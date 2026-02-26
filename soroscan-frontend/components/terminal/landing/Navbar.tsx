@@ -101,6 +101,9 @@ export function Navbar() {
             className="md:hidden text-terminal-green hover:text-terminal-cyan transition-colors p-1"
             onClick={() => setOpen((o) => !o)}
             aria-label="Toggle menu"
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            aria-haspopup="true"
           >
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -108,7 +111,12 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="md:hidden mt-4 pb-2 border-t border-terminal-green/20 pt-4 flex flex-col gap-4 text-xs uppercase tracking-widest text-terminal-gray">
+        <div
+          id="mobile-menu"
+          role="navigation"
+          aria-label="Mobile navigation"
+          className="md:hidden mt-4 pb-2 border-t border-terminal-green/20 pt-4 flex flex-col gap-4 text-xs uppercase tracking-widest text-terminal-gray"
+        >
           {navLinks.map((link) =>
             link.external ? (
               <a

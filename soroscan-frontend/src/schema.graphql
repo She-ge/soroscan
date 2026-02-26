@@ -18,6 +18,10 @@ type Mutation {
   refreshToken(refresh: String!): AuthPayload!
 }
 
+type Subscription {
+  contractEvent(contractId: String!): ContractEvent!
+}
+
 type AuthPayload {
   access: String!
   refresh: String!
