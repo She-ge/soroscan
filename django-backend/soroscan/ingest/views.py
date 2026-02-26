@@ -24,10 +24,11 @@ import requests as http_requests
 
 from soroscan.throttles import IngestRateThrottle
 
-from .models import APIKey, ContractEvent, TrackedContract, WebhookSubscription
+from .models import APIKey, ContractEvent, ContractInvocation, TrackedContract, WebhookSubscription
 from .serializers import (
     APIKeySerializer,
     ContractEventSerializer,
+    ContractInvocationSerializer,
     EventSearchSerializer,
     RecordEventRequestSerializer,
     TrackedContractSerializer,
@@ -252,6 +253,69 @@ class ContractEventViewSet(viewsets.ReadOnlyModelViewSet):
                 "results": serializer.data,
             }
         )
+
+
+class ContractInvocationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for querying contract invocations.
+
+    Endpoints:
+    - GET /api/contracts/{contract_id}/invocations/ - List invocations
+    - GET /api/invocations/{id}/ - Get invocation details
+    """
+
+    serializer_class = ContractInvocationSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ["caller", "function_name"]
+    ordering_fields = ["created_at", "ledger_sequence"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        """Filter by contract and user ownership."""
+        contract_id = self.kwargs.get("contract_id")
+        qs = ContractInvocation.objects.select_related("contract").filter(
+            contract__owner=self.request.user
+        )
+        if contract_id:
+            qs = qs.filter(contract__contract_id=contract_id)
+        return qs
+
+    def get_serializer_context(self):
+        """Add include_events flag from query params."""
+        context = super().get_serializer_context()
+        context["include_events"] = self.request.query_params.get("include_events") == "true"
+        return context
+
+    def list(self, request, *args, **kwargs):
+        """
+        List invocations with optional filters.
+
+        Query params:
+        - caller: Filter by caller address
+        - function_name: Filter by function name
+        - since: ISO timestamp for start of range
+        - until: ISO timestamp for end of range
+        - include_events: Include nested events (default: false)
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Timestamp range filtering
+        since = request.query_params.get("since")
+        until = request.query_params.get("until")
+        if since:
+            queryset = queryset.filter(created_at__gte=since)
+        if until:
+            queryset = queryset.filter(created_at__lte=until)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 
 class WebhookSubscriptionViewSet(viewsets.ModelViewSet):

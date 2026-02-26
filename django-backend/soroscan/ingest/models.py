@@ -54,6 +54,68 @@ class TrackedContract(models.Model):
         return f"{self.name} ({self.contract_id[:8]}...)"
 
 
+class ContractInvocation(models.Model):
+    """
+    Record of a contract function invocation that generated events.
+    """
+
+    tx_hash = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text="Transaction hash",
+    )
+    caller = models.CharField(
+        max_length=56,
+        db_index=True,
+        help_text="Source account address (G...)",
+    )
+    contract = models.ForeignKey(
+        TrackedContract,
+        on_delete=models.CASCADE,
+        related_name="invocations",
+        help_text="Target contract invoked",
+    )
+    function_name = models.CharField(
+        max_length=128,
+        db_index=True,
+        help_text="Contract function name",
+    )
+    parameters = models.JSONField(
+        help_text="Function parameters in XDR-encoded form",
+    )
+    result = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Function result in XDR-encoded form",
+    )
+    ledger_sequence = models.PositiveBigIntegerField(
+        db_index=True,
+        help_text="Ledger sequence number",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="Timestamp when record was created",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["contract", "created_at"]),
+            models.Index(fields=["caller"]),
+            models.Index(fields=["tx_hash"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tx_hash", "contract"],
+                name="unique_tx_hash_contract",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.function_name}@{self.ledger_sequence} ({self.contract.name})"
+
+
 class EventSchema(models.Model):
     """
     Versioned JSON schema for contract event types (issue #17).
@@ -161,6 +223,14 @@ class ContractEvent(models.Model):
     timestamp = models.DateTimeField(db_index=True, help_text="Event timestamp")
     tx_hash = models.CharField(max_length=64, help_text="Transaction hash")
     raw_xdr = models.TextField(blank=True, help_text="Raw XDR for debugging")
+    invocation = models.ForeignKey(
+        "ContractInvocation",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="events",
+        help_text="Invocation that generated this event",
+    )
     decoded_payload = models.JSONField(
         null=True,
         blank=True,
@@ -186,6 +256,7 @@ class ContractEvent(models.Model):
             models.Index(fields=["ledger"]),
             models.Index(fields=["tx_hash"]),
             models.Index(fields=["contract", "ledger", "event_index"]),
+            models.Index(fields=["invocation"]),
         ]
         constraints = [
             models.UniqueConstraint(

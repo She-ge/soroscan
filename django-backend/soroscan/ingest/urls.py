@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     APIKeyViewSet,
     ContractEventViewSet,
+    ContractInvocationViewSet,
     TrackedContractViewSet,
     contract_event_explorer_view,
     WebhookSubscriptionViewSet,
@@ -18,6 +19,7 @@ from .views import (
 router = DefaultRouter()
 router.register(r"contracts", TrackedContractViewSet, basename="contract")
 router.register(r"events", ContractEventViewSet, basename="event")
+router.register(r"invocations", ContractInvocationViewSet, basename="invocation")
 router.register(r"webhooks", WebhookSubscriptionViewSet, basename="webhook")
 router.register(r"api-keys", APIKeyViewSet, basename="apikey")
 

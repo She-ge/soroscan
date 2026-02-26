@@ -122,6 +122,8 @@ def _upsert_contract_event(
     contract: TrackedContract,
     event: Any,
     fallback_event_index: int = 0,
+    client: SorobanClient | None = None,
+    batch_cache: dict | None = None,
 ) -> tuple[ContractEvent, bool]:
     ledger = _safe_int(_event_attr(event, "ledger", "ledger_sequence"), default=0)
     event_index = _extract_event_index(event, fallback_event_index)
@@ -614,6 +616,8 @@ def process_ledger_events(ledger_sequence: int) -> int:
                     "schema_version": schema_version,
                 },
             )
+            
+            # Update validation status if needed
             if not created:
                 if (
                     event_record.validation_status != validation_status
@@ -756,6 +760,9 @@ def backfill_contract_events(
         for batch_start in range(next_ledger, end_ledger + 1, BATCH_LEDGER_SIZE):
             batch_end = min(batch_start + BATCH_LEDGER_SIZE - 1, end_ledger)
             batch_events = client.get_events_range(contract.contract_id, batch_start, batch_end)
+            
+            # Create batch_cache for this batch to avoid redundant RPC calls
+            batch_cache = {}
 
             if not batch_events:
                 logger.warning(
@@ -766,7 +773,9 @@ def backfill_contract_events(
                 )
 
             for fallback_event_index, event in enumerate(batch_events):
-                _, created = _upsert_contract_event(contract, event, fallback_event_index)
+                _, created = _upsert_contract_event(
+                    contract, event, fallback_event_index, client=client, batch_cache=batch_cache
+                )
                 processed_events += 1
                 if created:
                     created_events += 1
