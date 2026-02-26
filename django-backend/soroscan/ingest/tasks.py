@@ -554,20 +554,12 @@ def process_new_event(event_data: dict[str, Any]) -> None:
 
 
 @shared_task
-def sync_events_from_horizon() -> int:
+def process_ledger_events(ledger_sequence: int) -> int:
     """
-    Sync events from Horizon/Soroban RPC.
+    Fetch and index events for a specific ledger sequence.
     """
-    from stellar_sdk import SorobanServer
-
-    _start = time.monotonic()
+    from stellar_sdk.soroban_server import SorobanServer
     m = _get_metrics()
-
-    cursor_state, _ = IndexerState.objects.get_or_create(
-        key="horizon_cursor",
-        defaults={"value": "now"},
-    )
-    cursor = cursor_state.value
     server = SorobanServer(settings.SOROBAN_RPC_URL)
     new_events = 0
 
@@ -576,26 +568,27 @@ def sync_events_from_horizon() -> int:
             TrackedContract.objects.filter(is_active=True).values_list("contract_id", flat=True)
         )
 
-        # Always update the gauge, even when there are no active contracts.
-        m.active_contracts_gauge.set(len(contract_ids))
-
         if not contract_ids:
-            logger.info("No active contracts to index", extra={})
             return 0
 
         events_response = server.get_events(
-            start_ledger=int(cursor) if cursor.isdigit() else None,
+            start_ledger=ledger_sequence,
+            # Some SDKs/RPCs might not strictly respect end_ledger in get_events
+            # but we filter below anyway.
             filters=[
                 {
                     "type": "contract",
                     "contractIds": contract_ids,
                 }
             ],
-            pagination={"limit": 100},
+            pagination={"limit": 1000},
         )
 
         network = _network_label()
         for fallback_event_index, event in enumerate(events_response.events):
+            if int(event.ledger) != ledger_sequence:
+                continue
+
             try:
                 contract = TrackedContract.objects.get(contract_id=event.contract_id)
             except TrackedContract.DoesNotExist:
@@ -652,23 +645,73 @@ def sync_events_from_horizon() -> int:
                 contract.last_indexed_ledger = event_record.ledger
                 contract.save(update_fields=["last_indexed_ledger"])
 
-        last_ledger = None
+        return new_events
+
+    except Exception:
+        logger.exception("Failed to process events for ledger %s", ledger_sequence)
+        return 0
+
+
+@shared_task
+def sync_events_from_horizon() -> int:
+    """
+    Sync events from Horizon/Soroban RPC.
+    """
+    _start = time.monotonic()
+    m = _get_metrics()
+
+    cursor_state, _ = IndexerState.objects.get_or_create(
+        key="horizon_cursor",
+        defaults={"value": "now"},
+    )
+    cursor = cursor_state.value
+    new_events = 0
+
+    try:
+        # For simplicity in the periodic task, we still use the batch get_events
+        # but we could also refactor it to pull multiple ledgers if needed.
+        # Here we just use process_ledger_events logic inside if we want to be consistent.
+        # Actually, sync_events_from_horizon is meant to "catch up".
+        
+        from stellar_sdk.soroban_server import SorobanServer
+        server = SorobanServer(settings.SOROBAN_RPC_URL)
+        
+        contract_ids = list(
+            TrackedContract.objects.filter(is_active=True).values_list("contract_id", flat=True)
+        )
+        if not contract_ids:
+            return 0
+
+        start_ledger = int(cursor) if cursor.isdigit() else None
+        
+        events_response = server.get_events(
+            start_ledger=start_ledger,
+            filters=[{"type": "contract", "contractIds": contract_ids}],
+            pagination={"limit": 100},
+        )
+
+        processed_ledgers = set()
+        for event in events_response.events:
+            processed_ledgers.add(int(event.ledger))
+        
+        for ledger_seq in sorted(list(processed_ledgers)):
+            new_events += process_ledger_events(ledger_seq)
+
         if events_response.events:
             last_ledger = events_response.events[-1].ledger
             cursor_state.value = str(last_ledger)
             cursor_state.save()
 
         logger.info(
-            "Indexed %s new events",
+            "Indexed %s new events from %s ledgers",
             new_events,
-            extra={"ledger_sequence": last_ledger},
+            len(processed_ledgers),
         )
 
     except Exception:
-        logger.exception("Failed to sync events from Horizon", extra={})
+        logger.exception("Failed to sync events from Horizon")
 
     finally:
-        # Always record duration, even if an exception occurred.
         m.task_duration_seconds.labels(
             task_name="sync_events_from_horizon"
         ).observe(time.monotonic() - _start)

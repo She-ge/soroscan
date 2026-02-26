@@ -24,6 +24,7 @@ REQUIRED_ENV_VARS = [
     'DATABASE_URL',
     'REDIS_URL',
     'SOROBAN_RPC_URL',
+    'HORIZON_URL',
     'STELLAR_NETWORK_PASSPHRASE',
     'SOROSCAN_CONTRACT_ID',
 ]
@@ -242,6 +243,7 @@ CELERY_BEAT_SCHEDULE = {
 
 # Stellar / Soroban Configuration
 SOROBAN_RPC_URL = env("SOROBAN_RPC_URL", default="https://soroban-testnet.stellar.org")
+HORIZON_URL = env("HORIZON_URL", default="https://horizon-testnet.stellar.org")
 STELLAR_NETWORK_PASSPHRASE = env(
     "STELLAR_NETWORK_PASSPHRASE",
     default="Test SDF Network ; September 2015",

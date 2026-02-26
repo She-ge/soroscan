@@ -1,12 +1,9 @@
-"""
-Stellar/Soroban client for interacting with the SoroScan contract.
-"""
 import logging
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Optional, Generator
 
 from django.conf import settings
-from stellar_sdk import Keypair, TransactionBuilder
+from stellar_sdk import Keypair, TransactionBuilder, Server
 from stellar_sdk.soroban_server import SorobanServer
 from stellar_sdk.xdr import (
     SCVal,
@@ -34,22 +31,25 @@ class TransactionResult:
 
 class SorobanClient:
     """
-    Client for interacting with Soroban smart contracts.
+    Client for interacting with Soroban smart contracts and Horizon.
     """
 
     def __init__(
         self,
         rpc_url: Optional[str] = None,
+        horizon_url: Optional[str] = None,
         network_passphrase: Optional[str] = None,
         contract_id: Optional[str] = None,
         secret_key: Optional[str] = None,
     ):
         self.rpc_url = rpc_url or settings.SOROBAN_RPC_URL
+        self.horizon_url = horizon_url or settings.HORIZON_URL
         self.network_passphrase = network_passphrase or settings.STELLAR_NETWORK_PASSPHRASE
         self.contract_id = contract_id or settings.SOROSCAN_CONTRACT_ID
         self.secret_key = secret_key or settings.INDEXER_SECRET_KEY
 
         self.server = SorobanServer(self.rpc_url)
+        self.horizon = Server(self.horizon_url)
         self.keypair = Keypair.from_secret(self.secret_key) if self.secret_key else None
 
     def _address_to_sc_val(self, address: str) -> SCVal:
@@ -267,3 +267,17 @@ class SorobanClient:
             for event in events
             if start_ledger <= int(getattr(event, "ledger", start_ledger)) <= end_ledger
         ]
+
+    def stream_ledgers(self, cursor: Optional[str] = None) -> Generator[dict[str, Any], None, None]:
+        """
+        Stream ledgers from Horizon.
+
+        Args:
+            cursor: The cursor to start streaming from.
+
+        Yields:
+            Ledger objects.
+        """
+        logger.info("Starting ledger stream from Horizon (cursor=%s)", cursor)
+        for ledger in self.horizon.ledgers().cursor(cursor).stream():
+            yield ledger

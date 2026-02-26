@@ -41,6 +41,7 @@ def client(valid_keypair, valid_contract_id):
 class TestSorobanClient:
     def test_client_initialization(self, client):
         assert client.rpc_url == "https://soroban-testnet.stellar.org"
+        assert client.horizon_url == "https://horizon-testnet.stellar.org"
         assert client.network_passphrase == "Test SDF Network ; September 2015"
         assert client.contract_id.startswith("C")
         assert client.keypair is not None
