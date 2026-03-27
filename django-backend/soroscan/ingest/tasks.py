@@ -286,6 +286,12 @@ def _upsert_contract_event(
             "signature_status": signature_status,
         },
     )
+
+    # Update contract last activity timestamp if this event is newer
+    if not contract.last_event_at or timestamp > contract.last_event_at:
+        contract.last_event_at = timestamp
+        contract.save(update_fields=["last_event_at", "updated_at"])
+
     obj, created = result
     if created:
         m = _get_metrics()

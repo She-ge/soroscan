@@ -49,6 +49,7 @@ class TestTrackedContractViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["results"]) == 1
         assert response.data["results"][0]["contract_id"] == contract.contract_id
+        assert "last_event_at" in response.data["results"][0]
 
     def test_list_contracts_unauthorized(self, api_client):
         url = reverse("contract-list")
@@ -95,6 +96,7 @@ class TestTrackedContractViewSet:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["total_events"] == 8
         assert response.data["unique_event_types"] == 2
+        assert "last_activity" in response.data
 
     def test_update_contract(self, authenticated_client, contract):
         url = reverse("contract-detail", args=[contract.id])

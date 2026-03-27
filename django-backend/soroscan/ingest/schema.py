@@ -48,6 +48,7 @@ class ContractType:
     name: auto
     description: auto
     is_active: auto
+    last_event_at: auto
     created_at: auto
 
     @strawberry.field
@@ -473,7 +474,6 @@ class Query:
             stats = contract.events.aggregate(
                 total=Count("id"),
                 unique_types=Count("event_type", distinct=True),
-                last=Max("timestamp"),
             )
 
             return ContractStats(
@@ -481,7 +481,7 @@ class Query:
                 name=contract.name,
                 total_events=stats["total"] or 0,
                 unique_event_types=stats["unique_types"] or 0,
-                last_activity=stats["last"],
+                last_activity=contract.last_event_at,
             )
 
         return get_or_set_json(key, query_cache_ttl(), _stats)

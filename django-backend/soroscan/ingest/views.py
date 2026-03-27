@@ -144,10 +144,10 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
                 total_events=Count("id"),
                 unique_event_types=Count("event_type", distinct=True),
                 latest_ledger=Max("ledger"),
-                last_activity=Max("timestamp"),
             )
             agg["contract_id"] = contract.contract_id
             agg["name"] = contract.name
+            agg["last_activity"] = contract.last_event_at
             return agg
 
         stats = get_or_set_json(cache_key, query_cache_ttl(), _build)

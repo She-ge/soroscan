@@ -245,6 +245,7 @@ class TestGraphQLQueries:
                 contractStats(contractId: "{contract.contract_id}") {{
                     totalEvents
                     uniqueEventTypes
+                    lastActivity
                 }}
             }}
         """
@@ -252,6 +253,7 @@ class TestGraphQLQueries:
         assert result.errors is None
         assert result.data["contractStats"]["totalEvents"] == 3
         assert result.data["contractStats"]["uniqueEventTypes"] == 2
+        assert "lastActivity" in result.data["contractStats"]
 
     def test_query_event_types(self, contract):
         ContractEventFactory(contract=contract, event_type="transfer")
