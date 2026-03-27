@@ -417,6 +417,37 @@ class WebhookSubscriptionAdmin(AdminAuditMixin, admin.ModelAdmin):
     search_fields = ["target_url", "contract__name", "event_type"]
     readonly_fields = ["secret", "created_at", "last_triggered", "failure_count", "status"]
     ordering = ["-created_at"]
+    actions = ["enable_webhooks", "disable_webhooks"]
+
+    @admin.action(description="Enable selected webhooks")
+    def enable_webhooks(self, request, queryset):
+        """Enable selected webhooks and reset status/failure count."""
+        updated = queryset.update(
+            is_active=True,
+            status=WebhookSubscription.STATUS_ACTIVE,
+            failure_count=0,
+        )
+        for obj in queryset:
+            self._audit(request, obj, "change", "Enabled via bulk action")
+        
+        self.message_user(
+            request,
+            f"Successfully enabled {updated} webhook(s) and reset their status.",
+            level=messages.SUCCESS,
+        )
+
+    @admin.action(description="Disable selected webhooks")
+    def disable_webhooks(self, request, queryset):
+        """Disable selected webhooks."""
+        updated = queryset.update(is_active=False)
+        for obj in queryset:
+            self._audit(request, obj, "change", "Disabled via bulk action")
+
+        self.message_user(
+            request,
+            f"Successfully disabled {updated} webhook(s).",
+            level=messages.SUCCESS,
+        )
 
     def get_queryset(self, request):
         """Optimize queries with select_related to prevent N+1 issues."""
