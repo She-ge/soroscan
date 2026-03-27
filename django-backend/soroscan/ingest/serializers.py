@@ -74,6 +74,7 @@ class TrackedContractSerializer(serializers.ModelSerializer):
             "is_active",
             "deprecation_status",
             "deprecation_reason",
+            "max_events_per_minute",
             "last_indexed_ledger",
             "team",
             "event_count",

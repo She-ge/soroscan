@@ -134,6 +134,11 @@ class TrackedContract(models.Model):
         blank=True,
         help_text="Optional reason shown to users when contract is deprecated/suspended",
     )
+    max_events_per_minute = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Max events per minute for ingest-time rate limiting (None = unlimited)",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -25,6 +25,7 @@ from django.db.models import F
 from django.utils import timezone
 
 from .models import ContractABI, ContractEvent, ContractSigningKey, TrackedContract, WebhookSubscription, IndexerState, EventSchema, RemediationRule, RemediationIncident, AdminAction
+from .rate_limit import check_ingest_rate
 from .stellar_client import SorobanClient
 
 logger = logging.getLogger(__name__)
@@ -259,6 +260,21 @@ def _upsert_contract_event(
     client: SorobanClient | None = None,
     batch_cache: dict | None = None,
 ) -> tuple[ContractEvent, bool]:
+    # Check rate limit before processing
+    if not check_ingest_rate(contract):
+        m = _get_metrics()
+        m.events_rate_limited_total.labels(
+            contract_id=_short_contract_id(contract.contract_id),
+            network=_network_label(),
+        ).inc()
+        logger.warning(
+            "Rate limit exceeded for contract %s — skipping event",
+            contract.contract_id,
+            extra={"contract_id": contract.contract_id},
+        )
+        # Return a dummy tuple to indicate the event was skipped
+        return (None, False)
+    
     ledger = _safe_int(_event_attr(event, "ledger", "ledger_sequence"), default=0)
     event_index = _extract_event_index(event, fallback_event_index)
     tx_hash = str(_event_attr(event, "tx_hash", "transaction_hash", default="") or "")
@@ -812,6 +828,19 @@ def sync_events_from_horizon() -> int:
             except TrackedContract.DoesNotExist:
                 continue
 
+            # Check rate limit before processing
+            if not check_ingest_rate(contract):
+                m.events_rate_limited_total.labels(
+                    contract_id=_short_contract_id(contract.contract_id),
+                    network=network,
+                ).inc()
+                logger.warning(
+                    "Rate limit exceeded for contract %s — skipping event",
+                    contract.contract_id,
+                    extra={"contract_id": contract.contract_id},
+                )
+                continue
+
             payload = event.value
             passed, version_used = validate_event_payload(
                 contract, event.type, payload, ledger=event.ledger
@@ -947,9 +976,13 @@ def backfill_contract_events(
                 )
 
             for fallback_event_index, event in enumerate(batch_events):
-                _, created = _upsert_contract_event(
+                result = _upsert_contract_event(
                     contract, event, fallback_event_index, client=client, batch_cache=batch_cache
                 )
+                # Handle rate-limited events (returns None, False)
+                if result[0] is None:
+                    continue
+                _, created = result
                 processed_events += 1
                 if created:
                     created_events += 1

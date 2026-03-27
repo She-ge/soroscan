@@ -118,6 +118,7 @@ class TrackedContractAdmin(AdminAuditMixin, admin.ModelAdmin):
         "team",
         "is_active",
         "deprecation_status",
+        "max_events_per_minute",
         "last_indexed_ledger",
         "event_count",
         "created_at",
