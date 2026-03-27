@@ -302,6 +302,14 @@ def _import_batch(batch: list[dict], contracts: dict, result: ImportResult, dry_
     result.imported += actually_inserted
     result.skipped += len(events) - actually_inserted
 
+    # Update last_event_at for involved contracts
+    for cid, contract in contracts.items():
+        # cid is the contract_id string, contract is the TrackedContract instance
+        contract_events = [e for e in events if e.contract == contract]
+        if contract_events:
+            latest_in_batch = max(e.timestamp for e in contract_events)
+            contract.update_last_event_at(latest_in_batch)
+
 
 def import_json(src: IO, result: ImportResult, dry_run: bool = False) -> ImportResult:
     data = json.load(src)

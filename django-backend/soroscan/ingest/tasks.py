@@ -288,9 +288,7 @@ def _upsert_contract_event(
     )
 
     # Update contract last activity timestamp if this event is newer
-    if not contract.last_event_at or timestamp > contract.last_event_at:
-        contract.last_event_at = timestamp
-        contract.save(update_fields=["last_event_at", "updated_at"])
+    contract.update_last_event_at(timestamp)
 
     obj, created = result
     if created:

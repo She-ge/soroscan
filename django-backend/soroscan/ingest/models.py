@@ -126,6 +126,17 @@ class TrackedContract(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def update_last_event_at(self, timestamp):
+        """
+        Efficiently update last_event_at if the provided timestamp is newer.
+        """
+        if not timestamp:
+            return
+
+        if not self.last_event_at or timestamp > self.last_event_at:
+            self.last_event_at = timestamp
+            self.save(update_fields=["last_event_at", "updated_at"])
+
     class Meta:
         ordering = ["-created_at"]
         indexes = [

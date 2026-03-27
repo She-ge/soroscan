@@ -796,7 +796,7 @@ def restore_archived_events(request):
     for row in rows:
         try:
             contract = TrackedContract.objects.get(contract_id=row["contract__contract_id"])
-            ContractEvent.objects.get_or_create(
+            obj, created = ContractEvent.objects.get_or_create(
                 contract=contract,
                 ledger=row["ledger"],
                 event_index=row["event_index"],
@@ -808,6 +808,13 @@ def restore_archived_events(request):
                     "tx_hash": row.get("tx_hash", ""),
                 },
             )
+            # Update last_event_at if this event is newer
+            ts = row["timestamp"]
+            if isinstance(ts, str):
+                from django.utils.dateparse import parse_datetime
+                ts = parse_datetime(ts)
+            contract.update_last_event_at(ts)
+
             restored_count += 1
         except Exception:
             logger.warning("Skipped row during restore: %s", row.get("id"), exc_info=True)
