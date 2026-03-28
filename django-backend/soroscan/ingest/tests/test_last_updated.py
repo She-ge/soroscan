@@ -96,7 +96,7 @@ class TestLastEventAtBulkOperations:
         batch = ArchivedEventBatch.objects.create(
             policy_id=1, # Mock policy
             s3_key="test.json.gz",
-            status=ArchivedEventBatch.STATUS_PENDING,
+            status=ArchivedEventBatch.STATUS_ARCHIVED,
             start_ledger=1000,
             end_ledger=1000,
             event_count=1
