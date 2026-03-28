@@ -6,6 +6,7 @@ import secrets
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils.text import slugify
 
@@ -83,6 +84,11 @@ class TrackedContract(models.Model):
     Contracts registered for event indexing.
     """
 
+    class DeprecationStatus(models.TextChoices):
+        ACTIVE = "active", "Active"
+        DEPRECATED = "deprecated", "Deprecated"
+        SUSPENDED = "suspended", "Suspended"
+
     contract_id = models.CharField(
         max_length=56,
         unique=True,
@@ -90,6 +96,12 @@ class TrackedContract(models.Model):
         help_text="Stellar contract address (C...)",
     )
     name = models.CharField(max_length=100, help_text="Human-readable contract name")
+    alias = models.CharField(
+        max_length=256,
+        blank=True,
+        default="",
+        help_text="Optional friendly name/alias for easier identification (e.g. 'Token Transfer Contract')",
+    )
     description = models.TextField(blank=True, help_text="Optional description")
     owner = models.ForeignKey(
         User,
@@ -123,6 +135,51 @@ class TrackedContract(models.Model):
         db_index=True,
         help_text="Timestamp of the last indexed event for this contract",
     )
+    deprecation_status = models.CharField(
+        max_length=16,
+        choices=DeprecationStatus.choices,
+        default=DeprecationStatus.ACTIVE,
+        db_index=True,
+        help_text="Manual lifecycle/deprecation state for warning users",
+    )
+    deprecation_reason = models.TextField(
+        blank=True,
+        help_text="Optional reason shown to users when contract is deprecated/suspended",
+    )
+    max_events_per_minute = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Max events per minute for ingest-time rate limiting (None = unlimited)",
+    )
+
+    # ---------------------------------------------------------------------------
+    # Event filtering (whitelist / blacklist)
+    # ---------------------------------------------------------------------------
+    FILTER_NONE = "none"
+    FILTER_WHITELIST = "whitelist"
+    FILTER_BLACKLIST = "blacklist"
+    FILTER_TYPE_CHOICES = [
+        (FILTER_NONE, "No Filter"),
+        (FILTER_WHITELIST, "Whitelist"),
+        (FILTER_BLACKLIST, "Blacklist"),
+    ]
+
+    event_filter_type = models.CharField(
+        max_length=16,
+        choices=FILTER_TYPE_CHOICES,
+        default=FILTER_NONE,
+        help_text=(
+            "Ingest filter mode: none = store all events; "
+            "whitelist = only store listed event types; "
+            "blacklist = drop listed event types."
+        ),
+    )
+    event_filter_list = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of event type names used by the whitelist/blacklist filter.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -130,10 +187,36 @@ class TrackedContract(models.Model):
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["contract_id", "is_active"]),
+            models.Index(fields=["alias"]),
         ]
 
     def __str__(self):
-        return f"{self.name} ({self.contract_id[:8]}...)"
+        display = self.alias or self.name
+        return f"{display} ({self.contract_id[:8]}...)"
+
+    def display_name(self) -> str:
+        """Return alias if set, otherwise contract_id."""
+        return self.alias if self.alias else self.contract_id
+
+    def deprecation_warning(self) -> dict[str, str] | None:
+        if self.deprecation_status == self.DeprecationStatus.ACTIVE:
+            return None
+        status_label = self.get_deprecation_status_display().lower()
+        if self.deprecation_reason:
+            message = self.deprecation_reason
+        else:
+            message = f"This contract is {status_label}."
+        return {"type": "deprecation", "message": message}
+
+    def should_ingest_event(self, event_type: str) -> bool:
+        """Return True if *event_type* should be persisted given the filter config."""
+        if self.event_filter_type == self.FILTER_NONE:
+            return True
+        if self.event_filter_type == self.FILTER_WHITELIST:
+            return event_type in (self.event_filter_list or [])
+        if self.event_filter_type == self.FILTER_BLACKLIST:
+            return event_type not in (self.event_filter_list or [])
+        return True
 
 
 class ContractInvocation(models.Model):
@@ -443,6 +526,11 @@ class WebhookSubscription(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     last_triggered = models.DateTimeField(null=True, blank=True)
     failure_count = models.PositiveIntegerField(default=0)
+    timeout_seconds = models.IntegerField(
+        default=10,
+        validators=[MinValueValidator(1), MaxValueValidator(60)],
+        help_text="Timeout for webhook dispatch in seconds (1-60, default: 10)",
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -501,6 +589,11 @@ class WebhookDeliveryLog(models.Model):
         auto_now_add=True,
         db_index=True,
         help_text="UTC timestamp of this attempt",
+    )
+    payload_bytes = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Size of the webhook payload in bytes",
     )
 
     class Meta:
