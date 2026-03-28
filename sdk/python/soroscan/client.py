@@ -1,6 +1,5 @@
 """SoroScan API client implementations."""
 
-from datetime import datetime
 from typing import Any, Literal
 from urllib.parse import urljoin
 

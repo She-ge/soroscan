@@ -1,7 +1,6 @@
 import pytest
 from django.utils import timezone
 from datetime import timedelta
-from soroscan.ingest.models import TrackedContract, ContractEvent
 from soroscan.ingest.tasks import _upsert_contract_event
 from .factories import TrackedContractFactory
 

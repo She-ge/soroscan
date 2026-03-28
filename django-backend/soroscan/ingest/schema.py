@@ -10,7 +10,7 @@ from typing import AsyncGenerator, Optional
 import strawberry
 import strawberry_django
 from channels.layers import get_channel_layer
-from django.db.models import Case, Count, IntegerField, Max, Value, When
+from django.db.models import Case, Count, IntegerField, Value, When
 from django.utils import timezone
 from strawberry import auto
 from strawberry.types import Info
