@@ -36,6 +36,8 @@ class TrackedContractFactory(DjangoModelFactory):
     is_active = True
     deprecation_status = TrackedContract.DeprecationStatus.ACTIVE
     deprecation_reason = ""
+    event_filter_type = TrackedContract.FILTER_NONE
+    event_filter_list = factory.LazyFunction(list)
 
 
 class EventSchemaFactory(DjangoModelFactory):

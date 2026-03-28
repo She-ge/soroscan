@@ -51,6 +51,8 @@ class ContractType:
     is_active: auto
     deprecation_status: auto
     deprecation_reason: auto
+    event_filter_type: auto
+    event_filter_list: strawberry.scalars.JSON
     created_at: auto
 
     @strawberry.field
@@ -735,12 +737,14 @@ class Mutation:
         description: Optional[str] = None,
         is_active: Optional[bool] = None,
         alias: Optional[str] = None,
+        event_filter_type: Optional[str] = None,
+        event_filter_list: Optional[list[str]] = None,
     ) -> Optional[ContractType]:
         """Update a tracked contract."""
         user = _get_authenticated_user(info)
         if not user:
             raise Exception("Authentication required")
-        
+
         try:
             contract = TrackedContract.objects.get(contract_id=contract_id)
         except TrackedContract.DoesNotExist:
@@ -754,6 +758,13 @@ class Mutation:
             contract.is_active = is_active
         if alias is not None:
             contract.alias = alias
+        if event_filter_type is not None:
+            valid_types = {c[0] for c in TrackedContract.FILTER_TYPE_CHOICES}
+            if event_filter_type not in valid_types:
+                raise Exception(f"Invalid event_filter_type. Must be one of: {valid_types}")
+            contract.event_filter_type = event_filter_type
+        if event_filter_list is not None:
+            contract.event_filter_list = event_filter_list
 
         contract.save()
 

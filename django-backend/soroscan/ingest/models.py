@@ -145,6 +145,35 @@ class TrackedContract(models.Model):
         blank=True,
         help_text="Max events per minute for ingest-time rate limiting (None = unlimited)",
     )
+
+    # ---------------------------------------------------------------------------
+    # Event filtering (whitelist / blacklist)
+    # ---------------------------------------------------------------------------
+    FILTER_NONE = "none"
+    FILTER_WHITELIST = "whitelist"
+    FILTER_BLACKLIST = "blacklist"
+    FILTER_TYPE_CHOICES = [
+        (FILTER_NONE, "No Filter"),
+        (FILTER_WHITELIST, "Whitelist"),
+        (FILTER_BLACKLIST, "Blacklist"),
+    ]
+
+    event_filter_type = models.CharField(
+        max_length=16,
+        choices=FILTER_TYPE_CHOICES,
+        default=FILTER_NONE,
+        help_text=(
+            "Ingest filter mode: none = store all events; "
+            "whitelist = only store listed event types; "
+            "blacklist = drop listed event types."
+        ),
+    )
+    event_filter_list = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of event type names used by the whitelist/blacklist filter.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -172,6 +201,16 @@ class TrackedContract(models.Model):
         else:
             message = f"This contract is {status_label}."
         return {"type": "deprecation", "message": message}
+
+    def should_ingest_event(self, event_type: str) -> bool:
+        """Return True if *event_type* should be persisted given the filter config."""
+        if self.event_filter_type == self.FILTER_NONE:
+            return True
+        if self.event_filter_type == self.FILTER_WHITELIST:
+            return event_type in (self.event_filter_list or [])
+        if self.event_filter_type == self.FILTER_BLACKLIST:
+            return event_type not in (self.event_filter_list or [])
+        return True
 
 
 class ContractInvocation(models.Model):

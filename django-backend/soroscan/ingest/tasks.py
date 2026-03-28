@@ -279,6 +279,25 @@ def _upsert_contract_event(
     event_index = _extract_event_index(event, fallback_event_index)
     tx_hash = str(_event_attr(event, "tx_hash", "transaction_hash", default="") or "")
     event_type = str(_event_attr(event, "type", "event_type", default="unknown") or "unknown")
+
+    # Check whitelist/blacklist filter before persisting
+    if not contract.should_ingest_event(event_type):
+        m = _get_metrics()
+        m.events_filtered_total.labels(
+            contract_id=_short_contract_id(contract.contract_id),
+            network=_network_label(),
+            filter_type=contract.event_filter_type,
+            event_type=event_type,
+        ).inc()
+        logger.debug(
+            "Event type '%s' filtered (%s) for contract %s — skipping",
+            event_type,
+            contract.event_filter_type,
+            contract.contract_id,
+            extra={"contract_id": contract.contract_id, "event_type": event_type},
+        )
+        return (None, False)
+
     payload = _event_attr(event, "value", "payload", default={}) or {}
     raw_xdr = str(_event_attr(event, "xdr", "raw_xdr", default="") or "")
     signature_status = resolve_signature_status(contract, event, payload)
@@ -838,6 +857,23 @@ def sync_events_from_horizon() -> int:
                     "Rate limit exceeded for contract %s — skipping event",
                     contract.contract_id,
                     extra={"contract_id": contract.contract_id},
+                )
+                continue
+
+            # Check whitelist/blacklist filter before persisting
+            if not contract.should_ingest_event(event.type):
+                m.events_filtered_total.labels(
+                    contract_id=_short_contract_id(contract.contract_id),
+                    network=network,
+                    filter_type=contract.event_filter_type,
+                    event_type=event.type,
+                ).inc()
+                logger.debug(
+                    "Event type '%s' filtered (%s) for contract %s — skipping",
+                    event.type,
+                    contract.event_filter_type,
+                    contract.contract_id,
+                    extra={"contract_id": contract.contract_id, "event_type": event.type},
                 )
                 continue
 
