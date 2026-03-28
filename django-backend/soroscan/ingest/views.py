@@ -92,9 +92,30 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
     serializer_class = TrackedContractSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["is_active"]
-    search_fields = ["name", "contract_id"]
-    ordering_fields = ["created_at", "name"]
+    search_fields = ["name", "alias", "contract_id"]
+    ordering_fields = ["created_at", "name", "alias"]
     ordering = ["-created_at"]
+
+    @staticmethod
+    def _collect_warnings(items: list[dict]) -> list[dict[str, str]]:
+        warnings: list[dict[str, str]] = []
+        for item in items:
+            for warning in item.get("warnings", []):
+                if warning not in warnings:
+                    warnings.append(warning)
+        return warnings
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        if isinstance(response.data, dict) and "results" in response.data:
+            response.data["warnings"] = self._collect_warnings(response.data["results"])
+        return response
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        if isinstance(response.data, dict):
+            response.data.setdefault("warnings", [])
+        return response
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

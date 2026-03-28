@@ -25,7 +25,9 @@ from django.db.models import F
 from django.utils import timezone
 
 from .models import ContractABI, ContractEvent, ContractSigningKey, TrackedContract, WebhookSubscription, IndexerState, EventSchema, RemediationRule, RemediationIncident, AdminAction
+from .rate_limit import check_ingest_rate
 from .stellar_client import SorobanClient
+from .metrics import webhook_payload_bytes
 
 logger = logging.getLogger(__name__)
 BATCH_LEDGER_SIZE = 200
@@ -259,10 +261,44 @@ def _upsert_contract_event(
     client: SorobanClient | None = None,
     batch_cache: dict | None = None,
 ) -> tuple[ContractEvent, bool]:
+    # Check rate limit before processing
+    if not check_ingest_rate(contract):
+        m = _get_metrics()
+        m.events_rate_limited_total.labels(
+            contract_id=_short_contract_id(contract.contract_id),
+            network=_network_label(),
+        ).inc()
+        logger.warning(
+            "Rate limit exceeded for contract %s — skipping event",
+            contract.contract_id,
+            extra={"contract_id": contract.contract_id},
+        )
+        # Return a dummy tuple to indicate the event was skipped
+        return (None, False)
+    
     ledger = _safe_int(_event_attr(event, "ledger", "ledger_sequence"), default=0)
     event_index = _extract_event_index(event, fallback_event_index)
     tx_hash = str(_event_attr(event, "tx_hash", "transaction_hash", default="") or "")
     event_type = str(_event_attr(event, "type", "event_type", default="unknown") or "unknown")
+
+    # Check whitelist/blacklist filter before persisting
+    if not contract.should_ingest_event(event_type):
+        m = _get_metrics()
+        m.events_filtered_total.labels(
+            contract_id=_short_contract_id(contract.contract_id),
+            network=_network_label(),
+            filter_type=contract.event_filter_type,
+            event_type=event_type,
+        ).inc()
+        logger.debug(
+            "Event type '%s' filtered (%s) for contract %s — skipping",
+            event_type,
+            contract.event_filter_type,
+            contract.contract_id,
+            extra={"contract_id": contract.contract_id, "event_type": event_type},
+        )
+        return (None, False)
+
     payload = _event_attr(event, "value", "payload", default={}) or {}
     raw_xdr = str(_event_attr(event, "xdr", "raw_xdr", default="") or "")
     signature_status = resolve_signature_status(contract, event, payload)
@@ -392,6 +428,7 @@ def validate_event_payload(
 
 
 @shared_task(
+    name="ingest.tasks.dispatch_webhook",
     bind=True,
     autoretry_for=(requests.exceptions.RequestException,),
     retry_backoff=True,
@@ -439,6 +476,25 @@ def dispatch_webhook(self, subscription_id: int, event_id: int) -> bool:
         "tx_hash": event.tx_hash,
     }
     payload_bytes = json.dumps(event_data, sort_keys=True).encode("utf-8")
+    payload_size = len(payload_bytes)
+
+    # Log warning if payload exceeds 512 KB
+    if payload_size > 512 * 1024:
+        logger.warning(
+            "Large webhook payload detected for contract %s: %d bytes (> 512 KB)",
+            event.contract.contract_id,
+            payload_size,
+            extra={
+                "contract_id": event.contract.contract_id,
+                "payload_bytes": payload_size,
+            },
+        )
+
+    # Record histogram metric
+    webhook_payload_bytes.labels(
+        contract_id=event.contract.contract_id,
+    ).observe(payload_size)
+
     sig_hex = hmac.new(
         webhook.secret.encode("utf-8"),
         msg=payload_bytes,
@@ -459,13 +515,13 @@ def dispatch_webhook(self, subscription_id: int, event_id: int) -> bool:
             webhook.target_url,
             data=payload_bytes,
             headers=headers,
-            timeout=10,
+            timeout=webhook.timeout_seconds,
         )
         status_code = response.status_code
 
         if status_code == 429:
             error_msg = "Rate limited by subscriber (429)"
-            _log_delivery_attempt(webhook, event, attempt_number, status_code, False, error_msg)
+            _log_delivery_attempt(webhook, event, attempt_number, status_code, False, error_msg, payload_size)
             attempt_logged = True
             _on_delivery_failure(webhook, self)
             m.webhook_deliveries_total.labels(status="rate_limited").inc()
@@ -486,7 +542,7 @@ def dispatch_webhook(self, subscription_id: int, event_id: int) -> bool:
         success = 200 <= status_code < 300
         error_msg = "" if success else f"HTTP {status_code}"
 
-        _log_delivery_attempt(webhook, event, attempt_number, status_code, success, error_msg)
+        _log_delivery_attempt(webhook, event, attempt_number, status_code, success, error_msg, payload_size)
         attempt_logged = True
 
         if success:
@@ -511,9 +567,26 @@ def dispatch_webhook(self, subscription_id: int, event_id: int) -> bool:
         m.webhook_deliveries_total.labels(status="failure").inc()
         response.raise_for_status()
 
+    except requests.exceptions.Timeout:
+        # Log timeout as 504 Gateway Timeout
+        if not attempt_logged:
+            _log_delivery_attempt(webhook, event, attempt_number, 504, False, "Timeout exceeded", payload_size)
+            attempt_logged = True
+            _on_delivery_failure(webhook, self)
+
+        logger.warning(
+            "Webhook %s dispatch timed out (attempt %s/%s) after %d seconds",
+            subscription_id,
+            attempt_number,
+            self.max_retries + 1,
+            webhook.timeout_seconds,
+            extra={"webhook_id": subscription_id},
+        )
+        raise
+
     except requests.RequestException as exc:
         if not attempt_logged:
-            _log_delivery_attempt(webhook, event, attempt_number, None, False, str(exc))
+            _log_delivery_attempt(webhook, event, attempt_number, None, False, str(exc), payload_size)
             _on_delivery_failure(webhook, self)
         m.webhook_deliveries_total.labels(status="failure").inc()
         m.webhook_delivery_duration_seconds.observe(time.monotonic() - _start)
@@ -549,6 +622,7 @@ def _log_delivery_attempt(
     status_code: int | None,
     success: bool,
     error: str,
+    payload_bytes: int | None = None,
 ) -> None:
     """Create a ``WebhookDeliveryLog`` record for one dispatch attempt."""
     from .models import WebhookDeliveryLog
@@ -560,6 +634,7 @@ def _log_delivery_attempt(
         status_code=status_code,
         success=success,
         error=error,
+        payload_bytes=payload_bytes,
     )
 
 
@@ -757,8 +832,8 @@ def process_new_event(event_data: dict[str, Any]) -> None:
     )
 
 
-@shared_task
-def sync_events_from_horizon() -> int:
+@shared_task(name="ingest.tasks.ingest_latest_events")
+def ingest_latest_events() -> int:
     """
     Sync events from Horizon/Soroban RPC.
     """
@@ -812,6 +887,36 @@ def sync_events_from_horizon() -> int:
                     network=network,
                     reason="no_contract",
                 ).inc()
+                continue
+
+            # Check rate limit before processing
+            if not check_ingest_rate(contract):
+                m.events_rate_limited_total.labels(
+                    contract_id=_short_contract_id(contract.contract_id),
+                    network=network,
+                ).inc()
+                logger.warning(
+                    "Rate limit exceeded for contract %s — skipping event",
+                    contract.contract_id,
+                    extra={"contract_id": contract.contract_id},
+                )
+                continue
+
+            # Check whitelist/blacklist filter before persisting
+            if not contract.should_ingest_event(event.type):
+                m.events_filtered_total.labels(
+                    contract_id=_short_contract_id(contract.contract_id),
+                    network=network,
+                    filter_type=contract.event_filter_type,
+                    event_type=event.type,
+                ).inc()
+                logger.debug(
+                    "Event type '%s' filtered (%s) for contract %s — skipping",
+                    event.type,
+                    contract.event_filter_type,
+                    contract.contract_id,
+                    extra={"contract_id": contract.contract_id, "event_type": event.type},
+                )
                 continue
 
             payload = event.value
@@ -905,10 +1010,40 @@ def sync_events_from_horizon() -> int:
     finally:
         # Always record duration, even if an exception occurred.
         m.task_duration_seconds.labels(
-            task_name="sync_events_from_horizon"
+            task_name="ingest_latest_events"
         ).observe(time.monotonic() - _start)
 
     return new_events
+
+
+@shared_task(name="ingest.tasks.aggregate_event_statistics")
+def aggregate_event_statistics() -> dict[str, Any]:
+    """
+    Perform analytics aggregation on ingested events (Low Priority).
+    """
+    _start = time.monotonic()
+    m = _get_metrics()
+    
+    # Placeholder for actual aggregation logic
+    total_events = ContractEvent.objects.count()
+    active_contracts = TrackedContract.objects.filter(is_active=True).count()
+    
+    logger.info(
+        "Aggregated statistics: %d events across %d contracts",
+        total_events,
+        active_contracts,
+        extra={"total_events": total_events, "active_contracts": active_contracts},
+    )
+    
+    m.task_duration_seconds.labels(
+        task_name="aggregate_event_statistics"
+    ).observe(time.monotonic() - _start)
+    
+    return {
+        "total_events": total_events,
+        "active_contracts": active_contracts,
+        "timestamp": timezone.now().isoformat(),
+    }
 
 
 @shared_task(bind=True, queue="backfill", max_retries=3, default_retry_delay=60)
@@ -963,9 +1098,13 @@ def backfill_contract_events(
                 )
 
             for fallback_event_index, event in enumerate(batch_events):
-                _, created = _upsert_contract_event(
+                result = _upsert_contract_event(
                     contract, event, fallback_event_index, client=client, batch_cache=batch_cache
                 )
+                # Handle rate-limited events (returns None, False)
+                if result[0] is None:
+                    continue
+                _, created = result
                 processed_events += 1
                 if created:
                     created_events += 1

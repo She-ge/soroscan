@@ -56,6 +56,7 @@ class TrackedContractSerializer(serializers.ModelSerializer):
     """
 
     event_count = serializers.SerializerMethodField()
+    warnings = serializers.SerializerMethodField()
     team = serializers.PrimaryKeyRelatedField(
         queryset=Team.objects.all(),
         required=False,
@@ -68,19 +69,30 @@ class TrackedContractSerializer(serializers.ModelSerializer):
             "id",
             "contract_id",
             "name",
+            "alias",
             "description",
             "abi_schema",
             "is_active",
+            "deprecation_status",
+            "deprecation_reason",
+            "max_events_per_minute",
+            "event_filter_type",
+            "event_filter_list",
             "last_indexed_ledger",
             "team",
             "event_count",
+            "warnings",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "last_indexed_ledger", "event_count", "created_at", "updated_at"]
+        read_only_fields = ["id", "last_indexed_ledger", "event_count", "warnings", "created_at", "updated_at"]
 
     def get_event_count(self, obj) -> int:
         return obj.events.count()
+
+    def get_warnings(self, obj) -> list[dict[str, str]]:
+        warning = obj.deprecation_warning()
+        return [warning] if warning else []
 
     def validate_team(self, value):
         request = self.context.get("request")
