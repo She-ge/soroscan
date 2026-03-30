@@ -82,6 +82,40 @@ def _stop_task_profiling(task_id: str, task, **kwargs) -> None:
         )
 
 # ---------------------------------------------------------------------------
+# Backoff calculation for webhook retries
+# ---------------------------------------------------------------------------
+
+def calculate_backoff(attempt: int, strategy: str, base_seconds: int) -> int:
+    """
+    Calculate the backoff delay for a webhook retry attempt.
+    
+    Args:
+        attempt: 0-based attempt number (0 = first retry, 1 = second retry, etc.)
+        strategy: One of 'exponential', 'linear', or 'fixed'
+        base_seconds: Base number of seconds for the backoff calculation
+    
+    Returns:
+        Backoff delay in seconds
+        
+    Examples:
+        - exponential with base_seconds=60, attempt=2: 60 * 2^2 = 240 seconds
+        - linear with base_seconds=60, attempt=2: 60 * 2 = 120 seconds
+        - fixed with base_seconds=60: always returns 60 seconds
+    """
+    if strategy == "exponential":
+        # base_seconds * 2^attempt
+        return base_seconds * (2 ** attempt)
+    elif strategy == "linear":
+        # base_seconds * attempt (add 1 because attempt is 0-based)
+        return base_seconds * (attempt + 1)
+    elif strategy == "fixed":
+        # Always return base_seconds
+        return base_seconds
+    else:
+        # Default to exponential if unknown strategy
+        return base_seconds * (2 ** attempt)
+
+# ---------------------------------------------------------------------------
 # Prometheus metrics (imported lazily to avoid import-time side-effects
 # during migrations/management commands that don't need metrics).
 # ---------------------------------------------------------------------------
@@ -456,13 +490,12 @@ def validate_event_payload(
     name="ingest.tasks.dispatch_webhook",
     bind=True,
     autoretry_for=(requests.exceptions.RequestException,),
-    retry_backoff=True,
-    retry_backoff_max=600,
     max_retries=5,
 )
 def dispatch_webhook(self, subscription_id: int, event_id: int) -> bool:
     """
     Deliver a single ContractEvent to a WebhookSubscription endpoint.
+    Uses configurable backoff strategy for retries based on webhook subscription settings.
     """
     _start = time.monotonic()
     m = _get_metrics()
@@ -558,6 +591,19 @@ def dispatch_webhook(self, subscription_id: int, event_id: int) -> bool:
                     countdown = int(retry_after)
                 except (ValueError, TypeError):
                     pass
+            
+            # Check if we've exhausted retries
+            if self.request.retries >= self.max_retries:
+                # Final attempt — don't retry, let the HTTPError propagate
+                raise requests.HTTPError("Rate limited (429)", response=response)
+            
+            # If no Retry-After header, use webhook's backoff strategy
+            if countdown is None:
+                countdown = calculate_backoff(
+                    self.request.retries,
+                    webhook.retry_backoff_strategy,
+                    webhook.retry_backoff_seconds,
+                )
 
             raise self.retry(
                 exc=requests.HTTPError("Rate limited (429)", response=response),
@@ -607,7 +653,19 @@ def dispatch_webhook(self, subscription_id: int, event_id: int) -> bool:
             webhook.timeout_seconds,
             extra={"webhook_id": subscription_id},
         )
-        raise
+        
+        # Check if we've exhausted retries
+        if self.request.retries >= self.max_retries:
+            # Final attempt — don't retry, let the exception propagate
+            raise
+        
+        # Retry with backoff based on webhook's strategy
+        countdown = calculate_backoff(
+            self.request.retries,
+            webhook.retry_backoff_strategy,
+            webhook.retry_backoff_seconds,
+        )
+        raise self.retry(countdown=countdown)
 
     except requests.RequestException as exc:
         if not attempt_logged:
@@ -627,7 +685,19 @@ def dispatch_webhook(self, subscription_id: int, event_id: int) -> bool:
             exc,
             extra={"webhook_id": subscription_id},
         )
-        raise
+        
+        # Check if we've exhausted retries
+        if self.request.retries >= self.max_retries:
+            # Final attempt — don't retry, let the exception propagate
+            raise
+        
+        # Retry with backoff based on webhook's strategy
+        countdown = calculate_backoff(
+            self.request.retries,
+            webhook.retry_backoff_strategy,
+            webhook.retry_backoff_seconds,
+        )
+        raise self.retry(countdown=countdown)
 
     m.webhook_delivery_duration_seconds.observe(time.monotonic() - _start)
     m.task_duration_seconds.labels(task_name="dispatch_webhook").observe(

@@ -499,6 +499,15 @@ class WebhookSubscription(models.Model):
         (STATUS_SUSPENDED, "Suspended"),
     ]
 
+    BACKOFF_EXPONENTIAL = "exponential"
+    BACKOFF_LINEAR = "linear"
+    BACKOFF_FIXED = "fixed"
+    BACKOFF_STRATEGY_CHOICES = [
+        (BACKOFF_EXPONENTIAL, "Exponential (base * 2^attempt)"),
+        (BACKOFF_LINEAR, "Linear (base * attempt)"),
+        (BACKOFF_FIXED, "Fixed (base seconds)"),
+    ]
+
     contract = models.ForeignKey(
         TrackedContract,
         on_delete=models.CASCADE,
@@ -530,6 +539,17 @@ class WebhookSubscription(models.Model):
         default=10,
         validators=[MinValueValidator(1), MaxValueValidator(60)],
         help_text="Timeout for webhook dispatch in seconds (1-60, default: 10)",
+    )
+    retry_backoff_strategy = models.CharField(
+        max_length=16,
+        choices=BACKOFF_STRATEGY_CHOICES,
+        default=BACKOFF_EXPONENTIAL,
+        help_text="Strategy for calculating retry delays",
+    )
+    retry_backoff_seconds = models.PositiveIntegerField(
+        default=60,
+        validators=[MinValueValidator(1), MaxValueValidator(3600)],
+        help_text="Base seconds for backoff calculation (1-3600, default: 60)",
     )
 
     class Meta:

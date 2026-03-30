@@ -438,14 +438,26 @@ class Query:
         contract_id: Optional[str] = None,
         event_type: Optional[str] = None,
         signature_status: Optional[str] = None,
-        ledger_min: Optional[int] = None,
-        ledger_max: Optional[int] = None,
+        from_ledger: Optional[int] = None,
+        to_ledger: Optional[int] = None,
         first: int = 20,
         after: Optional[str] = None,
         since: Optional[datetime] = None,
         until: Optional[datetime] = None,
     ) -> EventConnection:
-        """Query events with cursor-based pagination and filtering."""
+        """Query events with cursor-based pagination and filtering.
+        
+        Ledger range filtering: if from_ledger or to_ledger is provided, both must be provided.
+        Raises ValueError if from_ledger > to_ledger.
+        """
+        # Validate ledger range: either both or neither must be provided
+        if (from_ledger is None) != (to_ledger is None):
+            raise ValueError("Both from_ledger and to_ledger must be provided together, or neither")
+        
+        # Validate that from_ledger <= to_ledger
+        if from_ledger is not None and to_ledger is not None and from_ledger > to_ledger:
+            raise ValueError("from_ledger must be less than or equal to to_ledger")
+        
         qs = ContractEvent.objects.select_related("contract").order_by("id")
 
         if contract_id:
@@ -456,10 +468,10 @@ class Query:
             normalized_signature_status = signature_status.lower()
             if normalized_signature_status in {"valid", "invalid", "missing"}:
                 qs = qs.filter(signature_status=normalized_signature_status)
-        if ledger_min is not None:
-            qs = qs.filter(ledger__gte=ledger_min)
-        if ledger_max is not None:
-            qs = qs.filter(ledger__lte=ledger_max)
+        if from_ledger is not None:
+            qs = qs.filter(ledger__gte=from_ledger)
+        if to_ledger is not None:
+            qs = qs.filter(ledger__lte=to_ledger)
         if since:
             qs = qs.filter(timestamp__gte=since)
         if until:

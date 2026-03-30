@@ -511,7 +511,7 @@ class TestGraphQLQueries:
 
         query = """
             query {
-                events(ledgerMin: 150, ledgerMax: 250) {
+                events(fromLedger: 150, toLedger: 250) {
                     edges { node { id } }
                     totalCount
                 }
@@ -532,8 +532,8 @@ class TestGraphQLQueries:
                 events(
                     contractId: "{contract.contract_id}",
                     eventType: "transfer",
-                    ledgerMin: 50,
-                    ledgerMax: 150
+                    fromLedger: 50,
+                    toLedger: 150
                 ) {{
                     edges {{ node {{ id }} }}
                     totalCount
