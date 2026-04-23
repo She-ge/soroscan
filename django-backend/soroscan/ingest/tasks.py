@@ -930,6 +930,14 @@ def process_new_event(event_data: dict[str, Any]) -> None:
         event_type__in=[event_type, ""]
     )
 
+    # CDC streaming should not depend on webhook subscriptions.
+    producer = get_producer()
+    if producer:
+        try:
+            producer.publish(contract_id, event_data)
+        except Exception:
+            logger.exception("Failed to stream event to backend", extra={"contract_id": contract_id})
+
     if not webhooks.exists():
         logger.info(
             "No active webhooks for contract %s event_type %s",
@@ -985,14 +993,6 @@ def process_new_event(event_data: dict[str, Any]) -> None:
 
     # Evaluate alert rules asynchronously (separate queue, non-blocking)
     evaluate_alert_rules.apply_async(args=[event_obj.id], queue="default")
-
-    # Stream event to Kafka/PubSub if enabled
-    producer = get_producer()
-    if producer:
-        try:
-            producer.publish(contract_id, event_data)
-        except Exception:
-            logger.exception("Failed to stream event to backend", extra={"contract_id": contract_id})
 
     logger.info(
         "Dispatched event to %s webhooks",

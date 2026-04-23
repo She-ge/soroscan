@@ -370,14 +370,18 @@ SLACK_ALERT_TIMEOUT_SECONDS = env.int("SLACK_ALERT_TIMEOUT_SECONDS", default=10)
 # ---------------------------------------------------------------------------
 EVENT_STREAMING = {
     "enabled": env.bool("EVENT_STREAMING_ENABLED", default=False),
-    "backend": env("EVENT_STREAMING_BACKEND", default="kafka"),  # 'kafka' or 'pubsub'
+    "backend": env("EVENT_STREAMING_BACKEND", default="kafka"),  # 'kafka', 'pubsub', or 'sqs'
     "kafka": {
         "bootstrap_servers": env.list("KAFKA_BOOTSTRAP_SERVERS", default=["localhost:9092"]),
-        "topic_template": env("KAFKA_TOPIC_TEMPLATE", default="soroscan-events-{contract_id}"),
+        "topic": env("KAFKA_TOPIC", default="soroscan.events"),
+        "schema_registry_url": env("KAFKA_SCHEMA_REGISTRY_URL", default=""),
     },
     "pubsub": {
         "project_id": env("PUBSUB_PROJECT_ID", default=""),
-        "topic_template": env("PUBSUB_TOPIC_TEMPLATE", default="soroscan-events-{contract_id}"),
+        "topic": env("PUBSUB_TOPIC", default="soroscan.events"),
+    },
+    "sqs": {
+        "queue_url": env("SQS_QUEUE_URL", default=""),
     },
 }
 

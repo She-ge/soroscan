@@ -153,11 +153,15 @@ EVENT_STREAMING = {
     "backend": "kafka",
     "kafka": {
         "bootstrap_servers": ["localhost:9092"],
-        "topic_template": "soroscan-events-{contract_id}",
+        "topic": "soroscan.events",
+        "schema_registry_url": "",
     },
     "pubsub": {
         "project_id": "test-project",
-        "topic_template": "soroscan-events-{contract_id}",
+        "topic": "soroscan.events",
+    },
+    "sqs": {
+        "queue_url": "",
     },
 }
 
