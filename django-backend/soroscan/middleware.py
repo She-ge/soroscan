@@ -20,10 +20,16 @@ class RequestIdMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        request_id = getattr(request, "request_id", None) or uuid.uuid4().hex
+        request_id = request.META.get("HTTP_X_REQUEST_ID") or getattr(request, "request_id", None) or uuid.uuid4().hex
         request.request_id = request_id
         set_request_id(request_id)
-        return self.get_response(request)
+        
+        response = self.get_response(request)
+        response["X-Request-ID"] = request_id
+        
+        # Centralized exception handler will append request_id to errors,
+        # but we also ensure it's in the response headers here.
+        return response
 
 
 class ReverseProxyFixedIPMiddleware:
