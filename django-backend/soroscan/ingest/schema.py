@@ -28,6 +28,7 @@ from .models import (
     WebhookDeliveryLog,
 )
 from .services.timeline import build_timeline
+from soroscan.graphql_extensions import GraphQLResolverLoggingExtension
 
 
 def _get_authenticated_user(info: Info):
@@ -1135,4 +1136,9 @@ class Subscription:
             await channel_layer.group_discard(group_name, channel_name)
 
 
-schema = strawberry.Schema(query=Query, mutation=Mutation, subscription=Subscription)
+schema = strawberry.Schema(
+    query=Query,
+    mutation=Mutation,
+    subscription=Subscription,
+    extensions=[GraphQLResolverLoggingExtension],
+)
