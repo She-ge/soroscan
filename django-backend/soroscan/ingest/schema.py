@@ -28,7 +28,7 @@ from .models import (
     WebhookDeliveryLog,
 )
 from .services.timeline import build_timeline
-from soroscan.graphql_extensions import GraphQLResolverLoggingExtension
+from ..graphql_extensions import GraphQLResolverLoggingExtension
 
 
 def _get_authenticated_user(info: Info):

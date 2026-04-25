@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch
 from soroscan.ingest.schema import schema
 from .factories import TrackedContractFactory
 
