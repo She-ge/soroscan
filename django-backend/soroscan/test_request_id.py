@@ -1,4 +1,3 @@
-import uuid
 import pytest
 from django.urls import path
 from rest_framework.decorators import api_view, permission_classes
