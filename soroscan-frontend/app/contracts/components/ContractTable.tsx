@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/terminal/Button";
 import type { Contract } from "@/components/ingest/contract-types";
 import { ContractEmptyState } from "./ContractEmptyState";
+import { EventCountBadge } from "@/components/ui/EventCountBadge";
 
 interface ContractTableProps {
   contracts: Contract[];
@@ -39,8 +40,13 @@ export function ContractTable({ contracts, onDelete, onRegister }: ContractTable
           <div
             key={contract.id}
             onClick={() => handleRowClick(contract.id)}
-            className="cursor-pointer border border-terminal-green/20 bg-terminal-green/5 p-4 flex flex-col gap-3"
+            className="relative cursor-pointer border border-terminal-green/20 bg-terminal-green/5 p-4 flex flex-col gap-3"
           >
+            <EventCountBadge
+              contractId={contract.contractId}
+              initialCount={contract.eventCount}
+              className="absolute top-4 right-28"
+            />
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-xs text-terminal-cyan uppercase mb-1">Contract ID</div>
@@ -151,7 +157,12 @@ export function ContractTable({ contracts, onDelete, onRegister }: ContractTable
                     {contract.status.toUpperCase()}
                   </span>
                 </TableCell>
-                <TableCell className="font-mono">{contract.eventCount.toLocaleString()}</TableCell>
+                <TableCell className="font-mono">
+                  <EventCountBadge
+                    contractId={contract.contractId}
+                    initialCount={contract.eventCount}
+                  />
+                </TableCell>
                 <TableCell>
                   <div className="flex gap-1 flex-wrap">
                     {contract.tags?.slice(0, 3).map((tag) => (

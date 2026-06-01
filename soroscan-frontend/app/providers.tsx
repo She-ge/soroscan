@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { ToastProvider } from "@/context/ToastContext";
 import { ApolloProvider } from "@/providers/ApolloProvider";
+import { EventStreamProvider } from "@/context/EventStreamContext";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -11,7 +12,9 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <ApolloProvider>
-      <ToastProvider>{children}</ToastProvider>
+      <EventStreamProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </EventStreamProvider>
     </ApolloProvider>
   );
 }
