@@ -9,7 +9,7 @@ const mockHook = {
 };
 
 jest.mock("@/src/hooks/useContractEventSubscription", () => ({
-  useContractEventSubscription: (opts: any) => mockHook.useContractEventSubscription(opts),
+  useContractEventSubscription: (opts: unknown) => mockHook.useContractEventSubscription(opts),
 }));
 
 describe("EventCountBadge", () => {
