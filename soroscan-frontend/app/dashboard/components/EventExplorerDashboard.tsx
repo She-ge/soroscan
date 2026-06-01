@@ -6,6 +6,7 @@ import { FilterBar } from "./FilterBar";
 import { EventDetailModal } from "./EventDetailModal";
 import { PaginationControls } from "./PaginationControls";
 import { AdvancedSearch } from "./AdvancedSearch";
+import { BulkActionsToolbar } from "./BulkActionsToolbar";
 import { fetchAllContracts, fetchExplorerEvents } from "@/components/ingest/graphql";
 import type { EventRecord } from "@/components/ingest/types";
 import styles from "@/components/ingest/ingest-terminal.module.css";
@@ -53,6 +54,88 @@ export function EventExplorerDashboard() {
   const [selectedEvent, setSelectedEvent] = useState<EventRecord | null>(null);
   const [totalCount, setTotalCount] = useState(0);
 
+  // ── Multi-select state ─────────────────────────────────────────────────────
+  /**
+   * Memoized selection store keyed by event ID.
+   * We intentionally keep this as a Set so membership checks are O(1).
+   * The state is reset whenever the page / filters change to avoid stale IDs.
+   */
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Reset selection when events change (new page load, filter change, etc.)
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filteredEvents]);
+
+  const handleToggleSelect = useCallback((eventId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleToggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const allIds = filteredEvents.map((e) => e.id);
+      const allSelected = allIds.every((id) => prev.has(id));
+      if (allSelected) {
+        // Deselect all
+        return new Set();
+      }
+      // Select all visible events
+      return new Set(allIds);
+    });
+  }, [filteredEvents]);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(new Set(filteredEvents.map((e) => e.id)));
+  }, [filteredEvents]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  // Called after successful bulk delete — remove from local state (optimistic UI)
+  const handleDeleteSuccess = useCallback(
+    (deletedIds: string[]) => {
+      const deletedSet = new Set(deletedIds);
+      setEvents((prev) => prev.filter((e) => !deletedSet.has(e.id)));
+      setSelectedIds(new Set());
+      showToast(
+        `${deletedIds.length} event${deletedIds.length !== 1 ? "s" : ""} deleted.`,
+        "success",
+      );
+    },
+    [showToast],
+  );
+
+  // Called after successful bulk tag
+  const handleBulkTagSuccess = useCallback(
+    (eventIds: string[], tag: string) => {
+      setEventTags((prev) => {
+        const next = { ...prev };
+        for (const id of eventIds) {
+          const current = next[id] ?? [];
+          if (!current.includes(tag)) {
+            next[id] = [...current, tag];
+          }
+        }
+        return next;
+      });
+      showToast(
+        `Tag '${tag}' added to ${eventIds.length} event${eventIds.length !== 1 ? "s" : ""}.`,
+        "success",
+      );
+    },
+    [showToast],
+  );
+
+  // ── Persist tags ───────────────────────────────────────────────────────────
   useEffect(() => {
     try {
       const raw = localStorage.getItem(EVENT_TAGS_STORAGE_KEY);
@@ -332,6 +415,9 @@ export function EventExplorerDashboard() {
             showTags
             hasActiveFilters={hasActiveFilters}
             onClearFilters={handleClearFilters}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onToggleSelectAll={handleToggleSelectAll}
           />
 
           <PaginationControls
@@ -352,6 +438,17 @@ export function EventExplorerDashboard() {
           onClose={() => setSelectedEvent(null)}
         />
       )}
+
+      {/* Floating bulk actions toolbar – visible when ≥1 events are selected */}
+      <BulkActionsToolbar
+        selectedIds={selectedIds}
+        allEvents={filteredEvents}
+        onClearSelection={handleClearSelection}
+        onSelectAll={handleSelectAll}
+        onDeleteSuccess={handleDeleteSuccess}
+        onBulkTagSuccess={handleBulkTagSuccess}
+        tagSuggestions={tagSuggestions}
+      />
     </div>
   );
 }
