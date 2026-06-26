@@ -37,8 +37,10 @@ from .models import (
     ContractInvocation,
     ContractSource,
     ContractVerification,
+    Organization,
     OrganizationCostSnapshot,
     OrganizationBudget,
+    OrganizationMembership,
     IngestError,
     IndexerState,
     Team,
@@ -56,6 +58,7 @@ from .serializers import (
     ContractVerificationSerializer,
     EventSearchSerializer,
     OrganizationBudgetSerializer,
+    OrganizationCorsSerializer,
     OrganizationCostSnapshotSerializer,
     RecordEventRequestSerializer,
     TeamMemberAddSerializer,
@@ -1088,6 +1091,66 @@ def organization_cost_breakdown_view(request):
         payload.append(item)
 
     return Response({"results": payload})
+
+
+@extend_schema(
+    summary="Get or update organization CORS origins",
+    description=(
+        "GET returns the current list of allowed CORS origins for an organization. "
+        "PATCH replaces the entire list. "
+        "Only the organization owner and admins may update this setting. "
+        "Staff users may access any organization."
+    ),
+    request=OrganizationCorsSerializer,
+    responses={200: OrganizationCorsSerializer},
+)
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def organization_cors_view(request, pk: int):
+    """
+    Retrieve or update the per-organization CORS allowed origins.
+
+    - **GET** — returns ``{id, name, cors_origins}`` for the organization.
+    - **PATCH** — replaces ``cors_origins`` with the supplied list.
+
+    Permission rules:
+    - Staff users can access any organization.
+    - Non-staff users may only access organizations where they hold an
+      ``owner`` or ``admin`` membership role.
+    """
+    try:
+        org = Organization.objects.get(pk=pk)
+    except Organization.DoesNotExist:
+        return Response({"error": "Organization not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Permission check: staff OR org owner/admin.
+    if not request.user.is_staff:
+        has_permission = OrganizationMembership.objects.filter(
+            organization=org,
+            user=request.user,
+            role__in=[OrganizationMembership.Role.OWNER, OrganizationMembership.Role.ADMIN],
+        ).exists()
+        if not has_permission:
+            return Response(
+                {"error": "You do not have permission to manage CORS settings for this organization."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+    if request.method == "GET":
+        serializer = OrganizationCorsSerializer(org)
+        return Response(serializer.data)
+
+    # PATCH
+    serializer = OrganizationCorsSerializer(org, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer.save()
+    logger.info(
+        "cors_origins updated for org=%s by user=%s",
+        org.slug,
+        request.user.username,
+    )
+    return Response(serializer.data)
 
 
 def contract_timeline_view(request, contract_id: str):

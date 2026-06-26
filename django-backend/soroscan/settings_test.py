@@ -40,6 +40,7 @@ MIDDLEWARE = [
     "soroscan.middleware.MaintenanceModeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "soroscan.cors_middleware.OrgCorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "soroscan.middleware.RequestIdMiddleware",
     "soroscan.middleware.PlatformVersionMiddleware",

@@ -33,7 +33,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Organization
-        fields = ["id", "name", "slug", "settings", "quota", "created_at", "updated_at"]
+        fields = ["id", "name", "slug", "settings", "quota", "cors_origins", "created_at", "updated_at"]
         read_only_fields = ["id", "slug", "created_at", "updated_at"]
 
     def create(self, validated_data):
@@ -48,6 +48,41 @@ class OrganizationSerializer(serializers.ModelSerializer):
             defaults={"role": OrganizationMembership.Role.OWNER, "invited_by": user},
         )
         return org
+
+
+class OrganizationCorsSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating an Organization's per-org CORS allowed origins.
+
+    Each entry must be a non-empty string beginning with ``http://`` or
+    ``https://``.  Trailing slashes are stripped for consistency.
+    """
+
+    cors_origins = serializers.ListField(
+        child=serializers.CharField(max_length=2048),
+        allow_empty=True,
+        help_text=(
+            'List of allowed CORS origins, e.g. ["https://app.example.com"]. '
+            "Each entry must start with http:// or https://."
+        ),
+    )
+
+    class Meta:
+        model = Organization
+        fields = ["id", "name", "cors_origins"]
+        read_only_fields = ["id", "name"]
+
+    def validate_cors_origins(self, value):
+        cleaned = []
+        for raw in value:
+            origin = raw.strip().rstrip("/")
+            if not (origin.startswith("http://") or origin.startswith("https://")):
+                raise serializers.ValidationError(
+                    f"Invalid origin '{raw}': must start with http:// or https://"
+                )
+            if origin:
+                cleaned.append(origin)
+        return cleaned
 
 
 class TeamSerializer(serializers.ModelSerializer):

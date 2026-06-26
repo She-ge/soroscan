@@ -110,6 +110,7 @@ MIDDLEWARE = [
     "soroscan.middleware.MaintenanceModeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "soroscan.cors_middleware.OrgCorsMiddleware",
     "soroscan.middleware.ReverseProxyFixedIPMiddleware",
     "soroscan.middleware.ClientIPLoggingMiddleware",
     "soroscan.middleware.CacheBustingMiddleware",
