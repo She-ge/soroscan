@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoroScan Webhook Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin-bottom: 2rem;
+            color: #60a5fa;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background-color: #1e293b;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-size: 1rem;
+        }
+        textarea {
+            min-height: 200px;
+            font-family: monospace;
+            resize: vertical;
+        }
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #2563eb;
+        }
+        button:disabled {
+            background-color: #475569;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 1.5rem;
+        }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .status-success {
+            background-color: #16a34a;
+            color: white;
+        }
+        .status-error {
+            background-color: #dc2626;
+            color: white;
+        }
+        pre {
+            background-color: #0f172a;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+        .templates {
+            margin-top: 1rem;
+        }
+        .template-btn {
+            background-color: #475569;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            width: auto;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        .template-btn:hover {
+            background-color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SoroScan Webhook Simulator</h1>
+        
+        <div class="grid">
+            <div class="card">
+                <h2 style="margin-bottom: 1rem;">Send Webhook</h2>
+                
+                <div class="form-group">
+                    <label for="targetUrl">Target URL</label>
+                    <input type="url" id="targetUrl" placeholder="https://example.com/webhook">
+                </div>
+                
+                <div class="form-group">
+                    <label for="secret">Secret (optional, for HMAC signing)</label>
+                    <input type="text" id="secret" placeholder="your-webhook-secret">
+                </div>
+                
+                <div class="form-group">
+                    <label for="signatureAlgorithm">Signature Algorithm</label>
+                    <select id="signatureAlgorithm">
+                        <option value="sha256">SHA256 (default)</option>
+                        <option value="sha1">SHA1</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="payload">Payload</label>
+                    <textarea id="payload"></textarea>
+                </div>
+                
+                <div class="templates">
+                    <button class="template-btn" onclick="loadTemplate('test')">Test Event</button>
+                    <button class="template-btn" onclick="loadTemplate('transfer')">Transfer Event</button>
+                    <button class="template-btn" onclick="loadTemplate('mint')">Mint Event</button>
+                </div>
+                
+                <button id="sendBtn" style="margin-top: 1rem;">Send Webhook</button>
+            </div>
+            
+            <div class="card">
+                <h2 style="margin-bottom: 1rem;">Response</h2>
+                <div id="responseContainer" class="result">
+                    <p style="color: #94a3b8;">Send a webhook to see the response</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const templates = {
+            test: {
+                event_type: 'test',
+                payload: { message: 'This is a test webhook' },
+                contract_id: 'CD6Y4V5B7C6Y4V5B7C6Y4V5B7',
+                timestamp: new Date().toISOString()
+            },
+            transfer: {
+                event_type: 'transfer',
+                payload: {
+                    from: 'GABC...',
+                    to: 'GDEF...',
+                    amount: '10000000',
+                    asset: 'native'
+                },
+                contract_id: 'CD6Y4V5B7C6Y4V5B7C6Y4V5B7',
+                timestamp: new Date().toISOString()
+            },
+            mint: {
+                event_type: 'mint',
+                payload: {
+                    to: 'GABC...',
+                    amount: '1000000000',
+                    asset: 'CA555555555555555555555555555555555555555'
+                },
+                contract_id: 'CD6Y4V5B7C6Y4V5B7C6Y4V5B7',
+                timestamp: new Date().toISOString()
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('payload').value = JSON.stringify(templates.test, null, 2);
+        });
+
+        function loadTemplate(name) {
+            document.getElementById('payload').value = JSON.stringify(templates[name], null, 2);
+        }
+
+        document.getElementById('sendBtn').addEventListener('click', async () => {
+            const targetUrl = document.getElementById('targetUrl').value;
+            const secret = document.getElementById('secret').value;
+            const signatureAlgorithm = document.getElementById('signatureAlgorithm').value;
+            let payload;
+            
+            try {
+                payload = JSON.parse(document.getElementById('payload').value);
+            } catch (e) {
+                alert('Invalid JSON payload');
+                return;
+            }
+
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+
+            try {
+                const response = await fetch('/api/send-webhook', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        targetUrl,
+                        payload,
+                        secret,
+                        signatureAlgorithm
+                    }),
+                });
+
+                const result = await response.json();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ success: false, error: error.message });
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send Webhook';
+            }
+        });
+
+        function displayResult(result) {
+            const container = document.getElementById('responseContainer');
+            
+            if (result.success) {
+                container.innerHTML = `
+                    <div class="result-header">
+                    <div>
+                        <span class="status-badge ${result.status >= 200 && result.status < 300 ? 'status-success' : 'status-error'}">
+                            ${result.status} ${result.statusText}
+                        </span>
+                        <span style="margin-left: 1rem; color: #94a3b8;">${result.time}ms</span>
+                    </div>
+                    </div>
+                    <h3 style="margin-bottom: 0.5rem;">Headers</h3>
+                    <pre>${JSON.stringify(result.headers, null, 2)}</pre>
+                    <h3 style="margin-bottom: 0.5rem; margin-top: 1rem;">Body</h3>
+                    <pre>${result.body}</pre>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="result-header">
+                        <span class="status-badge status-error">Error</span>
+                    </div>
+                    <pre>${result.error}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

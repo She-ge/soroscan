@@ -4,6 +4,38 @@ SoroScan handles a high-volume, write-heavy ingestion workload by continually pu
 
 This document describes the recommended database tuning configurations for optimizing write-throughput, smoothing out checkpoint spikes, and speeding up index execution.
 
+## Application Connection Pool
+
+SoroScan derives its connection target from process concurrency:
+
+`max connections = min(DB_POOL_HARD_LIMIT, WEB_CONCURRENCY × DB_CONNECTIONS_PER_WORKER)`
+
+The defaults produce a target range of 2–16 connections for four Gunicorn
+workers, and automatically increase as the deployment scales. PostgreSQL must
+reserve capacity for migrations, Celery, and administration; keep
+`DB_POOL_HARD_LIMIT` below the database server's `max_connections`.
+
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `WEB_CONCURRENCY` | `4` | Number of API worker processes |
+| `DB_CONNECTIONS_PER_WORKER` | `4` | Connection budget per worker |
+| `DB_POOL_MIN_SIZE` | `2` | Warm connection target |
+| `DB_POOL_HARD_LIMIT` | `40` | Safety cap during scale-out |
+| `DB_CONNECT_TIMEOUT` | `5` | Seconds allowed to establish a connection |
+| `DB_CONN_MAX_AGE` | `300` | Recycle persistent Django connections after five minutes |
+
+`CONN_HEALTH_CHECKS` is enabled so recycled connections are checked before
+reuse. In larger deployments, point `DATABASE_URL` at PgBouncer in transaction
+mode and apply the calculated maximum there.
+
+Prometheus exports:
+
+- `soroscan_db_pool_connections{state="total|active|idle|wait_queue"}`
+- `soroscan_db_pool_configured_limit{limit="min|max"}`
+
+Alert when active connections exceed 80% of the configured maximum or when
+`wait_queue` remains non-zero.
+
 ---
 
 ## Recommended Base Parameters (Target: 8GB RAM System)

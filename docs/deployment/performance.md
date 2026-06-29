@@ -1,5 +1,6 @@
 ---
-id: deployment/performance
+slug: /deployment/performance
+
 title: Performance Tuning & Load Testing
 description: DB optimizations, caching, connection pooling, and benchmarking methodology.
 sidebar_label: Performance

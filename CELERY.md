@@ -71,6 +71,9 @@ celery -A soroscan worker -Q backfill --concurrency=4 --loglevel=info
 - **CPU-bound tasks** (event decoding, aggregation): concurrency = CPU count.
 - Use `--max-tasks-per-child=500` to reclaim memory from long-running workers.
 - Monitor queue depths via `celery -A soroscan inspect active_queues` or the `/api/health/workers/` endpoint.
+- Prometheus metrics are emitted for active/completed/failed tasks, duration,
+  worker status, and Redis queue depth. Import
+  `k8s/grafana-templates/celery-task-queue.json` for the status dashboard.
 
 ---
 

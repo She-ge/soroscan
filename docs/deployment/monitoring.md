@@ -1,5 +1,6 @@
 ---
-id: deployment/monitoring
+slug: /deployment/monitoring
+
 title: Monitoring & Observability
 description: Prometheus, Grafana, logging, alerting, and SLOs for SoroScan.
 sidebar_label: Monitoring
@@ -22,6 +23,9 @@ This page explains how to monitor SoroScan in production: metrics, dashboards, l
 - `celery_task_duration_seconds` (latency of ingest tasks)
 - `events_indexed_total` and `events_indexed_rate`
 - `webhook_delivery_success_total` and `webhook_delivery_failure_total`
+- `soroscan_db_pool_connections` and `soroscan_db_pool_configured_limit`
+- `soroscan_celery_queue_depth`, `soroscan_celery_tasks_active`,
+  `soroscan_celery_tasks_total`, and `soroscan_celery_task_duration_seconds`
 
 ## Grafana dashboards
 - Import `k8s/grafana-dashboard.json` as a starting point.
@@ -44,6 +48,17 @@ This page explains how to monitor SoroScan in production: metrics, dashboards, l
   - DB connection saturation: connections > 80% of max
   - Celery queue backlog: pending tasks > threshold
   - Webhook failure spikes: failure rate increased by 5x
+
+Apply the checked-in SLA rules with:
+
+```bash
+kubectl apply -f k8s/prometheus-rules.yaml
+```
+
+The warning API alert fires above 1% 5xx responses for five minutes; the
+critical alert fires above 5% for two minutes. Both include the service label
+and a PromQL root-cause query grouped by view and error type. Celery alerts
+cover queue depth above 100 and task failure rate above 5%.
 
 ## Incident escalation
 - Configure Alertmanager to send critical alerts to PagerDuty or Slack.

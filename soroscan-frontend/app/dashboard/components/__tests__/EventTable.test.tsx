@@ -43,7 +43,7 @@ describe("EventTable", () => {
     mockOnEventClick.mockClear();
     mockOnToggleSelect.mockClear();
     mockOnToggleSelectAll.mockClear();
-    // Mock clipboard API
+
     Object.assign(navigator, {
       clipboard: {
         writeText: jest.fn(() => Promise.resolve()),
@@ -63,32 +63,26 @@ describe("EventTable", () => {
           loading={true}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      // Check that skeleton rows are rendered
-      const skeletonRows = container.querySelectorAll("tbody tr");
-      expect(skeletonRows.length).toBe(5);
-
-      // Check that skeleton elements exist
-      const skeletons = container.querySelectorAll(".skeleton");
-      expect(skeletons.length).toBeGreaterThan(0);
+      expect(container.querySelectorAll("tbody tr")).toHaveLength(5);
+      expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
     });
 
-    it("skeleton matches table structure with 7 columns (including checkbox)", () => {
+    it("skeleton matches table structure with 7 columns including checkbox", () => {
       const { container } = render(
         <EventTable
           events={[]}
           loading={true}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
       const firstRow = container.querySelector("tbody tr");
       const cells = firstRow?.querySelectorAll("td");
 
-      // Should have 7 columns: Checkbox, Contract, Type, Ledger, Time, Transaction, Actions
       expect(cells?.length).toBe(7);
     });
 
@@ -99,19 +93,14 @@ describe("EventTable", () => {
           loading={true}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
       const firstRow = container.querySelector("tbody tr");
       const skeletons = firstRow?.querySelectorAll(".skeleton");
 
-      // 7 skeleton cells: checkbox + Contract + Type + Ledger + Time + Tx + Actions
       expect(skeletons?.length).toBe(7);
-
-      // Contract column skeleton (index 1, after checkbox)
       expect(skeletons?.[1]).toHaveStyle({ width: "120px" });
-
-      // Type column skeleton (pill-shaped)
       expect(skeletons?.[2]).toHaveStyle({ borderRadius: "12px" });
     });
 
@@ -122,11 +111,10 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      const skeletons = container.querySelectorAll(".skeleton");
-      expect(skeletons.length).toBe(0);
+      expect(container.querySelectorAll(".skeleton")).toHaveLength(0);
     });
 
     it("transitions smoothly from skeleton to content", () => {
@@ -136,29 +124,22 @@ describe("EventTable", () => {
           loading={true}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      // Initially shows skeleton
-      let skeletons = container.querySelectorAll(".skeleton");
-      expect(skeletons.length).toBeGreaterThan(0);
+      expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
 
-      // Rerender with data
       rerender(
         <EventTable
           events={mockEvents}
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      // Skeleton should be gone
-      skeletons = container.querySelectorAll(".skeleton");
-      expect(skeletons.length).toBe(0);
-
-      // Content should be visible (check for shortened contract ID)
-      expect(screen.getByText(/CCAAA/)).toBeInTheDocument();
+      expect(container.querySelectorAll(".skeleton")).toHaveLength(0);
+      expect(screen.getAllByText(/CCAAA/).length).toBeGreaterThan(0);
     });
   });
 
@@ -170,14 +151,13 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      // Check for shortened contract IDs (not full names)
-      expect(screen.getByText(/CCAAA/)).toBeInTheDocument();
-      expect(screen.getByText(/CCBBB/)).toBeInTheDocument();
-      expect(screen.getByText("transfer")).toBeInTheDocument();
-      expect(screen.getByText("swap")).toBeInTheDocument();
+      expect(screen.getAllByText(/CCAAA/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/CCBBB/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText("transfer").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("swap").length).toBeGreaterThan(0);
     });
 
     it("shows empty state when no events and not loading", () => {
@@ -187,7 +167,7 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
       expect(screen.getByText(/No events found/i)).toBeInTheDocument();
@@ -200,7 +180,7 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
       const viewButtons = screen.getAllByRole("button", { name: /view/i });
@@ -216,11 +196,10 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      const copyButtons = screen.getAllByTitle("Copy contract ID");
-      fireEvent.click(copyButtons[0]);
+      fireEvent.click(screen.getAllByTitle("Copy contract ID")[0]);
 
       await waitFor(() => {
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith("CCAAA123");
@@ -234,11 +213,10 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      const copyButtons = screen.getAllByTitle("Copy transaction hash");
-      fireEvent.click(copyButtons[0]);
+      fireEvent.click(screen.getAllByTitle("Copy transaction hash")[0]);
 
       await waitFor(() => {
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith("abc123");
@@ -247,13 +225,14 @@ describe("EventTable", () => {
 
     it("shows checkmark after successful copy", async () => {
       jest.useFakeTimers();
+
       render(
         <EventTable
           events={mockEvents}
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
       const copyButtons = screen.getAllByTitle("Copy contract ID");
@@ -263,7 +242,6 @@ describe("EventTable", () => {
         expect(copyButtons[0]).toHaveTextContent("✓");
       });
 
-      // After 2 seconds, should revert to clipboard icon
       await act(async () => {
         jest.advanceTimersByTime(2000);
       });
@@ -280,28 +258,94 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      const eventRow = container.querySelector("tbody tr");
-      expect(eventRow).toHaveStyle({ cursor: "pointer" });
+      expect(container.querySelector("tbody tr")).toHaveStyle({
+        cursor: "pointer",
+      });
     });
   });
 
-  describe("Multi-select (issue #569)", () => {
-    it("renders a checkbox in each event row", () => {
+  describe("Responsive Card Grid", () => {
+    it("renders a mobile card grid for events", () => {
       render(
         <EventTable
           events={mockEvents}
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      // One checkbox per row + one in header = 3 total
+      expect(screen.getByTestId("events-card-grid")).toBeInTheDocument();
+      expect(screen.getAllByTestId("event-card")).toHaveLength(2);
+    });
+
+    it("shows event information in mobile cards", () => {
+      render(
+        <EventTable
+          events={mockEvents}
+          loading={false}
+          onEventClick={mockOnEventClick}
+          {...defaultMultiSelectProps}
+        />,
+      );
+
+      const cards = screen.getAllByTestId("event-card");
+
+      expect(cards[0]).toHaveTextContent("transfer");
+      expect(cards[0]).toHaveTextContent("CCAAA123");
+      expect(cards[0]).toHaveTextContent("1000");
+      expect(cards[0]).toHaveTextContent("abc123");
+    });
+
+    it("opens event details when a mobile card is clicked", () => {
+      render(
+        <EventTable
+          events={mockEvents}
+          loading={false}
+          onEventClick={mockOnEventClick}
+          {...defaultMultiSelectProps}
+        />,
+      );
+
+      fireEvent.click(screen.getAllByTestId("event-card")[0]);
+
+      expect(mockOnEventClick).toHaveBeenCalledWith(mockEvents[0]);
+    });
+
+    it("opens event details from keyboard on a mobile card", () => {
+      render(
+        <EventTable
+          events={mockEvents}
+          loading={false}
+          onEventClick={mockOnEventClick}
+          {...defaultMultiSelectProps}
+        />,
+      );
+
+      fireEvent.keyDown(screen.getAllByTestId("event-card")[0], {
+        key: "Enter",
+      });
+
+      expect(mockOnEventClick).toHaveBeenCalledWith(mockEvents[0]);
+    });
+  });
+
+  describe("Multi-select (issue #569)", () => {
+    it("renders one table checkbox per event row plus the header checkbox", () => {
+      render(
+        <EventTable
+          events={mockEvents}
+          loading={false}
+          onEventClick={mockOnEventClick}
+          {...defaultMultiSelectProps}
+        />,
+      );
+
       const checkboxes = screen.getAllByRole("checkbox");
-      expect(checkboxes.length).toBe(mockEvents.length + 1); // rows + header
+      expect(checkboxes).toHaveLength(mockEvents.length + 1);
     });
 
     it("calls onToggleSelect when a row checkbox is clicked", () => {
@@ -311,11 +355,12 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      const rowCheckboxes = screen.getAllByRole("checkbox").slice(1); // exclude header
-      fireEvent.click(rowCheckboxes[0]);
+      const checkbox = screen.getAllByLabelText("Select event 1")[0];
+      fireEvent.click(checkbox);
+
       expect(mockOnToggleSelect).toHaveBeenCalledWith("1");
     });
 
@@ -326,11 +371,11 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      const headerCheckbox = screen.getByLabelText(/select all events/i);
-      fireEvent.click(headerCheckbox);
+      fireEvent.click(screen.getByLabelText(/select all events/i));
+
       expect(mockOnToggleSelectAll).toHaveBeenCalledTimes(1);
     });
 
@@ -343,11 +388,10 @@ describe("EventTable", () => {
           selectedIds={new Set(["1", "2"])}
           onToggleSelect={mockOnToggleSelect}
           onToggleSelectAll={mockOnToggleSelectAll}
-        />
+        />,
       );
 
-      const headerCheckbox = screen.getByLabelText(/deselect all events/i);
-      expect(headerCheckbox).toBeChecked();
+      expect(screen.getByLabelText(/deselect all events/i)).toBeChecked();
     });
 
     it("shows selected row with visual highlight class", () => {
@@ -359,13 +403,12 @@ describe("EventTable", () => {
           selectedIds={new Set(["1"])}
           onToggleSelect={mockOnToggleSelect}
           onToggleSelectAll={mockOnToggleSelectAll}
-        />
+        />,
       );
 
       const rows = container.querySelectorAll("tbody tr");
-      // First row should have the selectedRow class
+
       expect(rows[0].className).toMatch(/selectedRow/);
-      // Second row should NOT
       expect(rows[1].className).not.toMatch(/selectedRow/);
     });
   });
@@ -378,15 +421,11 @@ describe("EventTable", () => {
           loading={false}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
-      const table = screen.getByRole("table");
-      expect(table).toBeInTheDocument();
-
-      const headers = screen.getAllByRole("columnheader");
-      // Checkbox + Contract + Type + Ledger + Time + Transaction + Actions = 7
-      expect(headers).toHaveLength(7);
+      expect(screen.getByRole("table")).toBeInTheDocument();
+      expect(screen.getAllByRole("columnheader")).toHaveLength(7);
     });
 
     it("skeleton rows have unique keys", () => {
@@ -396,16 +435,12 @@ describe("EventTable", () => {
           loading={true}
           onEventClick={mockOnEventClick}
           {...defaultMultiSelectProps}
-        />
+        />,
       );
 
       const rows = container.querySelectorAll("tbody tr");
 
-      // Check that we have 5 skeleton rows
-      expect(rows.length).toBe(5);
-
-      // React keys are used internally and don't appear in DOM
-      // Just verify all rows are rendered
+      expect(rows).toHaveLength(5);
       rows.forEach((row) => {
         expect(row).toBeInTheDocument();
       });

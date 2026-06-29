@@ -18,6 +18,22 @@ pip install soroscan-sdk
 
 ## Quick Start
 
+### CLI
+
+Installing the package exposes the `soroscan` command:
+
+```bash
+export SOROSCAN_API_KEY="your-api-key"
+export SOROSCAN_BASE_URL="https://api.soroscan.io"
+
+soroscan events --contract CCAAA... --event-type transfer --limit 10
+soroscan events --contract CCAAA... --output json
+soroscan webhooks list
+soroscan webhooks test 1
+soroscan contracts list --search token
+soroscan contracts get 1 --output json
+```
+
 ### Synchronous Client
 
 ```python

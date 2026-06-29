@@ -8,6 +8,7 @@ from pathlib import Path
 
 import environ
 from django.core.exceptions import ImproperlyConfigured
+from soroscan.db_pool import calculate_pool_limits
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -104,11 +105,16 @@ ENABLE_SILK = env.bool("ENABLE_SILK", default=False)
 MIDDLEWARE = [
     # PrometheusBeforeMiddleware must be first to capture all requests.
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
+    "soroscan.middleware.GracefulShutdownMiddleware",
+    "soroscan.monitoring.ErrorRateMetricsMiddleware",
     "soroscan.middleware.RequestBodySizeMiddleware",
     "soroscan.middleware.MaintenanceModeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "soroscan.cors_middleware.OrgCorsMiddleware",
     "soroscan.middleware.ReverseProxyFixedIPMiddleware",
+    "soroscan.middleware.ClientIPLoggingMiddleware",
+    "soroscan.middleware.CacheBustingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "soroscan.middleware.RequestIdMiddleware",
     "soroscan.middleware.PlatformVersionMiddleware",
@@ -116,6 +122,7 @@ MIDDLEWARE = [
     "soroscan.middleware.SlowQueryMiddleware",
     "soroscan.middleware.ApiDeprecationMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.gzip.GZipMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -158,6 +165,18 @@ DATABASES = {
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
     ),
 }
+DB_POOL_MIN_SIZE, DB_POOL_MAX_SIZE = calculate_pool_limits()
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=300)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    DATABASES["default"].setdefault("OPTIONS", {}).update(
+        {
+            "connect_timeout": env.int("DB_CONNECT_TIMEOUT", default=5),
+            "application_name": env(
+                "DB_APPLICATION_NAME", default="soroscan-backend"
+            ),
+        }
+    )
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -240,8 +259,29 @@ REST_FRAMEWORK = {
 # Spectacular Settings
 SPECTACULAR_SETTINGS = {
     "TITLE": "SoroScan API",
-    "DESCRIPTION": "REST API documentation for SoroScan, a Stellar Soroban smart contract indexer.",
-    "VERSION": "1.0.0",
+    "DESCRIPTION": (
+        "REST API documentation for SoroScan — a developer-focused indexing service "
+        "for Soroban smart contract events on the Stellar blockchain. Provides endpoints "
+        "for querying indexed events, managing tracked contracts, configuring webhooks, "
+        "and monitoring ingest health."
+    ),
+    "VERSION": SOFTWARE_VERSION,
+    # Exclude the schema endpoint itself from the generated schema
+    "SERVE_INCLUDE_SCHEMA": False,
+    # Split request/response components for cleaner schema output
+    "COMPONENT_SPLIT_REQUEST": True,
+    # Contact and license info
+    "CONTACT": {"name": "SoroScan", "url": "https://github.com/SoroScan/soroscan"},
+    "LICENSE": {"name": "MIT"},
+    # Tags for logical grouping in Swagger UI
+    "TAGS": [
+        {"name": "contracts", "description": "Tracked contract management"},
+        {"name": "events", "description": "Indexed contract event queries"},
+        {"name": "webhooks", "description": "Webhook subscription management"},
+        {"name": "ingest", "description": "Event ingestion and indexing"},
+        {"name": "analytics", "description": "Cost, rate-limit, and error analytics"},
+        {"name": "admin", "description": "Staff-only administrative endpoints"},
+    ],
 }
 
 # Simple JWT Settings
@@ -278,6 +318,9 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+# Graceful shutdown: wait up to 30s for active tasks after SIGTERM
+CELERY_WORKER_SOFT_SHUTDOWN_TIMEOUT = 30
+SHUTDOWN_TIMEOUT_SECONDS = env.int("SHUTDOWN_TIMEOUT_SECONDS", default=30)
 CELERY_TASK_ROUTES = {
     "ingest.tasks.ingest_latest_events": {"queue": "high_priority"},
     "ingest.tasks.dispatch_webhook": {"queue": "default"},
@@ -409,6 +452,18 @@ GRAPHQL_INTROSPECTION_ENABLED = env.bool(
     default=DEBUG,
 )
 
+# Maximum allowed GraphQL query complexity score (see soroscan.graphql_complexity).
+GRAPHQL_MAX_COMPLEXITY = env.int("GRAPHQL_MAX_COMPLEXITY", default=1000)
+
+# N+1 query detection (issue #490) — enabled by default in DEBUG, disabled in production.
+GRAPHQL_N1_DETECTION_ENABLED = env.bool(
+    "GRAPHQL_N1_DETECTION_ENABLED",
+    default=DEBUG,
+)
+
+# Ed25519 seed (32 bytes hex) for webhook X-Signature headers.
+WEBHOOK_ED25519_SIGNING_SEED = env("WEBHOOK_ED25519_SIGNING_SEED", default="")
+
 # Prometheus
 # Expose the /metrics endpoint without authentication.
 # The URL is registered in urls.py via django_prometheus.urls.
@@ -480,6 +535,16 @@ LOGGING["loggers"]["django.performance.database"] = {
     "level": "WARNING",
     "propagate": False,
 }
+LOGGING["loggers"]["soroscan.graphql.n1_detection"] = {
+    "handlers": ["console"],
+    "level": "WARNING",
+    "propagate": False,
+}
+LOGGING["loggers"]["soroscan.graphql"] = {
+    "handlers": ["console"],
+    "level": env("GRAPHQL_RESOLVER_LOG_LEVEL", default="INFO"),
+    "propagate": False,
+}
 
 # ---------------------------------------------------------------------------
 # Security audit logger — admin login success / failure events
@@ -494,6 +559,15 @@ LOGGING["handlers"]["security_audit"] = {
 }
 LOGGING["loggers"]["soroscan.security_audit"] = {
     "handlers": ["security_audit", "console"],
+    "level": "INFO",
+    "propagate": False,
+}
+
+# ---------------------------------------------------------------------------
+# IP access logger — client IP, method, and path for every API request
+# ---------------------------------------------------------------------------
+LOGGING["loggers"]["soroscan.ip_access"] = {
+    "handlers": ["console"],
     "level": "INFO",
     "propagate": False,
 }
@@ -576,3 +650,10 @@ DEPRECATED_ENDPOINTS = {
         "replacement": "/graphql/"
     }
 }
+
+if 'test' in sys.argv:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    }

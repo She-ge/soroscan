@@ -35,6 +35,7 @@ describe("Dashboard Components", () => {
   describe("PaginationControls", () => {
     it("renders pagination controls with correct page info", () => {
       const mockOnPageChange = jest.fn();
+      const mockOnPageSizeChange = jest.fn();
       
       render(
         <PaginationControls
@@ -45,6 +46,8 @@ describe("Dashboard Components", () => {
           startIndex={21}
           endIndex={40}
           totalCount={100}
+          pageSize={25}
+          onPageSizeChange={mockOnPageSizeChange}
         />
       );
 
@@ -54,6 +57,7 @@ describe("Dashboard Components", () => {
 
     it("disables previous button on first page", () => {
       const mockOnPageChange = jest.fn();
+      const mockOnPageSizeChange = jest.fn();
       
       render(
         <PaginationControls
@@ -62,8 +66,10 @@ describe("Dashboard Components", () => {
           hasPrev={false}
           onPageChange={mockOnPageChange}
           startIndex={1}
-          endIndex={20}
+          endIndex={25}
           totalCount={100}
+          pageSize={25}
+          onPageSizeChange={mockOnPageSizeChange}
         />
       );
 
@@ -73,6 +79,7 @@ describe("Dashboard Components", () => {
 
     it("disables next button when no more pages", () => {
       const mockOnPageChange = jest.fn();
+      const mockOnPageSizeChange = jest.fn();
       
       render(
         <PaginationControls
@@ -83,6 +90,8 @@ describe("Dashboard Components", () => {
           startIndex={81}
           endIndex={100}
           totalCount={100}
+          pageSize={25}
+          onPageSizeChange={mockOnPageSizeChange}
         />
       );
 
@@ -92,6 +101,7 @@ describe("Dashboard Components", () => {
 
     it("calls onPageChange when clicking next", () => {
       const mockOnPageChange = jest.fn();
+      const mockOnPageSizeChange = jest.fn();
       
       render(
         <PaginationControls
@@ -102,6 +112,8 @@ describe("Dashboard Components", () => {
           startIndex={21}
           endIndex={40}
           totalCount={100}
+          pageSize={25}
+          onPageSizeChange={mockOnPageSizeChange}
         />
       );
 
@@ -113,6 +125,7 @@ describe("Dashboard Components", () => {
 
     it("calls onPageChange when clicking previous", () => {
       const mockOnPageChange = jest.fn();
+      const mockOnPageSizeChange = jest.fn();
       
       render(
         <PaginationControls
@@ -123,6 +136,8 @@ describe("Dashboard Components", () => {
           startIndex={21}
           endIndex={40}
           totalCount={100}
+          pageSize={25}
+          onPageSizeChange={mockOnPageSizeChange}
         />
       );
 
@@ -134,6 +149,7 @@ describe("Dashboard Components", () => {
 
     it("calls onPageChange with page 1 when clicking first", () => {
       const mockOnPageChange = jest.fn();
+      const mockOnPageSizeChange = jest.fn();
       
       render(
         <PaginationControls
@@ -144,6 +160,8 @@ describe("Dashboard Components", () => {
           startIndex={81}
           endIndex={100}
           totalCount={200}
+          pageSize={25}
+          onPageSizeChange={mockOnPageSizeChange}
         />
       );
 
@@ -151,6 +169,62 @@ describe("Dashboard Components", () => {
       fireEvent.click(firstButton);
       
       expect(mockOnPageChange).toHaveBeenCalledWith(1);
+    });
+
+    it("renders page size selector dropdown with options", () => {
+      const mockOnPageChange = jest.fn();
+      const mockOnPageSizeChange = jest.fn();
+      
+      render(
+        <PaginationControls
+          currentPage={1}
+          hasNext={true}
+          hasPrev={false}
+          onPageChange={mockOnPageChange}
+          startIndex={1}
+          endIndex={25}
+          totalCount={100}
+          pageSize={25}
+          onPageSizeChange={mockOnPageSizeChange}
+        />
+      );
+
+      const dropdown = screen.getByRole("combobox");
+      expect(dropdown).toBeInTheDocument();
+      
+      fireEvent.click(dropdown);
+      
+      expect(screen.getByRole("option", { name: "10 per page" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "25 per page" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "50 per page" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "100 per page" })).toBeInTheDocument();
+    });
+
+    it("calls onPageSizeChange when selecting a new page size", () => {
+      const mockOnPageChange = jest.fn();
+      const mockOnPageSizeChange = jest.fn();
+      
+      render(
+        <PaginationControls
+          currentPage={1}
+          hasNext={true}
+          hasPrev={false}
+          onPageChange={mockOnPageChange}
+          startIndex={1}
+          endIndex={25}
+          totalCount={100}
+          pageSize={25}
+          onPageSizeChange={mockOnPageSizeChange}
+        />
+      );
+
+      const dropdown = screen.getByRole("combobox");
+      fireEvent.click(dropdown);
+      
+      const option50 = screen.getByRole("option", { name: "50 per page" });
+      fireEvent.click(option50);
+      
+      expect(mockOnPageSizeChange).toHaveBeenCalledWith(50);
     });
   });
 });

@@ -2,6 +2,17 @@
 
 Official SDKs for the SoroScan API - Stellar/Soroban event indexing.
 
+## Strict type verification
+
+```bash
+cd typescript && npm run typecheck
+cd ../python && python -m mypy soroscan
+```
+
+The TypeScript SDK enables `strict`, `strictNullChecks`, and
+`noUncheckedIndexedAccess`, and contains no explicit `any` types. The Python
+SDK uses mypy strict mode and requires annotations for every function.
+
 ## Available SDKs
 
 ### Python SDK

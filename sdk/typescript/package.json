@@ -40,10 +40,14 @@
     "build:cjs:rename": "node scripts/rename-cjs.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:pact": "vitest run test/pact",
     "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --strict --strictNullChecks",
     "prepublishOnly": "npm run build && npm test"
   },
   "devDependencies": {
+    "@pact-foundation/pact": "^13.2.0",
+    "@types/node": "^22.0.0",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   },

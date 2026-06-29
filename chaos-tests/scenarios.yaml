@@ -1,0 +1,48 @@
+scenarios:
+  - name: pod_termination
+    description: Delete one backend pod and verify readiness recovers.
+    namespace: soroscan
+    selector: app=soroscan-backend
+    action:
+      type: pod_termination
+    recovery:
+      url: http://127.0.0.1:8000/ready/
+      timeout_seconds: 120
+
+  - name: network_latency
+    description: Inject traffic-control latency into backend pods.
+    namespace: soroscan
+    selector: app=soroscan-backend
+    action:
+      type: network_latency
+      latency_ms: 250
+      duration_seconds: 30
+    recovery:
+      url: http://127.0.0.1:8000/api/ingest/health/
+      timeout_seconds: 120
+
+  - name: memory_exhaustion
+    description: Apply a temporary low memory limit and verify graceful recovery.
+    namespace: soroscan
+    selector: app=soroscan-backend
+    action:
+      type: memory_exhaustion
+      deployment: soroscan-backend
+      memory_limit: 128Mi
+      duration_seconds: 30
+    recovery:
+      url: http://127.0.0.1:8000/ready/
+      timeout_seconds: 120
+
+  - name: cpu_throttling
+    description: Apply a temporary low CPU limit and verify graceful recovery.
+    namespace: soroscan
+    selector: app=soroscan-backend
+    action:
+      type: cpu_throttling
+      deployment: soroscan-backend
+      cpu_limit: 100m
+      duration_seconds: 30
+    recovery:
+      url: http://127.0.0.1:8000/api/ingest/health/
+      timeout_seconds: 120

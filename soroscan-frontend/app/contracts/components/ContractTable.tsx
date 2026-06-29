@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Star } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,22 +14,28 @@ import {
 import { Button } from "@/components/terminal/Button";
 import type { Contract } from "@/components/ingest/contract-types";
 import { ContractEmptyState } from "./ContractEmptyState";
-import { EventCountBadge } from "@/components/ui/EventCountBadge";
+import { useFavorites } from "@/lib/hooks/useFavorites";
 
 interface ContractTableProps {
   contracts: Contract[];
   onDelete: (id: string) => void;
   onRegister: () => void;
+  showFavoritesOnly?: boolean;
 }
 
-export function ContractTable({ contracts, onDelete, onRegister }: ContractTableProps) {
+export function ContractTable({ contracts, onDelete, onRegister, showFavoritesOnly = false }: ContractTableProps) {
   const router = useRouter();
+  const { isFavorite, toggleFavorite } = useFavorites();
+
+  const filteredContracts = showFavoritesOnly
+    ? contracts.filter((contract) => isFavorite(contract.id))
+    : contracts;
 
   const handleRowClick = (id: string) => {
     router.push(`/contracts/${id}`);
   };
 
-  if (contracts.length === 0) {
+  if (filteredContracts.length === 0) {
     return <ContractEmptyState onRegister={onRegister} />;
   }
 
@@ -36,17 +43,12 @@ export function ContractTable({ contracts, onDelete, onRegister }: ContractTable
     <>
       {/* ── Mobile card view (< 640px) ── */}
       <div className="flex flex-col gap-3 sm:hidden">
-        {contracts.map((contract) => (
+        {filteredContracts.map((contract) => (
           <div
             key={contract.id}
             onClick={() => handleRowClick(contract.id)}
-            className="relative cursor-pointer border border-terminal-green/20 bg-terminal-green/5 p-4 flex flex-col gap-3"
+            className="cursor-pointer border border-terminal-green/20 bg-terminal-green/5 p-4 flex flex-col gap-3"
           >
-            <EventCountBadge
-              contractId={contract.contractId}
-              initialCount={contract.eventCount}
-              className="absolute top-4 right-28"
-            />
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-xs text-terminal-cyan uppercase mb-1">Contract ID</div>
@@ -54,22 +56,40 @@ export function ContractTable({ contracts, onDelete, onRegister }: ContractTable
                   {contract.contractId.slice(0, 8)}...
                 </div>
               </div>
-              <span
-                className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-mono ${
-                  contract.status === "active"
-                    ? "text-terminal-green border border-terminal-green/30 bg-terminal-green/10"
-                    : "text-terminal-gray border border-terminal-gray/30 bg-terminal-gray/10"
-                }`}
-              >
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(contract.id);
+                  }}
+                  className="focus:outline-none"
+                >
+                  <Star
+                    size={20}
+                    className={
+                      isFavorite(contract.id)
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-terminal-gray hover:text-yellow-400"
+                    }
+                  />
+                </button>
                 <span
-                  className={`w-2 h-2 rounded-full ${
+                  className={`inline-flex items-center gap-2 px-2 py-1 text-xs font-mono ${
                     contract.status === "active"
-                      ? "bg-terminal-green animate-pulse"
-                      : "bg-terminal-gray"
+                      ? "text-terminal-green border border-terminal-green/30 bg-terminal-green/10"
+                      : "text-terminal-gray border border-terminal-gray/30 bg-terminal-gray/10"
                   }`}
-                />
-                {contract.status.toUpperCase()}
-              </span>
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      contract.status === "active"
+                        ? "bg-terminal-green animate-pulse"
+                        : "bg-terminal-gray"
+                    }`}
+                  />
+                  {contract.status.toUpperCase()}
+                </span>
+              </div>
             </div>
 
             <div>
@@ -120,6 +140,7 @@ export function ContractTable({ contracts, onDelete, onRegister }: ContractTable
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10"></TableHead>
               <TableHead>Contract ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Status</TableHead>
@@ -129,12 +150,30 @@ export function ContractTable({ contracts, onDelete, onRegister }: ContractTable
             </TableRow>
           </TableHeader>
           <TableBody>
-            {contracts.map((contract) => (
+            {filteredContracts.map((contract) => (
               <TableRow
                 key={contract.id}
                 onClick={() => handleRowClick(contract.id)}
                 className="cursor-pointer"
               >
+                <TableCell>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(contract.id);
+                    }}
+                    className="focus:outline-none"
+                  >
+                    <Star
+                      size={20}
+                      className={
+                        isFavorite(contract.id)
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-terminal-gray hover:text-yellow-400"
+                      }
+                    />
+                  </button>
+                </TableCell>
                 <TableCell className="font-mono text-terminal-cyan">
                   {contract.contractId.slice(0, 8)}...
                 </TableCell>
@@ -157,12 +196,7 @@ export function ContractTable({ contracts, onDelete, onRegister }: ContractTable
                     {contract.status.toUpperCase()}
                   </span>
                 </TableCell>
-                <TableCell className="font-mono">
-                  <EventCountBadge
-                    contractId={contract.contractId}
-                    initialCount={contract.eventCount}
-                  />
-                </TableCell>
+                <TableCell className="font-mono">{contract.eventCount.toLocaleString()}</TableCell>
                 <TableCell>
                   <div className="flex gap-1 flex-wrap">
                     {contract.tags?.slice(0, 3).map((tag) => (

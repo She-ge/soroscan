@@ -310,9 +310,9 @@ class APIKeyThrottleTests(TestCase):
         view.kwargs = {}
         throttle.allow_request(request, view)
         headers = getattr(request, "_api_key_throttle_headers", {})
-        self.assertIn("X-RateLimit-Limit", headers)
-        self.assertIn("X-RateLimit-Remaining", headers)
-        self.assertIn("X-RateLimit-Reset", headers)
+        self.assertIn("RateLimit-Limit", headers)
+        self.assertIn("RateLimit-Remaining", headers)
+        self.assertIn("RateLimit-Reset", headers)
 
     def test_key_from_query_param(self):
         from soroscan.throttles import APIKeyThrottle
@@ -363,12 +363,12 @@ class SlowQueryMiddlewareTests(TestCase):
         mw = SlowQueryMiddleware(get_response)
         request = RequestFactory().get("/")
         request._api_key_throttle_headers = {
-            "X-RateLimit-Limit": "50",
-            "X-RateLimit-Remaining": "49",
-            "X-RateLimit-Reset": "3600",
+            "RateLimit-Limit": "50",
+            "RateLimit-Remaining": "49",
+            "RateLimit-Reset": "3600",
         }
         response = mw(request)
-        self.assertEqual(response.get("X-RateLimit-Limit"), "50")
+        self.assertEqual(response.get("RateLimit-Limit"), "50")
 
     @patch("soroscan.middleware.slow_query_logger")
     def test_logs_slow_query_with_params(self, mock_logger):

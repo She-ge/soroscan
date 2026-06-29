@@ -1,245 +1,224 @@
-# Webhook Tester - Enhanced Testing Interface
+# Webhook Payload Builder
 
-A comprehensive webhook testing tool for SoroScan with request/response inspection, retry functionality, and timing analysis.
+A comprehensive UI for building, validating, and testing webhook payloads with real-time schema validation and interactive templates.
 
 ## Features
 
-### Core Features
-- 🎯 **Webhook Selection**: Browse and select from available webhooks
-- ✏️ **Payload Editing**: Edit JSON payloads with syntax highlighting
-- 📤 **Test Sending**: Send test requests to webhook endpoints
-- 📊 **Response Inspection**: View response body, headers, and request details
-- 🔄 **Retry Functionality**: Retry requests with the same payload
-- 📜 **History Tracking**: View and replay past requests
+### 1. **JSON Editor with Syntax Highlighting**
+- Real-time syntax highlighting for JSON
+- Line numbers and character count
+- Format and reset functionality
+- Synchronized scrolling between editor and highlight overlay
 
-### Advanced Features
-- ⏱️ **Timing Breakdown**: See request timing information
-- 🔍 **Request Inspection**: View all request headers sent
-- 🎨 **Syntax Highlighting**: Color-coded JSON editing
-- ⚠️ **Error Handling**: Clear error messages with retry options
-- 💾 **History Management**: Keep last 50 requests
+### 2. **Schema Validation**
+- Real-time validation against predefined schemas
+- Detailed error messages for validation failures
+- Visual indicators for valid/invalid payloads
+- Type checking for all fields
+- Required field validation
+
+### 3. **Template System**
+- Quick templates for common event types:
+  - Test Event
+  - Transfer Event
+  - Mint Event
+  - Burn Event
+  - Custom Event
+- Searchable template selector
+- One-click template application
+- Auto-detection of event type from payload
+
+### 4. **Schema Viewer**
+- Interactive schema documentation
+- Expandable/collapsible property tree
+- Field descriptions and examples
+- Type information and constraints
+- Required field indicators
+
+### 5. **Visual Payload Builder**
+- Form-based payload construction
+- Type-appropriate input fields:
+  - Text inputs for strings
+  - Number inputs for numbers
+  - Checkboxes for booleans
+  - Date-time pickers for timestamps
+  - Dropdowns for enums
+  - Textareas for objects
+- Nested object support
+- Auto-population with example values
+- "Use Current Time" quick action
+
+### 6. **Send Test Payload**
+- Send test webhooks to configured endpoints
+- HMAC signature generation
+- Request/response inspection
+- Retry functionality
+- Request history tracking
 
 ## Usage
 
-### Basic Workflow
+### Selecting a Template
 
-1. **Select Webhook**
-   - Click on a webhook in the left sidebar
-   - Payload auto-fills with webhook's contract_id and event_type
+1. Click the **Templates** button in the toolbar
+2. Search or browse available templates
+3. Click on a template to apply it to the editor
+4. The payload will be populated with example data
 
-2. **Edit Payload**
-   - Modify JSON in the editor
-   - Use "Format" button to auto-format
-   - Use "Reset" button to restore default
+### Viewing Schema Documentation
 
-3. **Send Test**
-   - Click "Send Test" button
-   - Wait for response
-   - View results in bottom panel
+1. Select a template or ensure your payload has an `event_type` field
+2. Click the **Schema** button in the toolbar
+3. Browse the schema properties, types, and descriptions
+4. Click on nested objects to expand/collapse them
 
-4. **Inspect Response**
-   - Click "Response Body" tab to see response
-   - Click "Response Headers" tab to see headers
-   - Click "Request" tab to see request details
+### Using the Visual Builder
 
-5. **Retry Request**
-   - Click "↻ Retry" button to resend
-   - Or click "Retry Request" on error
-   - Same payload and webhook used
+1. Click the **Builder** button in the toolbar
+2. Fill in the form fields with your desired values
+3. Use the "Use Current Time" button to set the timestamp to now
+4. Click **Apply** to update the JSON editor with your changes
 
-### Advanced Usage
+### Validating Your Payload
 
-#### View Request Details
-1. Send a test request
-2. Click "Request" tab in response viewer
-3. See request headers and timing
+1. Toggle validation on/off with the **Validate** button
+2. Validation runs automatically as you type
+3. View validation errors in the status bar and validation panel
+4. Fix errors based on the detailed error messages
 
-#### Replay from History
-1. Expand "History" panel at bottom
-2. Click on a previous request
-3. Payload and response loaded
-4. Click "↻ Retry" to resend
+### Sending a Test Webhook
 
-#### Handle Errors
-1. If request fails, error message shown
-2. Click "Retry Request" button
-3. Request resent automatically
-4. View new response
+1. Select a webhook from the sidebar
+2. Build or edit your payload
+3. Ensure validation passes (green checkmark)
+4. Click **Send Test** to dispatch the webhook
+5. View the response in the bottom panel
 
-## Architecture
+## Schema Structure
 
-### Components
+Each schema defines:
 
-```
-WebhookTesterPage
-├── WebhookSelector
-│   └── Lists available webhooks
-├── PayloadEditor
-│   ├── JSON editor with syntax highlighting
-│   ├── Format/Reset buttons
-│   └── Send/Retry buttons
-├── ResponseViewer
-│   ├── Response Body tab
-│   ├── Response Headers tab
-│   ├── Request tab (new)
-│   └── Retry button
-└── HistoryPanel
-    └── List of past requests
+```typescript
+interface PayloadSchema {
+  name: string;              // Display name
+  description: string;       // Schema description
+  eventType: string;         // Event type identifier
+  schema: {
+    type: 'object';
+    properties: {            // Field definitions
+      [key: string]: {
+        type: string;        // Field type
+        description?: string;
+        example?: any;
+        required?: boolean;
+        enum?: string[];
+        format?: string;
+      };
+    };
+    required: string[];      // Required field names
+  };
+  example: object;           // Example payload
+}
 ```
 
-### State Management
+## Adding Custom Schemas
 
-**Context**: `WebhookTesterContext`
-- Webhooks list
-- Selected webhook
-- Payload and validation
-- Response and errors
-- Request headers
-- History entries
-- Retry functionality
+To add a new schema, edit `schemas.ts` and add to the `WEBHOOK_SCHEMAS` array:
 
-**Key Functions**:
-- `sendTest()` - Send test request
-- `retryLastRequest()` - Retry last request
-- `selectHistoryEntry()` - Load history entry
+```typescript
+{
+  name: 'My Custom Event',
+  description: 'Description of the event',
+  eventType: 'my_custom_event',
+  schema: {
+    type: 'object',
+    properties: {
+      event_type: {
+        type: 'string',
+        example: 'my_custom_event',
+      },
+      // Add more properties...
+    },
+    required: ['event_type'],
+  },
+  example: {
+    event_type: 'my_custom_event',
+    // Add example data...
+  },
+}
+```
+
+## Components
+
+### `PayloadEditor.tsx`
+Main editor component with syntax highlighting and toolbar.
+
+### `TemplateSelector.tsx`
+Dropdown for selecting and applying payload templates.
+
+### `SchemaValidator.tsx`
+Real-time validation panel showing errors and success states.
+
+### `SchemaViewer.tsx`
+Interactive schema documentation viewer.
+
+### `PayloadBuilder.tsx`
+Visual form-based payload builder.
+
+### `schemas.ts`
+Schema definitions and validation logic.
+
+## Keyboard Shortcuts
+
+- **Ctrl/Cmd + F**: Format JSON
+- **Ctrl/Cmd + R**: Reset to default
+- **Ctrl/Cmd + Enter**: Send test (when valid)
 
 ## API Integration
 
-### Endpoints Used
+The webhook tester integrates with the Django backend:
 
-**GET** `/api/ingest/webhooks/?page_size=100`
-- Fetch available webhooks
+- **GET** `/api/ingest/webhooks/` - List webhooks
+- **POST** `/api/ingest/webhooks/{id}/test/` - Send test payload
 
-**POST** `/api/ingest/webhooks/{id}/test/`
-- Send test request to webhook
-- Body: JSON payload
-- Response: HTTP status, headers, body
+Test payloads are sent with proper HMAC signatures for authentication.
 
-## Customization
+## Validation Rules
 
-### Styling
+1. **JSON Syntax**: Must be valid JSON
+2. **Required Fields**: All required fields must be present
+3. **Type Checking**: Fields must match their defined types
+4. **Enum Values**: Enum fields must use allowed values
+5. **Format Validation**: Date-time fields must be ISO 8601 format
 
-All components use Tailwind CSS with a dark theme (zinc-950 background).
+## Best Practices
 
-**Color Scheme**:
-- Success (2xx): `text-green-400`
-- Redirect (3xx): `text-amber-400`
-- Client Error (4xx): `text-orange-400`
-- Server Error (5xx): `text-red-400`
-
-### Configuration
-
-**Base URL**: `http://localhost:8000` (in `context.tsx`)
-
-To change:
-```typescript
-const BASE_URL = 'http://your-api-url';
-```
-
-**History Limit**: 50 entries (in `context.tsx`)
-
-To change:
-```typescript
-setHistory(prev => [entry, ...prev].slice(0, 100)); // Change 50 to 100
-```
-
-## Development
-
-### File Structure
-
-```
-webhook-tester/
-├── page.tsx                    # Main page component
-├── context.tsx                 # State management
-├── types.ts                    # TypeScript interfaces
-├── components/
-│   ├── WebhookSelector.tsx    # Webhook list
-│   ├── PayloadEditor.tsx      # JSON editor
-│   ├── ResponseViewer.tsx     # Response display
-│   └── HistoryPanel.tsx       # History list
-├── README.md                   # This file
-├── CHANGES.md                  # Change log
-├── FEATURE_SUMMARY.md         # Feature overview
-├── UI_GUIDE.md                # Visual guide
-└── IMPLEMENTATION.md          # Technical details
-```
-
-### Adding Features
-
-1. **New Tab in Response Viewer**
-   ```typescript
-   type Tab = 'body' | 'headers' | 'request' | 'new-tab';
-   
-   // Add button
-   {t === 'new-tab' && 'New Tab'}
-   
-   // Add content
-   {tab === 'new-tab' && (
-     <div>New tab content</div>
-   )}
-   ```
-
-2. **New Button in Payload Editor**
-   ```typescript
-   <button onClick={handleNewAction}>
-     New Button
-   </button>
-   ```
-
-3. **New State in Context**
-   ```typescript
-   const [newState, setNewState] = useState(initialValue);
-   
-   // Add to context interface
-   newState: Type;
-   setNewState: (value: Type) => void;
-   
-   // Add to provider value
-   <WebhookTesterContext.Provider value={{
-     // ... existing ...
-     newState, setNewState,
-   }}>
-   ```
+1. **Start with a Template**: Use templates as a starting point
+2. **Validate Early**: Enable validation to catch errors as you type
+3. **Use the Builder**: For complex payloads, use the visual builder
+4. **Check the Schema**: Review schema documentation when unsure
+5. **Test Incrementally**: Test simple payloads before complex ones
 
 ## Troubleshooting
 
-### Webhooks Not Loading
-- Check API endpoint is accessible
-- Verify `BASE_URL` is correct
-- Check browser console for errors
+### Validation Errors
 
-### Requests Failing
-- Verify webhook URL is correct
-- Check webhook is active
-- Verify payload is valid JSON
-- Check network connectivity
+- **"Invalid JSON syntax"**: Check for missing commas, brackets, or quotes
+- **"Missing required field"**: Add the required field to your payload
+- **"Field must be a string/number/etc"**: Check the field type matches the schema
 
-### Retry Not Working
-- Ensure previous request completed
-- Check webhook is still selected
-- Verify payload hasn't changed
+### Send Failures
 
-## Performance
+- **"No webhook selected"**: Select a webhook from the sidebar
+- **"Invalid payload"**: Fix validation errors before sending
+- **"Network error"**: Check backend is running and accessible
 
-- **Initial Load**: ~500ms (fetch webhooks)
-- **Send Request**: Depends on webhook endpoint
-- **History**: Limited to 50 entries for performance
-- **Memory**: ~2-5MB typical usage
+## Future Enhancements
 
-## Browser Support
-
-- Chrome/Edge 90+
-- Firefox 88+
-- Safari 14+
-- Mobile browsers (responsive design)
-
-## Related Documentation
-
-- [Feature Summary](./FEATURE_SUMMARY.md) - Overview of all features
-- [UI Guide](./UI_GUIDE.md) - Visual guide and workflows
-- [Implementation Details](./IMPLEMENTATION.md) - Technical implementation
-- [Change Log](./CHANGES.md) - Complete change history
-
-## Support
-
-For issues or feature requests, please refer to issue #544 in the SoroScan repository.
+- [ ] Import/export payload templates
+- [ ] Payload history with search
+- [ ] Bulk testing across multiple webhooks
+- [ ] Custom schema upload
+- [ ] Payload diff viewer
+- [ ] Variable substitution (e.g., `{{timestamp}}`)
+- [ ] Webhook response assertions
+- [ ] Performance metrics and timing breakdown

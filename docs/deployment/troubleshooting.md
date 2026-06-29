@@ -1,5 +1,6 @@
 ---
-id: deployment/troubleshooting
+slug: /deployment/troubleshooting
+
 title: Troubleshooting Production Issues
 description: Quick diagnostics and remediation for common production problems.
 sidebar_label: Troubleshooting

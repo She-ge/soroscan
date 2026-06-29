@@ -1,52 +1,171 @@
----
-id: changelog
-title: Changelog
-sidebar_label: Changelog
----
+# Changelog
 
-This changelog tracks notable API and developer platform updates. It includes new features, breaking changes, deprecations, and migration guidance.
+All notable changes to this project will be documented in this file.
 
-## 2026-04-27
+## [unreleased]
 
-### Added
+### Bug Fixes
 
-- Developer portal navigation for API explorer, SDK docs, recipes, and operational docs.
-- Expanded cookbook coverage for common integration flows.
-- Rate limit observability guidance using standard rate-limit headers.
+- Return 429 Too Many Requests for rate limits (#348) ([84b2e7b](84b2e7b654808426eae37d893d98c121361de0a7))
+- Add mobile responsiveness for all pages #61 (#69) ([c03500d](c03500d7b57fbf7193abcda552b26e30e751fff0))
+- Resolve ruff linting errors (F841 unused variables) ([33ccd58](33ccd58928e1c45c6ed873610675a169d62e1954))
 
-### Changed
+### Documentation
 
-- Improved docs structure to support faster self-service onboarding.
+- Add IaC, release notes, and SDK development guides (#742) ([3bd77fe](3bd77fe84a74a799b23f2d1aed11af0c075d43bf))
+- Add database admin, contributing, troubleshooting, and roadmap guides (#740) ([ef6b6af](ef6b6afa133fac76b09f3009b50e600360a2b08b))
+- Add error states and validation patterns checklist (#684) ([b2f406b](b2f406ba10659d73248042fb370d95637744ea22))
+- Add webhook tester implementation checklist (#683) ([cc0252e](cc0252ef34041730824712eed8ecbb2a33357967))
+- Add GraphQL API documentation implementation checklist (#682) ([2fac953](2fac953374b369015e99406f68168e8bcbdc3458))
+- Add contract details page implementation checklist (#681) ([4e8b02f](4e8b02fafc7190d05ce24819b7451eafc01d9eef))
+- Add observability, security, performance, and testing guides (#680) ([11ac2f6](11ac2f6561738ff3ebfea4284db38abe4c5fc7fa))
+- Document Celery worker concurrency and queue configuration (#409) (#458) ([69176dd](69176dd757ddfa94d347d4879d1a3953d986f993))
+- Implement developer documentation portal with terminal aesthetic (#164) ([a29d577](a29d57745b5a3fbda32af0504f6d60987d9a8a44))
 
-### Deprecated
+### Feat
 
-- No deprecations announced in this release.
+- Add responsive mobile card grid for events (#713) ([81f54e4](81f54e4c97e1b19d66471045b091cd4a1e5fa71d))
+- Mobile navigation drawer (#700) ([9bd9cfb](9bd9cfba5b1e15bb6dbd563d54711d18ddf9b493))
+- Implemented event batch operations (#699) ([c1b6833](c1b68338fdb3e078b05cdd12fd1d499b7049a1ef))
+- Changes (#438) ([0774a7e](0774a7e6be5cbc17fba97ab96b6406bba777071a))
+- Add request ID tracking to all HTTP logs (#349) ([dd0b725](dd0b725a909f2776af9e65cfb7c5e46911349d45))
+- Log all GraphQL resolver calls with query name and duration (#346) ([39842b9](39842b9722cad3ed3f0a096f6de7ddcd02f795c9))
+- Track and expose last updated time stamp (#201) ([e466d14](e466d14924f9b306e955c30f02f7bcb1b80e2708))
+- Templates and terminal style ui (#50) ([61f7b60](61f7b6038d96b4247c5714aa455d114a71fb996f))
+- Scaffold client, add tests and docker file (#49) ([d453076](d45307667bc1e2ccba84c46e84a7d5e2af1f206f))
 
-### Migration Guide
+### Features
 
-- No migration action required. Existing API endpoints and payload shapes remain unchanged.
+- Payload compression, tracing, and DLQ observability (#743) ([3e050ca](3e050ca965ad4949dd1197ddec66f35cc15729de))
+- Resolve webhook headers, health checks, event filters, and dupl… (#734) ([e8ae880](e8ae880d1536978d63d4cee3ae71cc353854a499))
+- Add KeyboardShortcutsOverlay component and integrate into Providers (#732) ([55f03ef](55f03efd50381ca94eef82038ecfe216a4ac5c92))
+- Add FullPageLoader component with loading overlay functionality (#730) ([6191467](61914678fffa6152dcf0ebf80ba3ec2554642e60))
+- Add character count to contract description textareas with warning styling (#729) ([f1dfafe](f1dfafe30131e7f03853b9b9eac8ade0e0c5ca71))
+- Add badge showing if contract source is verified (#725) ([5c81b13](5c81b13d1afff63cbf480a3a976ba93d7bc9ba63))
+- Enhance CreateWebhookModal with timeout validation and user guidance (#727) ([fd19f32](fd19f328fcca7c5024937f0e5990b3a02988e669))
+- Add Pagination Size Selector (#726) ([3ed9ab3](3ed9ab36f3beae4361478db4a3c2ad267537bb37))
+- Add comprehensive validation for contract creation (#708) ([f15b43b](f15b43b9aa67f64aaaab02bc7aa21ab2e69ba36a))
+- Implement blacklist to block indexing of malicious contracts (#707) ([3a6c2e0](3a6c2e057e7ab93b2ff50c4c57d8b624dfd52cbc))
+- Add middleware to log client IP for every API request (#705) ([1e0c295](1e0c295af4e22d48421ea14cea218df964dff518))
+- Add uptime fields to health endpoint (#718) ([48dc054](48dc05435b41673edd2388d975083f30d06edf45))
+- Add event type statistics endpoint (#714) ([9773b4d](9773b4dc9582469e2e46b7733e1cfa666dfecaae))
+- Add real-time updates with notifications and connection status (#712) ([acfe0c1](acfe0c1e47f3e084c551fb26ca334f6572707444))
+- Add setup.sh to bootstrap local development environment (#706) ([ad0f698](ad0f69815a4d476c0e2a0ea613a190aabf915345))
+- Responsive settings layout and reusable confirmation dialog (#703) ([9d14ca0](9d14ca0ecaa22f9c0bab75107dbe334faf48685f))
+- Add comprehensive webhook payload builder UI (#696) ([f61f062](f61f0622b0c537e4ece55e32be72fc21d107ed56))
+- Add visual filter expression builder (#578) (#698) ([fe05cc7](fe05cc78a92b89b16febc79268895769a0ddcff3))
+- Add favorite star icon to contract cards (#693) ([88c901f](88c901f0c23a1850f65606fca901bc1e74fcd5cc))
+- Add database seeding, event replay, bulk import and backup veri… (#694) ([084d81e](084d81e40e917617698f088c83644069f3d215f1))
+- Add request timeout functionality to webhook components (#689) ([18f80ae](18f80ae9dfea16dd627a82d5b64ed4cd727dadd6))
+- Show data preview and file-size estimation before event export (#561) (#679) ([d51cd06](d51cd06e7954f1e3a937d172d8ebae90b0b803ac))
+- Refactor settings page with tabbed navigation and URL state persistence (#554) (#678) ([c53e5bd](c53e5bd795ff356c1557a157a6a0abdbbaf8d54d))
+- Add EventTypeMultiSelect component for webhook event type selection (#669) ([f1ed692](f1ed692c040ef6f39c2461366d7a22d6075ce090))
+- Implement #540 #541 #568 #574 frontend components (#686) ([f0dbeb2](f0dbeb247d6dc4c2c4c123fb910a47c9972fd6d1))
+- SDK Error/build breadcrumb /Create endpoint /TypeScript SDK (#677) ([89a7d11](89a7d1119c54dccd47b18b689b6fe98a8d8be7e2))
+- Implement event deduplication configuration schema and… (#675) ([b0b9c11](b0b9c116d1496ce9f63b590c1396903ecc52a42e))
+- Expand event details modal payload views (#674) ([d771fea](d771fea5f8ef0235caa969a10e0dee26a7e71ee3))
+- Add reusable grafana dashboard templates (#673) ([386e908](386e908bc6ea9847837513ede8ea5208c32b7777))
+- Add batch event retry controls to delivery log (#668) ([06b8d70](06b8d70be0fb8a745c65b26e428db87c0621b1eb))
+- Add event tags system UI (#667) ([bbb8888](bbb88889d38b94f42e8d05606f5ee183bd3b072e))
+- Add CopyEventLink component (#599) (#653) ([a094703](a09470377ceb5de60caa3becaab97d20f5cf33f9))
+- Add TooltipInfoIcon component (#609) (#652) ([1f5b0d9](1f5b0d95f97f6bbe4d22377bcd7c07d5bd1b8e64))
+- Add ExportProgressModal component (#546) (#651) ([a4109a0](a4109a077fea945a5e5f20a8b4da0a7e4fa705c8))
+- Add export format selection for event exports (#648) ([c05e6ee](c05e6ee25126758b4e53acfd92f1d4f7fe7e660a))
+- Add shared sort direction indicators for table headers (#637) ([120af84](120af84bbff456024aede0aeff8c67ac6ff58e0a))
+- Add empty state illustration for no contracts (#632) ([6398765](63987650119c7e59cf721c47436dcd60ba717ec2))
+- Enhance webhook test interface with request/response inspection (#628) ([e9725d0](e9725d0a44c4fb357aefffa4d249127155721113))
+- Implement cache warming, syntax highlighting, builder pattern, and loading skeleton (#633) ([86d8e5b](86d8e5b6d81d6c4728e5288983b5f3e5b94f9e8e))
+- Implement slow query logging middleware (#634) ([74253b1](74253b185551c08b82ae630f70af2129dc675b2b))
+- Auto-generate API endpoint docs from docstrings (#631) ([c2b3274](c2b3274a901a3778c3e4a525fd889390ba0e1f7a))
+- Implement Redis caching for TrackedContract objects (#630) ([91a7bfd](91a7bfdebab8a0c81478b9c95df64770a7e654f1))
+- Create 'reset_admin' script (#461) ([b153813](b15381382763452e732da7c269f924e71952816f))
+- Add MaintenanceModeMiddleware with 503 response and --admin bypass (#437) ([b9d185d](b9d185d20101bd9da5d20d164741956be5663244))
+- Add list_webhooks management command with --active-only flag (#436) ([2b91386](2b9138629edabce5bcbb4f6ab5a6a12f4f28b477))
+- Add Send Test Ping button to WebhookSubscription admin (#435) ([a42580f](a42580f9756f761a770fa58c5ff54e3c7099472d))
+- Log migration start/end with timestamps (#433) ([e47d548](e47d548fd3bab182e29955708881b298946e908f))
+- Log warning on startup if SECRET_KEY is weak or default (#423) (#457) ([489b836](489b83602f52958547a9d9f6a5e353dd32285f4a))
+- Add ping endpoint to verify webhook listener health (#403) (#454) ([4cc8906](4cc8906c6e34e2e8481c45f8c88beefa76140d5c))
+- Add Card component (#305) (#395) ([866e500](866e500ec5dea3479e66824c0e2d59b22573554b))
+- Add GET /api/ingest/networks/ endpoint (#404) (#453) ([33f807d](33f807d8f05bd22e08efe74980bd4179ba1dd1fd))
+- Enforce 1MB webhook limit & resolve ops issues (#452) ([bec03ce](bec03ceca82feeccb0600cae47c24777cc14f5ab))
+- Implement API key authentication (#377) (#445) ([710ef72](710ef7239c5500ee9bebea0916c97896371d76ea))
+- Add export_contracts command and Clear Cache admin action (#421, #422) (#440) ([f78cba3](f78cba3e3d8e70bc057bb86d08f21376e728aafc))
+- Add migration validation command and corresponding tests (#434) ([72fadfb](72fadfbf6206423456cc1398ca340832cad7a682))
+- Build developer portal with API explorer, SDK docs, cookbook, changelog, and rate limit observability (#396) ([bd156a6](bd156a68bbea18f0235f774145fa7fb6fe600869))
+- Add Badge component (#306) (#393) ([4836f7f](4836f7ff774db9c17730666c547d52f9a4477fb5))
+- API security and deprecation infrastructure #336 #338 (#390) ([dfd2a94](dfd2a94e3e523c766fc711a6592b1953a0640da7))
+- Add monitoring improvements for issues #318, #319, #321, #332 (#391) ([262381a](262381a93d39ed1c22f95616bedf1b3031436316))
+- Add migrations for DependencyImpactAssessment (#385) ([303838d](303838dc7ef751c55b716564fcb809dd79b10965))
+- Configure exponential backoff for Celery webhook retries (#384) ([d49df2d](d49df2d111486abe6f981bc4316588e09bc68486))
+- Add admin action to manually retry failed webhook messages (#383) ([de05208](de05208db9abb4f13dd866fd84c4b440990b768d))
+- Add rate limiting to GraphQL endpoint based on client IP (#382) ([bbf3741](bbf37417bd7cba81c463126293d24e3762066c63))
+- Add ProgressBar component with full feature set (#354) ([93ac802](93ac8025b92b0f8e5a948ec279d1dc784afed333))
+- Add Skeleton loader component with shimmer animation (#352) ([5c7d85b](5c7d85b6dac51f217bc8dee3fcaf70f182fa77c5))
+- Add Divider component with text and variant support (#350) ([047d003](047d003e8a4eeba86ed09abd8ab338b4699141aa))
+- Log warning when celery task approaches timeout (#351) ([02042ea](02042ea7fde0db7a536932cfb48b64b0121ca62b))
+- Add tab navigation component with keyboard support (#345) ([53e6744](53e67448e5a8ad696ccf3ff76fa12943a67f764c))
+- Add Dropdown component with keyboard navigation and accessibility features (#344) ([c27aced](c27acedd89a5aea4292ec80d2a9249e3ca3bb3ff))
+- Build accessible alert component with variants and dismiss toggle (#347) ([e7aa5c0](e7aa5c04a4e1a73065899956f0d28d64d9349e5a))
+- Implement data governance framework and contract deployment tra… (#328) ([e8c837b](e8c837bf088dc1b08e0fbd1e35da62d663486935))
+- Add metadata field and source code verification syst… (#327) ([57ea548](57ea5484d76fd1060bf10a246ec3bc58e7748219))
+- Add validation states and required indicator to input/label (#267) (#297) ([c0bd113](c0bd1133a222ea8b4bc52adc98a61d02cebccef2))
+- Add accessible modal component with focus management #265 (#296) ([ee82744](ee82744a66598ca75b9211a8d9477b56a01f8675))
+- Add reusable Alert component with 4 variants and tests (#288) ([8a25fee](8a25feef38126387c9dc0ce5b8d199b83a648b46))
+- Ledger range querying and configurable webhook backoff strategy (#254) ([e45fc06](e45fc06793eb5584a25fd8499bd54e19450b4856))
+- Add Tooltip with positioning and keyboard accessibility (#247) ([23cb527](23cb527eaefc35d7e4e41c41e9dd8b5f1c0f34af))
+- Add InputField with validation feedback and error messages (#246) ([2831060](2831060c715622026eacf498361c3eda64ea2ed6))
+- Query builder reports (CSV/JSON), codegen and SSR fixes (#244) ([bd2ce61](bd2ce6166275094939f30f64d16071f24ba414ac))
+- Contract dependency graph, codegen and SSR fixes (#243) ([05cbf12](05cbf12810e4500b0337f0a5dde71e7ab5bcee72))
+- Cost analysis dashboard, codegen and SSR fixes (#241) ([7c6b256](7c6b256f4619b0d4d4e0b83df3928d20b6be65e2))
+- Performance dashboard, codegen and SSR fixes (#242) ([d615b31](d615b314bc21bada393ba010a7fa616742946f92))
+- Add alias field to TrackedContract for friendly contract names (#207) ([13dc43a](13dc43abe2ab9111930a531f8287cfadc9c67555))
+- Build webhook testing UI to create, send, and verify test payloads (#186) ([3713e59](3713e597758270beb450b6f4e118d53e8dcf3450))
+- Add contract deprecation warnings across REST and GraphQL (#195) ([4ee9d80](4ee9d80d32f59958ff8e3918b0a899183de14130))
+- Make webhook dispatch timeout configurable per subscription (#194) ([8ed0074](8ed0074b6c1807df2852a654abb9e4da38700c15))
+- Add periodic task to clean up old deduplication logs (#193) ([5df1cc6](5df1cc6321ad48b66724ad7bc25f58ef5430fbd6))
+- Add contracts status aggregate endpoint (#192) ([0c67901](0c679013990d531b68aa28b482c5e79602145f94))
+- Build interactive API explorer for testing endpoints in browser (#163) ([8a20f67](8a20f6730c8d520a693a52771904dda44a8c5fe8))
+- Automated PostgreSQL backups and PITR recovery (#109) (#113) ([2cc1bbf](2cc1bbfbc4fabecd0d854a51324341b432694779))
+- Add data retention policies and automated S3 archival (#112) ([3e496dc](3e496dc2034b0c3031ee6fa3ca1efb10871b882c))
+- Build user settings page for theme, notifications, and API keys… (#67) ([aea64ef](aea64ef35dfaab3204f08abc0014fc3aa3e8326a))
+- Implement a contract ABI registry (#92) ([01d434c](01d434c4251ce657b2bc9a94b41440f8caa2b035))
+- TypeScript client SDK for the SoroScan API (#76) ([bca3c7f](bca3c7f95983fd53a451eff2aa6eb635b4326c2e))
+- Add GraphQL subscription support for real-time events (#74) ([c1a73a2](c1a73a238aaa19050eb7dae73e01433708891b1a))
+- Add landing site with docs and webhook subscription manager UI (#70) ([e3d26a9](e3d26a9f84ce0bd784f710b87841afe5ffe7ad30))
+- Build Event Explorer with filtering, pagination, and export support (#64) ([3b2563a](3b2563ad7c42948b5159599b12bfbaf62addfe96))
+- Build contract management interface for registering and tracking contracts (#65) ([474aa53](474aa5395c2332def273f5cd20c510dc79aef439))
+- Set up GraphQL Code Generator for end-to-end type safety (#63) ([cd9bf0e](cd9bf0e356715adb4c5d994a0317c1bfcc379d9a))
+- Add WebhookDeliveryLog model and suspended status to Webhook (#53) ([e62287c](e62287c2053853f84a5601eafd87fa8ac50af5bb))
+- Add drf-spectacular dependency and Django settings (#42) ([08a0145](08a01459062fa7879c84f52068e2ae465a8abe0e))
+- WebSocket Support for Real-Time Event Streaming (#41) ([a96cc5a](a96cc5ac1e8802da52dfd9146732fd2087e3e46a))
 
----
+### Implement
 
-## 2026-03-10
+- WCAG 2.1 AA Accessibility Audit and Real-Time Event Feed (GraphQL WebSocket) (#98) ([14843af](14843af982b322b8e75b8e9b3b19001d940b391f))
 
-### Added
+### Miscellaneous Tasks
 
-- Redoc-powered interactive API explorer backed by the OpenAPI specification.
-- Initial SDK documentation for Python and TypeScript.
+- Clean tracked environment artifacts ([63e7b58](63e7b58b8648e937cfaa0a1e9509f7f5098a290a))
+- Configure pre-commit hooks for black, flake8, and isort (Closes #374) (#442) ([a4722da](a4722da830252ce28e8d081330aba3e5e2abd1a6))
+- Remove venv from tracking and add to .gitignore ([f9cfe5f](f9cfe5f16ebc8986cec7fe4c7e3b218a80f544fe))
+- Admin (#96) ([23bc8f2](23bc8f2fcfed472345ea990946c29830217a6df2))
+- Auth (#95) ([0e1dd95](0e1dd95a95a3ca0770ec8add3b0dd2440dde2014))
+- Advanced search (#94) ([3a9d979](3a9d979bd3f7b115eea23124d086dc63c5a1d7c6))
+- Web sockets (#93) ([976da0a](976da0a51643b49dc2094e87ea219d34b0753563))
+- Add .gitignore for Rust build artifacts and test snapshots ([def4859](def4859460ca941f8684de4701253d91244c6636))
 
-### Deprecated
+### Testing
 
-- Legacy static API reference pages were replaced by the interactive explorer.
+- Add comprehensive tests for webhook signature validation (#627) ([4bf9d6c](4bf9d6c2275347d618d37e11e40e0fd2b55c406e))
+- Strengthen toast notification coverage for all types (#640) ([347e41a](347e41a010eadd0f0603a92326573d3bd30580c9))
+- Add unit test for daily platform stats window logic (#432) ([9861b45](9861b45e5deef2025af5ff8d981e03ba95ba25f4))
 
-### Migration Guide
+### Ci
 
-- Switch API reference bookmarks to `/api-explorer`.
+- Require pat for changelog pr ([5c17ff7](5c17ff7d9705545a374e32103eb2dd2e74af4c2d))
+- Fix ([ecfa2da](ecfa2dada41b0b39a58ac50c045d6449804b23d5))
+- Use pat for changelog pull request ([83ab8b2](83ab8b2c3df73f6262f50e28ee26d6556ef4be56))
+- Allow changelog workflow to open prs ([de776f9](de776f91f8027c5928238f6a724b8546ea59a669))
+- Update git-cliff action ([4bab0c8](4bab0c8493f4a8cfcbef999934acd751d9a30dfc))
 
----
-
-## Changelog Policy
-
-- **Patch updates**: backwards-compatible docs and behavior improvements.
-- **Minor updates**: new endpoints, optional fields, or new recipes.
-- **Major updates**: breaking API changes with explicit migration instructions.
+<!-- generated by git-cliff -->

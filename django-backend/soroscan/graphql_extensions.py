@@ -13,6 +13,65 @@ from django.core.cache import cache
 
 logger = logging.getLogger("soroscan.graphql")
 
+
+def _get_authenticated_user(info: Info):
+    """Safely extract authenticated user from context."""
+    if info.context is None:
+        return None
+    if not hasattr(info.context, "request"):
+        return None
+    request = info.context.request
+    if request is None:
+        return None
+    if not hasattr(request, "user"):
+        return None
+    user = request.user
+    if user and hasattr(user, "is_authenticated") and user.is_authenticated:
+        return user
+    return None
+
+
+class IsAuthenticated:
+    """Permission class to require authenticated user.
+    If not authenticated, the field is hidden from the schema.
+    """
+    def has_permission(self, info: Info) -> bool:
+        user = _get_authenticated_user(info)
+        return user is not None
+
+
+class IsStaff:
+    """Permission class to require staff user.
+    If not staff, the field is hidden from the schema.
+    """
+    def has_permission(self, info: Info) -> bool:
+        user = _get_authenticated_user(info)
+        return user is not None and user.is_staff
+
+
+class IsSuperuser:
+    """Permission class to require superuser.
+    If not superuser, the field is hidden from the schema.
+    """
+    def has_permission(self, info: Info) -> bool:
+        user = _get_authenticated_user(info)
+        return user is not None and user.is_superuser
+
+
+def permission_classes(permissions):
+    """Decorator to apply permission classes to a resolver.
+    If any permission fails, raises an exception.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(root, info, *args, **kwargs):
+            for permission in permissions:
+                if not permission().has_permission(info):
+                    raise Exception("Permission denied")
+            return func(root, info, *args, **kwargs)
+        return wrapper
+    return decorator
+
 # Sensitive keys to mask in logs
 SENSITIVE_KEYS = {"password", "secret", "token", "key", "authorization", "api_key"}
 

@@ -2,9 +2,9 @@ name: Frontend CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master, develop]
 
 jobs:
   lint-and-test:
@@ -44,6 +44,24 @@ jobs:
         run: pnpm run lint
         working-directory: soroscan-frontend
 
-      - name: Run tests
-        run: pnpm run test:ci
+      - name: Run tests with coverage
+        run: pnpm run test:ci --coverage
         working-directory: soroscan-frontend
+
+      - name: Upload HTML coverage report as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-html
+          path: soroscan-frontend/coverage/
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./soroscan-frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+          fail_ci_if_error: false

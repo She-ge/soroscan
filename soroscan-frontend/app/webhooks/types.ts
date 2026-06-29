@@ -18,13 +18,17 @@ export interface Webhook {
   /** Serialized filter expression built by the visual filter builder */
   filterExpression?: string
   status: WebhookStatus
+  isActive: boolean
   createdAt: string
   lastDelivery?: string
   lastStatusCode?: number
   successRate: number // 0–100
   timeoutSeconds: number
   secret: string
+  customHeaders?: Record<string, string>
   totalDeliveries: number
+  failureCount?: number
+  lastDeliverySuccess?: boolean
 }
 
 export interface DeliveryLog {

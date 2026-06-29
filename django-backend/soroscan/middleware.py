@@ -120,7 +120,7 @@ class SlowQueryMiddleware:
         with connection.execute_wrapper(_execute):
             response = self.get_response(request)
 
-        # Forward X-RateLimit-* headers set by APIKeyThrottle
+        # Forward RateLimit-* headers set by APIKeyThrottle
         headers = getattr(request, "_api_key_throttle_headers", None)
         if headers and hasattr(response, "__setitem__"):
             for name, value in headers.items():
@@ -149,6 +149,26 @@ class RequestBodySizeMiddleware:
         
         return self.get_response(request)
         
+class GracefulShutdownMiddleware:
+    """Reject new requests during shutdown and track in-flight request count."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from soroscan.shutdown import end_request, try_begin_request
+
+        if not try_begin_request():
+            return JsonResponse(
+                {"error": "Server is shutting down"},
+                status=503,
+            )
+        try:
+            return self.get_response(request)
+        finally:
+            end_request()
+
+
 class MaintenanceModeMiddleware:
     """Return 503 for all non-admin routes when MAINTENANCE_MODE=True."""
 
@@ -171,10 +191,10 @@ class ApiDeprecationMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         deprecated_endpoints = getattr(settings, "DEPRECATED_ENDPOINTS", {})
-        
+
         # Normalize request path: remove leading/trailing slashes
         norm_request_path = request.path.strip("/")
-        
+
         for path, config in deprecated_endpoints.items():
             # Normalize config path
             if path.strip("/") == norm_request_path:
@@ -182,4 +202,74 @@ class ApiDeprecationMiddleware:
                 response["Sunset"] = config.get("sunset", "")
                 response["Link"] = f'<{config.get("replacement", "")}>; rel="alternate"'
                 break
+        return response
+
+
+_STATIC_PATH_PREFIXES = ("/static/", "/media/", "/favicon.ico")
+
+ip_logger = logging.getLogger("soroscan.ip_access")
+
+
+class ClientIPLoggingMiddleware:
+    """
+    Log the client IP address, HTTP method, and request path for every
+    incoming API request.
+
+    The client IP is read from REMOTE_ADDR, which is expected to already
+    be set correctly by ReverseProxyFixedIPMiddleware when running behind
+    a proxy. Static-asset paths are excluded to avoid log noise.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        path = request.path
+        if not path.startswith(_STATIC_PATH_PREFIXES):
+            client_ip = request.META.get("REMOTE_ADDR", "unknown")
+            ip_logger.info(
+                "%s %s from %s",
+                request.method,
+                path,
+                client_ip,
+                extra={
+                    "client_ip": client_ip,
+                    "method": request.method,
+                    "path": path,
+                },
+            )
+        return self.get_response(request)
+
+
+class CacheBustingMiddleware:
+    """
+    Add Cache-Control headers to API responses.
+
+    Supports cache busting via:
+    - ``Cache-Control: no-cache`` header from client
+    - ``X-Cache-Bust`` header from client
+    - ``Last-Modified`` / ``ETag`` conditional request support
+    """
+
+    CACHE_CONTROL_PATHS = ("/api/", "/graphql/")
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Check if client requests cache bypass
+        cache_bust = (
+            request.headers.get("Cache-Control") == "no-cache"
+            or request.headers.get("X-Cache-Bust") == "1"
+        )
+
+        response = self.get_response(request)
+
+        if any(request.path.startswith(p) for p in self.CACHE_CONTROL_PATHS):
+            if cache_bust:
+                response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                response["Pragma"] = "no-cache"
+            else:
+                response["Cache-Control"] = "private, max-age=0"
+
         return response

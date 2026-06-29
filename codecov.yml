@@ -1,0 +1,58 @@
+# Codecov configuration for SoroScan
+# Docs: https://docs.codecov.com/docs/codecov-yaml
+
+codecov:
+  # Wait for both backend and frontend reports before posting a combined status
+  require_ci_to_pass: yes
+
+# Coverage target and threshold settings
+coverage:
+  # PR status checks — fail if coverage drops by more than 1%
+  status:
+    project:
+      default:
+        # Minimum absolute coverage required across the whole project
+        target: 70%
+        # Allow coverage to drop by at most 1% before failing the check
+        threshold: 1%
+        base: auto
+
+    patch:
+      default:
+        # New code introduced in a PR must have at least 70% coverage
+        target: 70%
+        threshold: 1%
+
+  # Track coverage per flag (backend / frontend) independently
+  flags:
+    backend:
+      paths:
+        - django-backend/
+      carryforward: true
+
+    frontend:
+      paths:
+        - soroscan-frontend/
+      carryforward: true
+
+# Pull request comment settings
+comment:
+  layout: "reach,diff,flags,components,files"
+  behavior: default       # post once, update on new commits
+  require_changes: false  # always comment so coverage is visible
+  require_base: false
+  require_head: true
+  hide_project_coverage: false
+
+# Ignore generated files, migrations, and config boilerplate
+ignore:
+  - "**/__generated__/**"
+  - "**/gql/**"
+  - "**/migrations/**"
+  - "**/*.config.ts"
+  - "**/*.config.js"
+  - "**/*.config.mjs"
+  - "soroscan-frontend/app/layout.tsx"
+  - "soroban-contracts/**"
+  - "chaos-tests/**"
+  - "docs/**"

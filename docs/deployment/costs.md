@@ -1,5 +1,6 @@
 ---
-id: deployment/costs
+slug: /deployment/costs
+
 title: Cost Estimates & Optimization
 description: Cost guidance for different deployment sizes and optimization tips.
 sidebar_label: Cost Estimates

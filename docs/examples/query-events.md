@@ -59,6 +59,26 @@ queryTransfers();
 
 ---
 
+### Export Events From Django
+
+Self-hosted operators can export indexed events from the backend:
+
+```bash
+cd django-backend
+python manage.py export_events \
+  --contract CCAAA... \
+  --format csv \
+  --start-date 2026-01-01 \
+  --end-date 2026-01-31 \
+  --output events.csv
+```
+
+Supported formats are `csv`, `json`, `parquet`, and `avro`. Use `--contract-id`
+instead of `--contract` if you prefer the original option name. Ledger filters
+remain available via `--start-ledger` and `--end-ledger`.
+
+---
+
 ## Best Practices
 
 1. **Use Cursors**: For large datasets, always use the `after` or `before` parameters instead of just increasing the ledger range.

@@ -15,3 +15,9 @@ export type { BadgeProps } from './Badge';
 
 export { default as ExportProgressModal } from './ExportProgressModal';
 export type { ExportProgressModalProps, ExportStatus } from './ExportProgressModal';
+
+export { default as VerifiedSourceBadge } from './VerifiedSourceBadge';
+export type { VerifiedSourceBadgeProps, VerificationDetails } from './VerifiedSourceBadge';
+
+export { ContractEventTimeline } from './ContractEventTimeline';
+export type { ContractEvent, ContractEventTimelineProps } from './ContractEventTimeline';

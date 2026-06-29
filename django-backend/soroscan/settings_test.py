@@ -36,14 +36,17 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
+    "soroscan.middleware.GracefulShutdownMiddleware",
     "soroscan.middleware.RequestBodySizeMiddleware",
     "soroscan.middleware.MaintenanceModeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "soroscan.cors_middleware.OrgCorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "soroscan.middleware.RequestIdMiddleware",
     "soroscan.middleware.PlatformVersionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.gzip.GZipMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -112,6 +115,7 @@ CACHES = {
     }
 }
 QUERY_CACHE_TTL_SECONDS = 60
+PACT_PROVIDER_STATES_ENABLED = True
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -146,6 +150,8 @@ CELERY_RESULT_BACKEND = "cache+memory://"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+SHUTDOWN_TIMEOUT_SECONDS = 30
+CELERY_WORKER_SOFT_SHUTDOWN_TIMEOUT = 30
 CELERY_TIMEZONE = TIME_ZONE
 
 # Stellar / Soroban Configuration
@@ -174,6 +180,13 @@ EVENT_STREAMING = {
 
 # GraphQL Introspection — enabled in tests/dev
 GRAPHQL_INTROSPECTION_ENABLED = True
+GRAPHQL_MAX_COMPLEXITY = 1000
+GRAPHQL_N1_DETECTION_ENABLED = False
+
+# Fixed test seed for deterministic webhook signature tests.
+WEBHOOK_ED25519_SIGNING_SEED = (
+    "0000000000000000000000000000000000000000000000000000000000000001"
+)
 
 # Logging
 LOGGING = {

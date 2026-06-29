@@ -94,6 +94,7 @@ export default function WebhooksPage() {
             </p>
           </div>
           <Button
+            data-tour="create-webhook"
             variant="primary"
             size="lg"
             onClick={() => setCreateOpen(true)}

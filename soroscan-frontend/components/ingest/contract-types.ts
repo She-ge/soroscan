@@ -1,3 +1,12 @@
+export type VerificationStatus = "pending" | "verified" | "failed";
+
+export interface ContractVerificationInfo {
+  status: VerificationStatus;
+  compilerVersion?: string;
+  verifiedAt?: string;
+  bytecodeHash?: string;
+}
+
 export interface Contract {
   id: string;
   contractId: string;
@@ -8,6 +17,10 @@ export interface Contract {
   eventCount: number;
   createdAt: string;
   updatedAt: string;
+  /** Verification status from ContractVerification model. Null when no verification record exists. */
+  verificationStatus?: VerificationStatus | null;
+  /** Full verification details, populated when verificationStatus is "verified". */
+  verification?: ContractVerificationInfo | null;
 }
 
 export interface ContractFormData {

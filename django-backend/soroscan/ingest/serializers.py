@@ -1,6 +1,8 @@
 """
 DRF Serializers for SoroScan API.
 """
+import re
+
 from rest_framework import serializers
 
 from django.utils.text import slugify
@@ -22,13 +24,16 @@ from .models import (
     WebhookSubscription,
 )
 
+_CONTRACT_ID_RE = re.compile(r"^C[A-Z2-7]{55}$")
+_VALID_NETWORKS = {choice[0] for choice in TrackedContract.Network.choices}
+
 
 class OrganizationSerializer(serializers.ModelSerializer):
     """Organization serializer with owner-managed tenancy settings."""
 
     class Meta:
         model = Organization
-        fields = ["id", "name", "slug", "settings", "quota", "created_at", "updated_at"]
+        fields = ["id", "name", "slug", "settings", "quota", "cors_origins", "created_at", "updated_at"]
         read_only_fields = ["id", "slug", "created_at", "updated_at"]
 
     def create(self, validated_data):
@@ -43,6 +48,41 @@ class OrganizationSerializer(serializers.ModelSerializer):
             defaults={"role": OrganizationMembership.Role.OWNER, "invited_by": user},
         )
         return org
+
+
+class OrganizationCorsSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating an Organization's per-org CORS allowed origins.
+
+    Each entry must be a non-empty string beginning with ``http://`` or
+    ``https://``.  Trailing slashes are stripped for consistency.
+    """
+
+    cors_origins = serializers.ListField(
+        child=serializers.CharField(max_length=2048),
+        allow_empty=True,
+        help_text=(
+            'List of allowed CORS origins, e.g. ["https://app.example.com"]. '
+            "Each entry must start with http:// or https://."
+        ),
+    )
+
+    class Meta:
+        model = Organization
+        fields = ["id", "name", "cors_origins"]
+        read_only_fields = ["id", "name"]
+
+    def validate_cors_origins(self, value):
+        cleaned = []
+        for raw in value:
+            origin = raw.strip().rstrip("/")
+            if not (origin.startswith("http://") or origin.startswith("https://")):
+                raise serializers.ValidationError(
+                    f"Invalid origin '{raw}': must start with http:// or https://"
+                )
+            if origin:
+                cleaned.append(origin)
+        return cleaned
 
 
 class TeamSerializer(serializers.ModelSerializer):
@@ -127,6 +167,11 @@ class TrackedContractSerializer(serializers.ModelSerializer):
     Used for creating, updating, and returning tracked Soroban smart contracts.
     """
 
+    # Declare these as plain CharField to bypass model-level RegexValidator/UniqueValidator
+    # and choices validation so our validate_* methods control error messages entirely.
+    contract_id = serializers.CharField(validators=[])
+    network = serializers.CharField(required=False, default=TrackedContract.Network.MAINNET)
+
     event_count = serializers.SerializerMethodField()
     warnings = serializers.SerializerMethodField()
     team = serializers.PrimaryKeyRelatedField(
@@ -143,6 +188,7 @@ class TrackedContractSerializer(serializers.ModelSerializer):
             "name",
             "alias",
             "description",
+            "network",
             "abi_schema",
             "json_schema",
             "is_active",
@@ -168,6 +214,34 @@ class TrackedContractSerializer(serializers.ModelSerializer):
     def get_warnings(self, obj) -> list[dict[str, str]]:
         warning = obj.deprecation_warning()
         return [warning] if warning else []
+
+    def validate_contract_id(self, value: str) -> str:
+        value = value.strip()
+
+        if not _CONTRACT_ID_RE.match(value):
+            raise serializers.ValidationError(
+                "Invalid contract address. A Soroban contract address must start "
+                "with 'C', be exactly 56 characters long, and use only uppercase "
+                "Base32 characters (A-Z and 2-7)."
+            )
+
+        # On create, reject duplicates with a clear message.
+        if self.instance is None:
+            if TrackedContract.objects.filter(contract_id=value).exists():
+                raise serializers.ValidationError(
+                    f"Contract '{value}' is already registered. "
+                    "Each contract address can only be tracked once."
+                )
+
+        return value
+
+    def validate_network(self, value: str) -> str:
+        if value not in _VALID_NETWORKS:
+            valid = ", ".join(sorted(_VALID_NETWORKS))
+            raise serializers.ValidationError(
+                f"'{value}' is not a valid network. Choose one of: {valid}."
+            )
+        return value
 
     def validate_team(self, value):
         request = self.context.get("request")
@@ -298,37 +372,35 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
         if not isinstance(value, dict):
             raise serializers.ValidationError("filter_condition must be an object.")
 
-        allowed_ops = {"and", "or", "not", "eq", "neq", "gt", "gte", "lt", "lte", "in", "contains", "startswith", "regex"}
 
-        def _validate(node: dict):
-            if not isinstance(node, dict):
-                raise serializers.ValidationError("Each condition node must be an object.")
-            op = str(node.get("op", "")).lower()
-            if op not in allowed_ops:
-                raise serializers.ValidationError(f"Unsupported operator: {op}")
+    def validate(self, attrs):
+            contract = attrs.get("contract")
+            if not contract and self.instance:
+                contract = self.instance.contract
+                
+            target_url = attrs.get("target_url")
+            if not target_url and self.instance:
+                target_url = self.instance.target_url
 
-            if op in {"and", "or"}:
-                conditions = node.get("conditions")
-                if not isinstance(conditions, list) or not conditions:
-                    raise serializers.ValidationError(f"'{op}' requires a non-empty conditions array.")
-                for sub in conditions:
-                    _validate(sub)
-                return
+            # Check for duplicates (Issue #474)
+            if contract and target_url:
+                qs = WebhookSubscription.objects.filter(contract=contract, target_url=target_url)
+                if self.instance:
+                    qs = qs.exclude(pk=self.instance.pk)
+                if qs.exists():
+                    raise serializers.ValidationError({
+                        "target_url": "A webhook subscription for this URL and contract already exists."
+                    })
 
-            if op == "not":
-                condition = node.get("condition")
-                if not isinstance(condition, dict):
-                    raise serializers.ValidationError("'not' requires a condition object.")
-                _validate(condition)
-                return
-
-            if "field" not in node:
-                raise serializers.ValidationError(f"'{op}' requires a field.")
-            if "value" not in node:
-                raise serializers.ValidationError(f"'{op}' requires a value.")
-
-        _validate(value)
-        return value
+            if contract:
+                estimated_size = contract.metadata.get("estimated_payload_size", 0)
+                if estimated_size > 1048576:  # 1MB
+                    raise serializers.ValidationError({"contract": "Estimated payload exceeds 1MB limit."})
+                    
+                if contract.metadata.get("is_massive", False):
+                    raise serializers.ValidationError({"contract": "Contract events are known to be massive."})
+                    
+            return attrs
 
     def validate_escalation_policy(self, value):
         if value in (None, []):
@@ -362,20 +434,6 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
                 )
         return value
 
-    def validate(self, attrs):
-        contract = attrs.get("contract")
-        if not contract and self.instance:
-            contract = self.instance.contract
-            
-        if contract:
-            estimated_size = contract.metadata.get("estimated_payload_size", 0)
-            if estimated_size > 1048576:  # 1MB
-                raise serializers.ValidationError({"contract": "Estimated payload exceeds 1MB limit."})
-                
-            if contract.metadata.get("is_massive", False):
-                raise serializers.ValidationError({"contract": "Contract events are known to be massive."})
-                
-        return attrs
 
 class RecordEventRequestSerializer(serializers.Serializer):
     """

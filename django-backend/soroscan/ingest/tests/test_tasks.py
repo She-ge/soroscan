@@ -34,6 +34,7 @@ from soroscan.ingest.tasks import (
     validate_contract_payload_schema,
     validate_event_payload,
 )
+from soroscan.ingest.telemetry import payload_compression_ratio
 
 from .factories import (
     ContractEventFactory,
@@ -130,6 +131,34 @@ class TestValidateContractPayloadSchema:
         contract.save(update_fields=["json_schema"])
 
         assert validate_contract_payload_schema(contract, {"bad": 1}, "transfer") is False
+
+
+@pytest.mark.django_db
+class TestTelemetryHelpers:
+    def test_payload_compression_ratio_records_metric(self, mocker):
+        observe = mocker.patch(
+            "soroscan.ingest.telemetry.event_payload_compression_ratio.observe"
+        )
+
+        ratio = payload_compression_ratio({"message": "x" * 200})
+
+        assert ratio is not None
+        assert 0 < ratio < 1
+        observe.assert_called_once()
+
+    @responses.activate
+    def test_webhook_request_receives_trace_headers(self, webhook, event):
+        responses.add(
+            responses.POST,
+            webhook.target_url,
+            status=200,
+            headers={"X-SoroScan-Ack": "ok"},
+        )
+
+        dispatch_webhook.apply(args=[webhook.id, event.id])
+
+        sent_headers = responses.calls[0].request.headers
+        assert "traceparent" in {key.lower() for key in sent_headers.keys()}
 
 
 # ---------------------------------------------------------------------------
@@ -657,15 +686,16 @@ class TestProcessNewEvent:
         event = ContractEventFactory(
             contract=contract, event_type="swap", ledger=6000, event_index=0
         )
+        
+        # Add unique target_urls here!
         webhook_swap = WebhookSubscriptionFactory(
-            contract=contract, event_type="swap", is_active=True,
+            contract=contract, event_type="swap", is_active=True, target_url="https://example.com/swap"
         )
         webhook_all = WebhookSubscriptionFactory(
-            contract=contract, event_type="", is_active=True,
+            contract=contract, event_type="", is_active=True, target_url="https://example.com/all"
         )
-        # non-matching event type — must NOT be dispatched
         WebhookSubscriptionFactory(
-            contract=contract, event_type="transfer", is_active=True,
+            contract=contract, event_type="transfer", is_active=True, target_url="https://example.com/transfer"
         )
 
         responses.add(

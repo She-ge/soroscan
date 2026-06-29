@@ -1,5 +1,6 @@
 ---
-id: deployment/runbooks
+slug: /deployment/runbooks
+
 title: Runbooks & Incident Procedures
 description: Practical runbooks for common production incidents.
 sidebar_label: Runbooks

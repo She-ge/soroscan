@@ -25,9 +25,9 @@ Rate limits are enforced using a rolling 60-second window tracked in Redis. Each
 Every API response includes headers that help you monitor your usage:
 
 ```http
-X-RateLimit-Limit: 500
-X-RateLimit-Remaining: 432
-X-RateLimit-Reset: 1714508459
+RateLimit-Limit: 500
+RateLimit-Remaining: 432
+RateLimit-Reset: 1714508459
 ```
 
 The `Retry-After` header tells you exactly how many seconds until your limit resets (calculated as seconds remaining in the current minute).
@@ -87,14 +87,14 @@ console.log(`Last active: ${stats.lastActivity}`);
 You can compute current usage versus limit directly from response headers:
 
 ```text
-usage = X-RateLimit-Limit - X-RateLimit-Remaining
+usage = RateLimit-Limit - RateLimit-Remaining
 ```
 
 Build dashboards around these metrics:
 
-- `usage_percent = usage / X-RateLimit-Limit * 100`
-- `remaining_requests = X-RateLimit-Remaining`
-- `seconds_to_reset = X-RateLimit-Reset - now`
+- `usage_percent = usage / RateLimit-Limit * 100`
+- `remaining_requests = RateLimit-Remaining`
+- `seconds_to_reset = RateLimit-Reset - now`
 
 Track these over time to alert before saturation and plan scale-up.
 

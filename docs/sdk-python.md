@@ -68,3 +68,5 @@ except ValidationError as e:
 ```
 
 For more detailed information, see the [official GitHub repository](https://github.com/Harbduls/soroscan/tree/main/sdk/python).
+
+If you want to contribute new methods or releases, see the [SDK Development Guide](./contributing/sdk-development.md).

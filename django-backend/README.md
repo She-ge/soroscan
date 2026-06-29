@@ -147,7 +147,16 @@ curl -X POST http://localhost:8000/graphql/ \
 SoroScan REST API comes with auto-generated interactive documentation:
 - **Swagger UI**: `/api/docs/`
 - **ReDoc UI**: `/api/redoc/`
-- **OpenAPI Schema**: `/api/schema/`
+- **OpenAPI Schema (JSON/YAML)**: `/api/schema/`
+
+To export the schema to a local file:
+
+```bash
+cd django-backend
+python manage.py spectacular --file schema.yml
+```
+
+This generates a valid OpenAPI 3.0 YAML file that can be imported into Postman, used to generate client SDKs, or published as part of your API contract.
 
 ### REST API
 

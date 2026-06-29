@@ -15,7 +15,9 @@ from .views import (
     compliance_export_view,
     contract_event_explorer_view,
     contract_event_types_view,
+    event_type_statistics_view,
     contract_identity_view,
+    organization_cors_view,
     organization_cost_breakdown_view,
     WebhookSubscriptionViewSet,
     contract_timeline_view,
@@ -27,6 +29,7 @@ from .views import (
     restore_archived_events,
     transaction_events_view,
     vulnerability_impact_view,
+    webhook_signing_public_key_view,
 )
 
 router = DefaultRouter()
@@ -44,10 +47,16 @@ urlpatterns = [
         contract_event_explorer_view,
         name="contract-event-explorer",
     ),
+   path(
+    "contracts/<str:contract_id>/event-types/",
+    contract_event_types_view,
+    name="contract-event-types",
+    ),
+
     path(
-        "contracts/<str:contract_id>/event-types/",
-        contract_event_types_view,
-        name="contract-event-types",
+        "events/type-statistics/",
+        event_type_statistics_view,
+        name="event-type-statistics",
     ),
     path(
         "contracts/<str:contract_id>/deployments/",
@@ -60,9 +69,15 @@ urlpatterns = [
         vulnerability_impact_view,
         name="contract-vulnerability-impact",
     ),
+    path(
+        "webhooks/signing-public-key/",
+        webhook_signing_public_key_view,
+        name="webhook-signing-public-key",
+    ),
     path("", include(router.urls)),
     path("record/", record_event_view, name="record-event"),
     path("health/", health_check, name="health-check"),
+    path("events/type-statistics/", event_type_statistics_view, name="event-type-statistics"),
     path("events/restore-archive/", restore_archived_events, name="restore-archive"),
     path("audit-trail/", audit_trail_view, name="audit-trail"),
     path("admin/ingest-errors/", admin_ingest_errors_view, name="admin-ingest-errors"),
@@ -70,6 +85,11 @@ urlpatterns = [
         "admin/organization-costs/",
         organization_cost_breakdown_view,
         name="admin-organization-costs",
+    ),
+    path(
+        "organizations/<int:pk>/cors/",
+        organization_cors_view,
+        name="organization-cors",
     ),
     path("deletion-requests/", deletion_requests_view, name="deletion-requests"),
     path("compliance-export/", compliance_export_view, name="compliance-export"),

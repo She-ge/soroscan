@@ -257,8 +257,8 @@ class TestBuilderIntegration:
     def test_complex_query_building(self):
         """Test building a complex query with multiple filters."""
         client = Mock(spec=SoroScanClient)
-        
-        query = (client.events()
+
+        query = (EventQueryBuilder(client)
             .filter_by_contract("CCAAA123")
             .filter_by_event_type("transfer")
             .filter_by_ledger_range(min=1000, max=2000)
@@ -279,8 +279,8 @@ class TestBuilderIntegration:
     def test_minimal_query_building(self):
         """Test building a minimal query with defaults."""
         client = Mock(spec=SoroScanClient)
-        
-        query = client.events().build()
+
+        query = EventQueryBuilder(client).build()
         
         assert "contract_id" not in query
         assert "event_type" not in query

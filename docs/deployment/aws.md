@@ -1,5 +1,6 @@
 ---
-id: deployment/aws
+slug: /deployment/aws
+
 title: AWS EKS Deployment (Terraform + Helm)
 description: Example for deploying SoroScan to AWS EKS using Terraform and Helm charts.
 sidebar_label: AWS / EKS

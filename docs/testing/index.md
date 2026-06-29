@@ -101,6 +101,14 @@ pnpm exec playwright test
 - Baseline performance metrics for API throughput, latency, and ingestion.
 - Regression testing on key endpoints to detect performance drift.
 
+## Chaos Engineering
+
+- Scenario definitions live in `chaos-tests/scenarios.yaml`.
+- CI validates chaos scenarios in dry-run mode.
+- Destructive Kubernetes failure injection requires `SOROSCAN_CHAOS_RUN=1`.
+- See `docs/testing/chaos-engineering.md` for pod termination, latency,
+  memory pressure, and CPU throttling workflows.
+
 ## Cross-Team Notes
 
 - Reference existing backend tests in `django-backend/`.

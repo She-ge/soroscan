@@ -54,6 +54,7 @@ export default function NotificationPrefs() {
           <div key={key} className="flex items-center justify-between gap-3 rounded-xl border border-green-500/10 bg-[#09132f]/80 px-4 py-3">
             <span className="font-mono text-sm text-green-300">{label}</span>
             <button
+              aria-pressed={prefs[key]}
               onClick={() => toggle(key)}
               className={`w-14 rounded-full border px-3 py-1 text-[11px] font-mono transition-colors ${
                 prefs[key]

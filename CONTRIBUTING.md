@@ -4,181 +4,72 @@ Thank you for investing your time in contributing to SoroScan!
 
 SoroScan is an open-source indexing layer designed to make Soroban smart contract data accessible and queryable. Whether you're fixing a bug, improving documentation, or building a new feature, we welcome your involvement.
 
-The following is a set of guidelines for contributing to SoroScan and its packages.
-
-## 🔰 New Developer Onboarding
-- Start here: [Developer Onboarding Guide](docs/contributing/developer-onboarding.md)
-
-<!-- ## ⚡ Quick Links
-
-- **[View Open Issues](../../issues)** - Find a task to work on.
-- **[Architecture Overview](../README.md#architecture)** - Understand the hybrid Rust/Django design.
-- **[Discussions](../../discussions)** - Ask questions or propose new ideas.
- -->
 ---
 
-## 🛠️ Development Workflow
+## 🚀 Quick Links for Contributors
 
-### 1. Find an Issue
-* Navigate to the **Issues** tab.
-* Filter by `good-first-issue` if you are new to the project.
-* **Claim it:** Please comment **"I'd like to work on this!"** on the issue thread to avoid duplicate work. Wait for a maintainer to assign it to you.
-* Clone & Navigate after forking the repo.
-```
-git clone https://github.com/<your-username>/soroscan.git
-cd soroscan
-```
+To make your onboarding process as smooth as possible, we have detailed guidelines for each stage of your contribution journey:
 
-### 2. Environment Setup
+1. 🔰 **Getting Started**: Read the [Developer Onboarding Guide](docs/contributing/developer-onboarding.md) to set up your local environment in under 2 hours.
+2. 🎨 **Code Style & Linting**: Adhere to our [Code Style Guidelines](docs/contributing/style-guide.md) (Python/Django, TypeScript/React, Rust, CSS, SQL).
+3. 🌿 **Git & PR Workflows**: Follow our [Git & PR Workflow Guide](docs/contributing/git-and-pr-workflow.md) to learn about branching, Conventional Commits, and code reviews.
+4. 📄 **Writing Documentation**: Check the [Documentation Contribution Guide](docs/contributing/documentation-guide.md) to learn how to edit docs and run the Docusaurus preview server.
+5. 🤝 **Community & Code of Conduct**: Read our [Community Standards](docs/contributing/community-standards.md) to understand our issue labeling, triage workflows, and Code of Conduct.
+6. 📝 **Logging Standards**: Follow our [Logging Standards](docs/contributing/LOGGING_STANDARDS.md) for structured logging formats, field naming conventions, log levels, and sensitive data masking.
+7. 🏛️ **Architecture Decisions**: Review our [Architecture Decision Records (ADRs)](docs/adrs/README.md) to understand the rationale behind major technical choices.
 
-This project requires **Rust**, **Python 3.11+**, **PostgreSQL**, and **Redis**.
 
-#### 🐍 Backend (Django) Setup
-The backend handles data ingestion, the API, and webhook dispatching.
+---
 
+## 🛠️ Overview of Our Development Workflow
+
+For a quick reference, here are the core expectations for contributing:
+
+### 1. Claiming an Issue
+Before writing any code, find an issue in the **Issues** tab.
+- Filter by `good-first-issue` if you are new.
+- Comment **"I'd like to work on this!"** on the issue thread.
+- Wait until a maintainer assigns the issue to you before starting work.
+
+### 2. Branching & Commits
+- Base your work on the `develop` branch.
+- Use **Conventional Commits** for commit messages (e.g. `feat(ingest): add contract event parsing`, `fix(admin): repair network error handling`).
+
+### 3. Running Code Validation
+Before staging your commits, run the formatters and tests:
+
+#### Python / Django:
 ```bash
-# 1. Navigate to backend directory
 cd django-backend
-
-# 2. Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure Environment
-cp .env.example .env
-# Edit .env with your local PostgreSQL credentials
-
-# 5. Run Migrations & Start Server
-python manage.py migrate
-python manage.py runserver
-```
-
-🦀 Smart Contract (Rust) Setup
-If you are modifying the core indexing logic or event emission standards.
-
-
-```bash
-# 1. Navigate to contracts directory
-cd soroban-contracts/soroscan_core
-
-# 2. Run tests to ensure environment is correct
-cargo test
-
-# 3. Build optimized WASM
-cargo build --target wasm32-unknown-unknown --release
-```
-
-### 3. Making Changes
-
-Branching: Create a new branch for your work.
-
-```Bash
-git checkout -b feat/your-feature-name
-```
-Code Style:
-
-- **Python:** We adhere to PEP 8. Please run black . before committing.
-
-- **Rust:** Please run cargo fmt before committing.
-
-
-### Database Migrations 
-Database migrations are critical for maintaining schema consistency across environments.
-
-#### When to Run `makemigrations`
-Run this command **whenever you modify any Django model** in `models.py`:
-
-```bash
-python manage.py makemigrations
-```
-
-This generates a new migration file in `migrations/` that describes the schema changes.
-
-**Important:** Always commit the generated migration file with your PR!
-
-#### When to Run `migrate`
-Run this command in these situations:
-
-1. **After pulling changes** from `main` that include new migrations:
-   ```bash
-   git pull origin main
-   python manage.py migrate
-   ```
-
-2. **After checking out a PR branch** to test it locally:
-   ```bash
-   gh pr checkout 123  # or git checkout feature-branch
-   python manage.py migrate
-   ```
-
-3. **After generating new migrations** yourself:
-   ```bash
-   python manage.py makemigrations
-   python manage.py migrate
-   ```
-
-#### Checking Migration Status
-To see which migrations are applied or pending:
-
-```bash
-python manage.py showmigrations
-```
-
-Migrations with `[X]` are applied, `[ ]` are pending.
-
-#### PR Requirements
-If your PR modifies models:
-- ✅ Include the generated migration file(s)
-- ✅ Ensure `python manage.py migrate` runs without errors
-- ✅ Run tests after migrating to verify compatibility
-
-### 4. Testing
-We prioritize stability. **Please run the test suite before submitting your PR.**
-
-Django Tests:
-
-```Bash
-python manage.py test
-```
-Contract Tests:
-
-```Bash
-cargo test
-```
-Linting:
-```Bash=# Python
+black .
 ruff check .
-black --check .
+pytest
+```
 
-# Rust
+#### TypeScript / Next.js:
+```bash
+cd soroscan-frontend
+pnpm install
+pnpm lint
+pnpm test
+```
+
+#### Rust / Soroban:
+```bash
+cd soroban-contracts/soroscan_core
+cargo fmt
 cargo clippy -- -D warnings
-cargo fmt --check
+cargo test
 ```
 
-## 🚀 Submitting a Pull Request (PR)
-Push your branch to your fork.
-```
-git push origin feat/your-feature-name
-```
+### 4. Submitting a Pull Request
+- Open your PR against the `develop` branch of the upstream repository.
+- Complete the PR description template.
+- Ensure all CI workflows pass.
+- Address code review comments constructively. Once resolved, the reviewer will approve the PR, and it will be merged via **Squash & Merge**.
 
-**Open a Pull Request against** the main branch.
+---
 
-**Title: Please use Conventional Commits format:**
-```
+## 📜 Code of Conduct
 
-feat: add websocket support
-
-fix: resolve overflow in indexer
-
-docs: update installation guide
-```
-
-Description: Reference the issue you are solving (e.g., Closes #12).
-
-Validation: Ensure all CI checks pass.
-
-📜 Code of Conduct
-By participating in this project, you agree to maintain a respectful and inclusive environment for everyone.
+By participating in this project, you agree to abide by our Code of Conduct to ensure SoroScan remains a respectful, safe, and supportive space for everyone. See the [Community Standards Guide](docs/contributing/community-standards.md) for details.

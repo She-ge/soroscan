@@ -10,11 +10,38 @@ const createJestConfig = nextJest({
 const config: Config = {
   coverageProvider: 'v8',
   testEnvironment: 'jsdom',
-  // Add more setup options before each test is run
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
-    // Handle module aliases (this will be automatically configured for you soon)
     '^@/(.*)$': '<rootDir>/$1',
+  },
+
+  // Coverage collection — only track files that are realistically testable
+  // (excludes pages/routes, API handlers, and pure config files)
+  collectCoverageFrom: [
+    'components/**/*.{ts,tsx}',
+    'lib/**/*.{ts,tsx}',
+    'context/**/*.{ts,tsx}',
+    'providers/**/*.{ts,tsx}',
+    'app/dashboard/components/**/*.{ts,tsx}',
+    '!**/*.d.ts',
+    '!**/node_modules/**',
+    '!**/__generated__/**',
+    '!**/gql/**',
+  ],
+
+  coverageDirectory: 'coverage',
+
+  coverageReporters: ['text', 'text-summary', 'lcov', 'json', 'html'],
+
+  // Thresholds are set at the current baseline so CI catches regressions.
+  // Raise these incrementally as test coverage improves.
+  coverageThreshold: {
+    global: {
+      lines: 40,
+      branches: 30,
+      functions: 35,
+      statements: 40,
+    },
   },
 }
 

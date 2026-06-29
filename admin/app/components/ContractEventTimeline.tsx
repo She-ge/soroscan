@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import VerifiedSourceBadge from './VerifiedSourceBadge';
+import type { VerificationDetails } from './VerifiedSourceBadge';
 
 // Event types with icons
 const EVENT_TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -65,11 +67,19 @@ export interface ContractEvent {
   payload?: Record<string, unknown>;
 }
 
-interface ContractEventTimelineProps {
+export interface ContractEventTimelineProps {
   events: ContractEvent[];
   onEventClick?: (event: ContractEvent) => void;
   selectedEventId?: string;
   filterEventTypes?: string[];
+  /** Whether the contract's source code is verified */
+  isVerified?: boolean;
+  /** Verification metadata shown in the badge tooltip */
+  verificationDetails?: VerificationDetails;
+  /** Called when the verified badge is clicked */
+  onViewSource?: () => void;
+  /** Optional contract name shown in the header */
+  contractName?: string;
 }
 
 export function ContractEventTimeline({
@@ -77,6 +87,10 @@ export function ContractEventTimeline({
   onEventClick,
   selectedEventId,
   filterEventTypes = [],
+  isVerified = false,
+  verificationDetails,
+  onViewSource,
+  contractName,
 }: ContractEventTimelineProps) {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
 
@@ -143,6 +157,24 @@ export function ContractEventTimeline({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header: contract name + verified badge */}
+      {(contractName || isVerified) && (
+        <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+          {contractName && (
+            <span className="text-sm font-semibold text-zinc-200 truncate">
+              {contractName}
+            </span>
+          )}
+          {isVerified && (
+            <VerifiedSourceBadge
+              isVerified={isVerified}
+              verificationDetails={verificationDetails}
+              onViewSource={onViewSource}
+            />
+          )}
+        </div>
+      )}
+
       {/* Filter bar */}
       {eventTypes.length > 1 && (
         <div className="flex items-center gap-2 p-3 border-b border-zinc-800 bg-zinc-900/50">

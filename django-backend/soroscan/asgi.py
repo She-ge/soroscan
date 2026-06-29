@@ -48,3 +48,7 @@ application = ProtocolTypeRouter(
         ),
     }
 )
+
+from soroscan.shutdown import register_shutdown_handlers  # noqa: E402
+
+register_shutdown_handlers()

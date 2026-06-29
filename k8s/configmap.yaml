@@ -9,6 +9,12 @@ data:
   ALLOWED_HOSTS: "*"  # Override with specific domains in production
   FRONTEND_BASE_URL: "https://app.soroscan.example.com"  # Replace with your frontend URL
   LOG_FORMAT: "json"
+  WEB_CONCURRENCY: "4"
+  DB_CONNECTIONS_PER_WORKER: "4"
+  DB_POOL_MIN_SIZE: "2"
+  DB_POOL_HARD_LIMIT: "40"
+  DB_CONN_MAX_AGE: "300"
+  DB_CONNECT_TIMEOUT: "5"
   
   # Stellar/Soroban configuration
   SOROBAN_RPC_URL: "https://soroban-testnet.stellar.org"

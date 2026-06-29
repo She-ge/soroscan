@@ -1,5 +1,6 @@
 ---
-id: deployment/helm
+slug: /deployment/helm
+
 title: Helm Chart Example
 description: Sample Helm chart values and guidance for deploying SoroScan.
 sidebar_label: Helm Chart

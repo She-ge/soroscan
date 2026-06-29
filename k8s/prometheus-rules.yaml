@@ -1,0 +1,59 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: soroscan-alerts
+  namespace: soroscan
+  labels:
+    app: soroscan
+spec:
+  groups:
+    - name: soroscan.api-sla
+      rules:
+        - alert: SoroScanApiErrorRateHigh
+          expr: |
+            100 * sum(rate(soroscan_http_responses_total{status_class="5xx"}[5m]))
+              / clamp_min(sum(rate(soroscan_http_responses_total[5m])), 0.001) > 1
+          for: 5m
+          labels:
+            severity: warning
+            service: soroscan-backend
+          annotations:
+            summary: "SoroScan API error rate exceeds the 1% SLA threshold"
+            description: "5xx responses are above 1% for service {{ $labels.service }}."
+            root_cause_query: 'topk(5, sum(rate(soroscan_http_responses_total{status_class="5xx"}[5m])) by (view,error_type))'
+            runbook_url: "https://github.com/SoroScan/soroscan/blob/main/docs/deployment/runbooks.md"
+        - alert: SoroScanApiErrorRateCritical
+          expr: |
+            100 * sum(rate(soroscan_http_responses_total{status_class="5xx"}[5m]))
+              / clamp_min(sum(rate(soroscan_http_responses_total[5m])), 0.001) > 5
+          for: 2m
+          labels:
+            severity: critical
+            service: soroscan-backend
+          annotations:
+            summary: "SoroScan API critical error rate exceeds 5%"
+            description: "5xx responses are above 5% for service {{ $labels.service }}."
+            root_cause_query: 'topk(5, sum(rate(soroscan_http_responses_total{status_class="5xx"}[5m])) by (view,error_type))'
+            runbook_url: "https://github.com/SoroScan/soroscan/blob/main/docs/deployment/runbooks.md"
+    - name: soroscan.celery
+      rules:
+        - alert: SoroScanCeleryQueueDepthHigh
+          expr: soroscan_celery_queue_depth > 100
+          for: 10m
+          labels:
+            severity: warning
+            service: soroscan-celery
+          annotations:
+            summary: "Celery queue {{ $labels.queue }} is backed up"
+            description: "Queue depth has exceeded 100 pending tasks for 10 minutes."
+        - alert: SoroScanCeleryFailureRateHigh
+          expr: |
+            100 * sum(rate(soroscan_celery_tasks_total{status="failure"}[10m]))
+              / clamp_min(sum(rate(soroscan_celery_tasks_total[10m])), 0.001) > 5
+          for: 5m
+          labels:
+            severity: critical
+            service: soroscan-celery
+          annotations:
+            summary: "Celery task failure rate exceeds 5%"
+            root_cause_query: 'topk(5, sum(rate(soroscan_celery_tasks_total{status="failure"}[10m])) by (task_name,error_type))'

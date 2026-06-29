@@ -68,7 +68,7 @@ services:
       context: ./django-backend
       dockerfile: Dockerfile
     container_name: soroscan-worker-high
-    command: celery -A soroscan worker --loglevel=info --concurrency=4 --queues=high_priority
+    command: celery -A soroscan worker --loglevel=info --concurrency=4 --queues=high_priority --stop-timeout=30
     volumes:
       - ./django-backend:/app
     env_file:
@@ -90,7 +90,7 @@ services:
       context: ./django-backend
       dockerfile: Dockerfile
     container_name: soroscan-worker-default
-    command: celery -A soroscan worker --loglevel=info --concurrency=2 --queues=default
+    command: celery -A soroscan worker --loglevel=info --concurrency=2 --queues=default --stop-timeout=30
     volumes:
       - ./django-backend:/app
     env_file:
@@ -112,7 +112,7 @@ services:
       context: ./django-backend
       dockerfile: Dockerfile
     container_name: soroscan-worker-low
-    command: celery -A soroscan worker --loglevel=info --concurrency=2 --queues=low_priority
+    command: celery -A soroscan worker --loglevel=info --concurrency=2 --queues=low_priority --stop-timeout=30
     volumes:
       - ./django-backend:/app
     env_file:
@@ -134,7 +134,7 @@ services:
       context: ./django-backend
       dockerfile: Dockerfile
     container_name: soroscan-worker-backfill
-    command: celery -A soroscan worker --loglevel=info --concurrency=1 --queues=backfill
+    command: celery -A soroscan worker --loglevel=info --concurrency=1 --queues=backfill --stop-timeout=30
     volumes:
       - ./django-backend:/app
     env_file:

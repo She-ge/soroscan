@@ -18,6 +18,7 @@ const sidebars: SidebarsConfig = {
   tutorialSidebar: [
     'getting-started',
     'api-overview',
+    'ROADMAP',
     {
       type: 'category',
       label: 'SDKs',
@@ -51,12 +52,31 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Database & Cache',
+      items: [
+        'database/operations-guide',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Examples',
       items: ['examples/query-events', 'examples/webhook-setup'],
+    },
+    {
+      type: 'category',
+      label: 'Contributing',
+      items: [
+        'contributing/developer-onboarding',
+        'contributing/style-guide',
+        'contributing/git-and-pr-workflow',
+        'contributing/documentation-guide',
+        'contributing/community-standards',
+      ],
     },
     'rate-limits',
     'changelog',
     'faq',
+    'troubleshooting/guide',
   ],
 };
 

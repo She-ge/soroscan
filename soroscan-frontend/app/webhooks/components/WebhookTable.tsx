@@ -9,6 +9,7 @@ import {
   type SortDirection,
 } from "@/components/terminal/Table"
 import { Button } from "@/components/terminal/Button"
+import { WebhookDeliveryStatusBadge, getDeliveryState } from "@/components/ui/WebhookDeliveryStatusBadge"
 import type { Webhook, WebhookStatus } from "../types"
 
 interface WebhookTableProps {
@@ -125,6 +126,21 @@ function WebhookCard({
                 HTTP {wh.lastStatusCode}
               </span>
             )}
+          </div>
+
+          {/* Delivery status */}
+          <div className="flex items-center gap-2">
+            <span className="text-terminal-gray w-20">STATUS</span>
+            <WebhookDeliveryStatusBadge
+              state={getDeliveryState(
+                wh.isActive ?? true,
+                wh.lastDeliverySuccess ?? wh.lastStatusCode ? wh.lastStatusCode < 300 : true,
+                wh.failureCount ?? 0
+              )}
+              lastDeliveryTime={wh.lastDelivery}
+              isActive={wh.isActive ?? true}
+              failureCount={wh.failureCount ?? 0}
+            />
           </div>
 
           {/* Contract filter */}
@@ -261,6 +277,7 @@ export function WebhookTable({ webhooks, onDelete, onTest, testingId, testResult
                   <SortDirectionIndicator active={sortField === "lastDelivery"} direction={sortDir} />
                 </span>
               </TableHead>
+              <TableHead>DELIVERY_STATUS</TableHead>
               <TableHead>ACTIONS</TableHead>
             </TableRow>
           </TableHeader>
@@ -313,6 +330,18 @@ export function WebhookTable({ webhooks, onDelete, onTest, testingId, testResult
                         HTTP {wh.lastStatusCode}
                       </div>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <WebhookDeliveryStatusBadge
+                      state={getDeliveryState(
+                        wh.isActive ?? true,
+                        wh.lastDeliverySuccess ?? (wh.lastStatusCode ? wh.lastStatusCode < 300 : true),
+                        wh.failureCount ?? 0
+                      )}
+                      lastDeliveryTime={wh.lastDelivery}
+                      isActive={wh.isActive ?? true}
+                      failureCount={wh.failureCount ?? 0}
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">

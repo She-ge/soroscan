@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 type APIKey = {
   id: string;
@@ -30,6 +31,8 @@ export default function APIKeyManager() {
     return [];
   });
   const [copied, setCopied] = useState<string | null>(null);
+  const [confirmingKey, setConfirmingKey] = useState<string | null>(null);
+  const [isRevoking, setIsRevoking] = useState(false);
 
   const saveKeys = (newKeys: APIKey[]) => {
     setKeys(newKeys);
@@ -49,8 +52,15 @@ export default function APIKeyManager() {
     saveKeys([...keys, newKey]);
   };
 
-  const handleRevoke = (id: string) => {
-    saveKeys(keys.filter((k) => k.id !== id));
+  const requestRevoke = (id: string) => setConfirmingKey(id);
+
+  const handleConfirmRevoke = () => {
+    if (!confirmingKey) return;
+    setIsRevoking(true);
+    const nextKeys = keys.filter((k) => k.id !== confirmingKey);
+    saveKeys(nextKeys);
+    setConfirmingKey(null);
+    setIsRevoking(false);
   };
 
   const handleCopy = (key: string) => {

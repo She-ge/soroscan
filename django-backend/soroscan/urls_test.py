@@ -9,10 +9,13 @@ from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
 
-from soroscan.health import health_view, readiness_view
+from soroscan.health import health_view, readiness_view, worker_health_view
 from soroscan.meta_views import db_pool_stats_view
+from soroscan.pact_provider import provider_states
 from soroscan.ingest.views import (
+    cache_stats_view,
     contract_status,
+    db_explain_view,
     rate_limit_analytics_view,
     webhook_batch_delivery_status_view,
     webhook_delivery_metrics_view,
@@ -39,7 +42,10 @@ urlpatterns = [
     path("api/contracts/status/", contract_status, name="contract-status"),
     path("api/analytics/rate-limits/", rate_limit_analytics_view, name="rate-limit-analytics"),
     path("api/meta/db-pool/", db_pool_stats_view, name="db-pool-stats"),
+    path("api/health/workers/", worker_health_view, name="worker-health"),
     path("api/dev/summary/", dev_summary_view, name="dev-summary"),
+    path("api/admin/db/explain/", db_explain_view, name="admin-db-explain"),
+    path("api/cache/stats/", cache_stats_view, name="cache-stats"),
     path(
         "api/webhooks/deliveries/batch-status/",
         webhook_batch_delivery_status_view,
@@ -51,6 +57,8 @@ urlpatterns = [
         name="webhook-delivery-metrics",
     ),
     path("api/ingest/", include("soroscan.ingest.urls")),
+    path("v1/", include("soroscan.v1.urls")),
+    path("_pact/provider-states", provider_states, name="pact-provider-states"),
 ]
 
 handler404 = 'soroscan.error_handlers.custom_404'

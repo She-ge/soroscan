@@ -13,6 +13,23 @@
 
 ---
 
+## 🧩 Figma Source
+
+Figma file: https://www.figma.com/file/qkTJWD2iKj4W2BVztdCrHt/SoroScan-UI-Design?node-id=0-1
+
+This repository follows the Figma master file as the single source of truth for colors, typography, spacing, and component behavior.
+
+---
+
+## 📱 Responsive System
+
+- Mobile: single-column stacked cards, large touch targets, high-contrast controls
+- Tablet: grouped panels with compact button rows
+- Desktop: wider layouts with side-by-side sections and status surfaces
+- Breakpoints: mobile first, then `sm` and `md` scale-up layouts across the UI
+
+---
+
 ## 📐 Design System Foundation
 
 ### Color Palette
@@ -225,6 +242,32 @@ SPECS
 │ Actions Col:     [View] [Edit] [Delete] buttons         │
 └──────────────────────────────────────────────────────────┘
 ```
+
+## 📊 Comparison & Diff View
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│ [EVENT A]                        │ [EVENT B]                          │
+├───────────────────────────────────────────────────────────────────────────┤
+│ Timestamp:  2026-05-29 12:24    │ Timestamp:  2026-05-29 12:44       │
+│ Event Type: Transfer           │ Event Type: Transfer               │
+├───────────────────────────────────────────────────────────────────────────┤
+│ Field           │ A Value             │ B Value             │ Status     │
+├───────────────────────────────────────────────────────────────────────────┤
+│ from            │ 0xabc...123          │ 0xabc...123          │ unchanged  │
+│ to              │ 0xdef...456          │ 0xdef...789          │ modified   │
+│ amount          │ 100                 │ 250                 │ modified   │
+│ memo            │ "swap"             │ —                   │ deleted    │
+│ reward          │ —                   │ 10                  │ added      │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+- Side-by-side layout shows event details in parallel columns.
+- Additions: green background, deletions: red, modified: amber, unchanged: neutral.
+- Alternative unified diff option uses inline change markers (+/−) with syntax-highlighted JSON/code blocks.
+- Mobile stacks event sections vertically with clear headers and toggle buttons to switch between A/B views.
+- Includes summary metrics: lines added, removed, changed.
+- Supports expandable rows for large payloads and collapsed sections for unchanged fields.
 
 ### 5. Modal / Dialog
 

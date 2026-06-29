@@ -36,20 +36,14 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Cache pip packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: "pip"
+          cache-dependency-path: "django-backend/requirements.txt"
 
       - name: Install dependencies
         working-directory: django-backend
@@ -67,11 +61,28 @@ jobs:
           DJANGO_SETTINGS_MODULE: soroscan.settings_test
           CELERY_TASK_ALWAYS_EAGER: "True"
         run: |
-          python -m pytest --cov=soroscan.ingest --cov-report=term-missing --cov-report=xml
+          python -m pytest \
+            --cov=soroscan \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=json \
+            --cov-fail-under=70
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+      - name: Upload HTML coverage report as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          file: ./django-backend/coverage.xml
+          name: backend-coverage-html
+          path: django-backend/htmlcov/
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./django-backend/coverage.xml
           flags: backend
           name: backend-coverage
+          fail_ci_if_error: false

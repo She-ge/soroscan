@@ -1,0 +1,35 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "e2e-tests/**"
+      - "django-backend/soroscan/ingest/tests/test_e2e_workflows.py"
+      - ".github/workflows/e2e-tests.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "e2e-tests/**"
+      - "django-backend/soroscan/ingest/tests/test_e2e_workflows.py"
+      - ".github/workflows/e2e-tests.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: e2e-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install pytest PyYAML
+
+      - name: Validate E2E scenarios and coverage
+        run: python -m pytest -q

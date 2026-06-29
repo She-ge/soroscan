@@ -52,4 +52,6 @@ console.log(events.items);
 
 - Explore the [API Overview](./api-overview.md) to understand the endpoint structure.
 - Check out the [Python SDK Guide](./sdk-python.md) or [TypeScript SDK Guide](./sdk-typescript.md) for more details.
+- Learn how the SDKs are built and released in the [SDK Development Guide](./contributing/sdk-development.md).
+- Integrate your own contracts with the [Soroban Contract Integration Guide](./cookbook/soroban-contract-integration.md).
 - Learn how to [Deploy](./deployment/docker-compose.md) your own SoroScan instance.

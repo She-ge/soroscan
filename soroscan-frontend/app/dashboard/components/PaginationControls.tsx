@@ -1,6 +1,8 @@
 "use client";
 
+import * as React from "react";
 import styles from "@/components/ingest/ingest-terminal.module.css";
+import { Dropdown } from "@/components/ui/dropdown";
 
 interface PaginationControlsProps {
   currentPage: number;
@@ -10,7 +12,16 @@ interface PaginationControlsProps {
   startIndex: number;
   endIndex: number;
   totalCount: number;
+  pageSize: number;
+  onPageSizeChange: (size: number) => void;
 }
+
+const PAGE_SIZE_OPTIONS = [
+  { label: "10 per page", value: "10" },
+  { label: "25 per page", value: "25" },
+  { label: "50 per page", value: "50" },
+  { label: "100 per page", value: "100" },
+];
 
 export function PaginationControls({
   currentPage,
@@ -20,6 +31,8 @@ export function PaginationControls({
   startIndex,
   endIndex,
   totalCount,
+  pageSize,
+  onPageSizeChange,
 }: PaginationControlsProps) {
   return (
     <div className={styles.paginationRow}>
@@ -50,6 +63,14 @@ export function PaginationControls({
       <span style={{ color: "#7ba8b5", fontSize: "0.85rem" }}>
         Showing {startIndex}-{endIndex} of {totalCount}+
       </span>
+
+      <div style={{ width: "140px", marginLeft: "8px" }}>
+        <Dropdown
+          options={PAGE_SIZE_OPTIONS}
+          value={pageSize.toString()}
+          onChange={(value) => onPageSizeChange(parseInt(value))}
+        />
+      </div>
       
       <button
         type="button"

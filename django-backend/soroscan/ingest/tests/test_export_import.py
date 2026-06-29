@@ -5,6 +5,7 @@ underlying export_import service.
 import csv
 import io
 import json
+from datetime import datetime, timezone as dt_timezone
 
 import pytest
 from django.core.management import call_command
@@ -51,6 +52,39 @@ class TestExportJSON:
 
         buf = io.StringIO()
         count = export_json(contract.contract_id, buf, start_ledger=150, end_ledger=250)
+        assert count == 1
+        data = json.loads(buf.getvalue())
+        assert data[0]["ledger"] == 200
+
+    def test_date_range_filter(self):
+        contract = TrackedContractFactory()
+        ContractEventFactory(
+            contract=contract,
+            ledger=100,
+            event_index=0,
+            timestamp=datetime(2026, 1, 1, tzinfo=dt_timezone.utc),
+        )
+        ContractEventFactory(
+            contract=contract,
+            ledger=200,
+            event_index=1,
+            timestamp=datetime(2026, 1, 15, tzinfo=dt_timezone.utc),
+        )
+        ContractEventFactory(
+            contract=contract,
+            ledger=300,
+            event_index=2,
+            timestamp=datetime(2026, 2, 1, tzinfo=dt_timezone.utc),
+        )
+
+        buf = io.StringIO()
+        count = export_json(
+            contract.contract_id,
+            buf,
+            start_date=datetime(2026, 1, 10, tzinfo=dt_timezone.utc),
+            end_date=datetime(2026, 1, 31, tzinfo=dt_timezone.utc),
+        )
+
         assert count == 1
         data = json.loads(buf.getvalue())
         assert data[0]["ledger"] == 200
@@ -184,6 +218,50 @@ class TestExportCommand:
         with open(out_file) as f:
             rows = list(csv.DictReader(f))
         assert len(rows) == 2
+
+    def test_command_supports_contract_alias_and_date_filter(self, tmp_path):
+        contract = TrackedContractFactory()
+        ContractEventFactory(
+            contract=contract,
+            ledger=100,
+            event_index=0,
+            timestamp=datetime(2026, 1, 1, tzinfo=dt_timezone.utc),
+        )
+        ContractEventFactory(
+            contract=contract,
+            ledger=200,
+            event_index=1,
+            timestamp=datetime(2026, 1, 20, tzinfo=dt_timezone.utc),
+        )
+        out_file = str(tmp_path / "events.json")
+
+        call_command(
+            "export_events",
+            contract_id=contract.contract_id,
+            format="json",
+            output=out_file,
+            start_date="2026-01-15",
+            end_date="2026-01-31",
+        )
+
+        data = json.loads(open(out_file).read())
+        assert [row["ledger"] for row in data] == [200]
+
+    def test_missing_contract_option_raises(self):
+        with pytest.raises(CommandError, match="Either --contract or --contract-id"):
+            call_command("export_events", format="json", output="-")
+
+    def test_invalid_date_range_raises(self):
+        contract = TrackedContractFactory()
+        with pytest.raises(CommandError, match="--start-date"):
+            call_command(
+                "export_events",
+                contract_id=contract.contract_id,
+                format="json",
+                output="-",
+                start_date="2026-02-01",
+                end_date="2026-01-01",
+            )
 
     def test_unknown_contract_raises(self):
         with pytest.raises(CommandError, match="No TrackedContract"):

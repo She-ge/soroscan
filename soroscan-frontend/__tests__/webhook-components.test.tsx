@@ -1,5 +1,5 @@
 import React from "react"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { WebhookTable } from "@/app/webhooks/components/WebhookTable"
 import { CreateWebhookModal } from "@/app/webhooks/components/CreateWebhookModal"
 import WebhookDetailPage from "@/app/webhooks/[id]/page"
@@ -235,6 +235,100 @@ describe("CreateWebhookModal", () => {
     fireEvent.change(timeoutInput, { target: { value: "35" } })
     fireEvent.blur(timeoutInput)
     expect(screen.queryByText(/Timeout must be a whole number between 5 and 60 seconds./)).not.toBeInTheDocument()
+  })
+
+  it("submits valid timeout value when creating a webhook", async () => {
+    render(
+      <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
+    )
+
+    const urlInput = screen.getByPlaceholderText(/https:\/\/yourapp.io\/webhook/)
+    fireEvent.change(urlInput, { target: { value: "https://example.com/hook" } })
+    fireEvent.blur(urlInput)
+
+    const timeoutInput = screen.getByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
+    fireEvent.change(timeoutInput, { target: { value: "45" } })
+    fireEvent.blur(timeoutInput)
+
+    fireEvent.click(screen.getByText("CREATE_WEBHOOK"))
+
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalledWith({
+        url: "https://example.com/hook",
+        eventTypes: ["ALL"],
+        contractFilter: undefined,
+        status: "ACTIVE",
+        timeoutSeconds: 45,
+        filterExpression: undefined,
+      })
+    }, { timeout: 1200 })
+  })
+
+  it("displays timeout explanation text", () => {
+    render(
+      <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
+    )
+    expect(screen.getByText(/Maximum time to wait for webhook response/)).toBeInTheDocument()
+  })
+
+  it("shows timeout quick suggestion buttons", () => {
+    render(
+      <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
+    )
+    const suggestionButtons = screen.getAllByRole("button").filter((btn) =>
+      ["10s", "20s", "30s", "45s", "60s"].includes(btn.textContent || "")
+    )
+    expect(suggestionButtons).toHaveLength(5)
+  })
+
+  it("sets timeout value when suggestion button is clicked", () => {
+    render(
+      <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
+    )
+    const suggestionButton = screen.getByRole("button", { name: "45s" })
+    fireEvent.click(suggestionButton)
+    const timeoutInput = screen.getByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
+    expect(timeoutInput.value).toBe("45")
+  })
+
+  it("validates timeout at minimum boundary (5 seconds)", () => {
+    render(
+      <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
+    )
+    const timeoutInput = screen.getByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
+    fireEvent.change(timeoutInput, { target: { value: "5" } })
+    fireEvent.blur(timeoutInput)
+    expect(screen.queryByText(/Timeout must be a whole number between 5 and 60 seconds./)).not.toBeInTheDocument()
+  })
+
+  it("validates timeout at maximum boundary (60 seconds)", () => {
+    render(
+      <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
+    )
+    const timeoutInput = screen.getByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
+    fireEvent.change(timeoutInput, { target: { value: "60" } })
+    fireEvent.blur(timeoutInput)
+    expect(screen.queryByText(/Timeout must be a whole number between 5 and 60 seconds./)).not.toBeInTheDocument()
+  })
+
+  it("rejects timeout below minimum (4 seconds)", () => {
+    render(
+      <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
+    )
+    const timeoutInput = screen.getByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
+    fireEvent.change(timeoutInput, { target: { value: "4" } })
+    fireEvent.blur(timeoutInput)
+    expect(screen.getByText(/Timeout must be a whole number between 5 and 60 seconds./)).toBeInTheDocument()
+  })
+
+  it("rejects timeout above maximum (61 seconds)", () => {
+    render(
+      <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
+    )
+    const timeoutInput = screen.getByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
+    fireEvent.change(timeoutInput, { target: { value: "61" } })
+    fireEvent.blur(timeoutInput)
+    expect(screen.getByText(/Timeout must be a whole number between 5 and 60 seconds./)).toBeInTheDocument()
   })
 })
 

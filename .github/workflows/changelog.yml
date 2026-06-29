@@ -31,19 +31,10 @@ jobs:
           OUTPUT: docs/changelog.md
           GITHUB_REPO: ${{ github.repository }}
 
-      - name: Ensure GH_PAT is configured
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        run: |
-          if [ -z "$GH_PAT" ]; then
-            echo "GH_PAT secret is required to create changelog pull requests."
-            exit 1
-          fi
-
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore(changelog): update changelog"
           title: "chore(changelog): Update Changelog"
           body: |

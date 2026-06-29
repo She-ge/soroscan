@@ -1,4 +1,5 @@
 [run]
+source = soroscan
 omit =
     soroscan/settings.py
     soroscan/settings_test.py
@@ -13,3 +14,16 @@ omit =
     soroscan/wsgi.py
     soroscan/asgi.py
     soroscan/ingest/migrations/*
+# Fail if total coverage drops below this threshold
+fail_under = 70
+show_missing = True
+skip_covered = False
+
+[html]
+directory = htmlcov
+
+[xml]
+output = coverage.xml
+
+[json]
+output = coverage.json

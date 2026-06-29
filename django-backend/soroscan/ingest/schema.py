@@ -15,7 +15,14 @@ from django.utils import timezone
 from strawberry import auto
 from strawberry.types import Info
 
-from .cache_utils import get_or_set_json, query_cache_ttl, stable_cache_key
+from .cache_utils import (
+    get_or_set_json,
+    invalidate_contract_query_cache,
+    invalidate_cached_contract,
+    invalidate_event_count_cache,
+    query_cache_ttl,
+    stable_cache_key,
+)
 from .models import (
     CallGraph,
     ContractDependency,
@@ -32,7 +39,11 @@ from ..graphql_extensions import (
     GraphQLRateLimitExtension,
     GraphQLResolverLoggingExtension,
     log_graphql_resolver,
+    IsAuthenticated,
+    IsStaff,
+    permission_classes,
 )
+from ..graphql_n1_detector import N1QueryDetectorExtension
 
 
 def _get_authenticated_user(info: Info):
@@ -750,6 +761,7 @@ class Query:
         )
 
     @strawberry.field
+    @permission_classes([IsStaff])
     def system_metrics(self, info: Info) -> SystemMetrics:
         """Get system-wide health and performance metrics."""
         user = _get_authenticated_user(info)
@@ -788,6 +800,7 @@ class Query:
         )
 
     @strawberry.field
+    @permission_classes([IsAuthenticated])
     def notifications(
         self,
         info: Info,
@@ -818,6 +831,7 @@ class Query:
         return Notification.objects.filter(user=user, is_read=False).count()
 
     @strawberry.field
+    @permission_classes([IsStaff])
     def recent_errors(self, info: Info, limit: int = 10) -> list[ErrorLog]:
         """Get recent system errors and warnings."""
         user = _get_authenticated_user(info)
@@ -842,6 +856,7 @@ class Query:
 @strawberry.type
 class Mutation:
     @strawberry.mutation
+    @permission_classes([IsAuthenticated])
     def register_contract(
         self,
         info: Info,
@@ -875,9 +890,11 @@ class Mutation:
             team=team,
             metadata=metadata or {},
         )
+        invalidate_cached_contract(contract_id)
         return contract
 
     @strawberry.mutation
+    @permission_classes([IsAuthenticated])
     def mark_notification_read(self, info: Info, notification_id: int) -> bool:
         """Mark a single notification as read."""
         user = _get_authenticated_user(info)
@@ -887,6 +904,7 @@ class Mutation:
         return updated > 0
 
     @strawberry.mutation
+    @permission_classes([IsAuthenticated])
     def mark_all_notifications_read(self, info: Info) -> int:
         """Mark all notifications as read. Returns count updated."""
         user = _get_authenticated_user(info)
@@ -895,6 +913,7 @@ class Mutation:
         return Notification.objects.filter(user=user, is_read=False).update(is_read=True)
 
     @strawberry.mutation
+    @permission_classes([IsAuthenticated])
     def clear_all_notifications(self, info: Info) -> int:
         """Delete all notifications for the user. Returns count deleted."""
         user = _get_authenticated_user(info)
@@ -904,6 +923,7 @@ class Mutation:
         return count
 
     @strawberry.mutation
+    @permission_classes([IsAuthenticated])
     def set_contract_metadata(
         self,
         info: Info,
@@ -939,6 +959,8 @@ class Mutation:
             },
         )
 
+        invalidate_cached_contract(contract_id)
+
         try:
             instance.full_clean()
         except ValidationError as exc:
@@ -955,6 +977,7 @@ class Mutation:
         )
 
     @strawberry.mutation
+    @permission_classes([IsAuthenticated])
     def delete_contract_metadata(self, info: Info, contract_id: str) -> bool:
         """Delete metadata for a contract. Returns False if no record exists."""
         user = _get_authenticated_user(info)
@@ -963,11 +986,13 @@ class Mutation:
 
         try:
             ContractMetadata.objects.get(contract__contract_id=contract_id).delete()
+            invalidate_cached_contract(contract_id)
             return True
         except ContractMetadata.DoesNotExist:
             return False
 
     @strawberry.mutation
+    @permission_classes([IsAuthenticated])
     def update_contract(
         self,
         info: Info,
@@ -1009,6 +1034,10 @@ class Mutation:
             contract.metadata = metadata
 
         contract.save()
+
+        invalidate_cached_contract(contract_id)
+        invalidate_contract_query_cache(contract_id)
+        invalidate_event_count_cache(contract_id)
 
         # Push notification when a contract is paused
         if is_active is False:
@@ -1149,5 +1178,6 @@ schema = strawberry.Schema(
     extensions=[
         GraphQLRateLimitExtension,
         GraphQLResolverLoggingExtension,
+        N1QueryDetectorExtension,
     ],
 )

@@ -59,7 +59,13 @@ def _event_to_dict(event: ContractEvent) -> dict:
     }
 
 
-def _iter_events(contract_id: str, start_ledger: int | None, end_ledger: int | None) -> Iterator[ContractEvent]:
+def _iter_events(
+    contract_id: str,
+    start_ledger: int | None,
+    end_ledger: int | None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> Iterator[ContractEvent]:
     """Yield events in (ledger, event_index) order using pk-based pagination to avoid loading all rows."""
     qs = (
         ContractEvent.objects
@@ -71,6 +77,10 @@ def _iter_events(contract_id: str, start_ledger: int | None, end_ledger: int | N
         qs = qs.filter(ledger__gte=start_ledger)
     if end_ledger is not None:
         qs = qs.filter(ledger__lte=end_ledger)
+    if start_date is not None:
+        qs = qs.filter(timestamp__gte=start_date)
+    if end_date is not None:
+        qs = qs.filter(timestamp__lte=end_date)
 
     last_pk = 0
     while True:
@@ -82,12 +92,22 @@ def _iter_events(contract_id: str, start_ledger: int | None, end_ledger: int | N
         last_pk = chunk[-1].pk
 
 
-def _count_events(contract_id: str, start_ledger: int | None, end_ledger: int | None) -> int:
+def _count_events(
+    contract_id: str,
+    start_ledger: int | None,
+    end_ledger: int | None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> int:
     qs = ContractEvent.objects.filter(contract__contract_id=contract_id)
     if start_ledger is not None:
         qs = qs.filter(ledger__gte=start_ledger)
     if end_ledger is not None:
         qs = qs.filter(ledger__lte=end_ledger)
+    if start_date is not None:
+        qs = qs.filter(timestamp__gte=start_date)
+    if end_date is not None:
+        qs = qs.filter(timestamp__lte=end_date)
     return qs.count()
 
 
@@ -95,11 +115,18 @@ def _count_events(contract_id: str, start_ledger: int | None, end_ledger: int | 
 # Export
 # ---------------------------------------------------------------------------
 
-def export_json(contract_id: str, out: IO, start_ledger=None, end_ledger=None) -> int:
+def export_json(
+    contract_id: str,
+    out: IO,
+    start_ledger=None,
+    end_ledger=None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> int:
     """Stream events as a JSON array to *out*. Returns event count."""
     out.write("[\n")
     count = 0
-    for event in _iter_events(contract_id, start_ledger, end_ledger):
+    for event in _iter_events(contract_id, start_ledger, end_ledger, start_date, end_date):
         if count > 0:
             out.write(",\n")
         out.write(json.dumps(_event_to_dict(event)))
@@ -108,18 +135,32 @@ def export_json(contract_id: str, out: IO, start_ledger=None, end_ledger=None) -
     return count
 
 
-def export_csv(contract_id: str, out: IO, start_ledger=None, end_ledger=None) -> int:
+def export_csv(
+    contract_id: str,
+    out: IO,
+    start_ledger=None,
+    end_ledger=None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> int:
     """Stream events as CSV to *out*. Returns event count."""
     writer = csv.DictWriter(out, fieldnames=EXPORT_FIELDS, lineterminator="\n")
     writer.writeheader()
     count = 0
-    for event in _iter_events(contract_id, start_ledger, end_ledger):
+    for event in _iter_events(contract_id, start_ledger, end_ledger, start_date, end_date):
         writer.writerow(_event_to_dict(event))
         count += 1
     return count
 
 
-def export_parquet(contract_id: str, path: str, start_ledger=None, end_ledger=None) -> int:
+def export_parquet(
+    contract_id: str,
+    path: str,
+    start_ledger=None,
+    end_ledger=None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> int:
     """Write events to a Parquet file at *path*. Returns event count."""
     try:
         import pyarrow as pa
@@ -153,7 +194,7 @@ def export_parquet(contract_id: str, path: str, start_ledger=None, end_ledger=No
         table = pa.table(arrays, schema=schema)
         writer.write_table(table)
 
-    for event in _iter_events(contract_id, start_ledger, end_ledger):
+    for event in _iter_events(contract_id, start_ledger, end_ledger, start_date, end_date):
         batch.append(_event_to_dict(event))
         count += 1
         if len(batch) >= CHUNK_SIZE:
@@ -167,7 +208,14 @@ def export_parquet(contract_id: str, path: str, start_ledger=None, end_ledger=No
     return count
 
 
-def export_avro(contract_id: str, path: str, start_ledger=None, end_ledger=None) -> int:
+def export_avro(
+    contract_id: str,
+    path: str,
+    start_ledger=None,
+    end_ledger=None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> int:
     """Write events to an Avro file at *path*. Returns event count."""
     try:
         import fastavro
@@ -198,7 +246,7 @@ def export_avro(contract_id: str, path: str, start_ledger=None, end_ledger=None)
 
     count = 0
     records = []
-    for event in _iter_events(contract_id, start_ledger, end_ledger):
+    for event in _iter_events(contract_id, start_ledger, end_ledger, start_date, end_date):
         records.append(_event_to_dict(event))
         count += 1
         if len(records) >= CHUNK_SIZE:

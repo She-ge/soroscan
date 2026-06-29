@@ -132,9 +132,57 @@ class TeamMembershipAdmin(admin.ModelAdmin):
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "owner", "quota", "created_at"]
+    list_display = ["name", "slug", "owner", "quota", "cors_origins_count", "created_at"]
     search_fields = ["name", "slug", "owner__username"]
     readonly_fields = ["created_at", "updated_at"]
+    fieldsets = (
+        (None, {
+            "fields": ("name", "slug", "owner", "quota", "settings"),
+        }),
+        ("CORS Configuration", {
+            "fields": ("cors_origins",),
+            "description": (
+                "Enter a JSON list of allowed origins for this organization, e.g. "
+                '<code>["https://app.example.com", "https://staging.example.com"]</code>. '
+                "Each entry must start with <code>http://</code> or <code>https://</code>. "
+                "Changes take effect within 60 seconds (cache TTL)."
+            ),
+        }),
+        ("Timestamps", {
+            "fields": ("created_at", "updated_at"),
+            "classes": ("collapse",),
+        }),
+    )
+
+    @admin.display(description="CORS Origins")
+    def cors_origins_count(self, obj):
+        origins = obj.cors_origins or []
+        count = len(origins)
+        if count == 0:
+            return format_html('<span style="color: #6c757d;">None</span>')
+        return format_html(
+            '<span title="{}">{} origin{}</span>',
+            ", ".join(origins[:10]),
+            count,
+            "s" if count != 1 else "",
+        )
+
+    def save_model(self, request, obj, form, change):
+        # Validate each origin before saving.
+        origins = obj.cors_origins or []
+        invalid = [
+            o for o in origins
+            if not isinstance(o, str) or not (o.startswith("http://") or o.startswith("https://"))
+        ]
+        if invalid:
+            self.message_user(
+                request,
+                f"Invalid CORS origin(s) removed (must start with http:// or https://): "
+                f"{', '.join(str(o) for o in invalid)}",
+                level=messages.WARNING,
+            )
+            obj.cors_origins = [o for o in origins if o not in invalid]
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(OrganizationMembership)

@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 import time
 from datetime import timedelta
 
@@ -25,6 +26,7 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 import requests as http_requests
 
 from soroscan.throttles import IngestRateThrottle
+from soroscan.webhook_signing import build_x_signature_header, public_key_base64
 
 from .cache_utils import cache_result, get_or_set_json, query_cache_ttl, stable_cache_key
 from .models import (
@@ -35,8 +37,10 @@ from .models import (
     ContractInvocation,
     ContractSource,
     ContractVerification,
+    Organization,
     OrganizationCostSnapshot,
     OrganizationBudget,
+    OrganizationMembership,
     IngestError,
     IndexerState,
     Team,
@@ -54,6 +58,7 @@ from .serializers import (
     ContractVerificationSerializer,
     EventSearchSerializer,
     OrganizationBudgetSerializer,
+    OrganizationCorsSerializer,
     OrganizationCostSnapshotSerializer,
     RecordEventRequestSerializer,
     TeamMemberAddSerializer,
@@ -122,10 +127,23 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
         return warnings
 
     def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
-        if isinstance(response.data, dict) and "results" in response.data:
-            response.data["warnings"] = self._collect_warnings(response.data["results"])
-        return response
+        """Cache the contracts list for 30 seconds (issue #488)."""
+        cache_key = stable_cache_key(
+            "rest_contracts_list",
+            {
+                "query": sorted(request.query_params.items()),
+                "user_id": getattr(request.user, "id", None),
+            },
+        )
+
+        def _build():
+            response = super(TrackedContractViewSet, self).list(request, *args, **kwargs)
+            if isinstance(response.data, dict) and "results" in response.data:
+                response.data["warnings"] = self._collect_warnings(response.data["results"])
+            return response.data
+
+        cached_data = get_or_set_json(cache_key, 30, _build)
+        return Response(cached_data)
 
     def retrieve(self, request, *args, **kwargs):
         response = super().retrieve(request, *args, **kwargs)
@@ -145,12 +163,27 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+        self._invalidate_list_cache()
 
     def perform_update(self, serializer):
         instance = serializer.save()
+        self._invalidate_list_cache()
         from .tasks import alert_downstream_contract_change
 
         alert_downstream_contract_change.delay(instance.contract_id, "modified")
+
+    def _invalidate_list_cache(self):
+        from django.core.cache import cache as _cache
+
+        if hasattr(_cache, "delete_pattern"):
+            _cache.delete_pattern("soroscan:rest_contracts_list:*")
+        else:
+            _cache.clear()
+
+    def destroy(self, request, *args, **kwargs):
+        response = super().destroy(request, *args, **kwargs)
+        self._invalidate_list_cache()
+        return response
 
     def get_queryset(self):
         qs = TrackedContract.objects.all()
@@ -328,7 +361,16 @@ class ContractEventViewSet(viewsets.ReadOnlyModelViewSet):
     }
 
     def get_queryset(self):
-        return ContractEvent.objects.select_related("contract").all()
+        qs = ContractEvent.objects.select_related("contract").all()
+        
+        # Support comma-separated 'type' filter (Issue #476)
+        event_types = self.request.query_params.get("type")
+        if event_types:
+            types_list = [t.strip() for t in event_types.split(",") if t.strip()]
+            if types_list:
+                qs = qs.filter(event_type__in=types_list)
+                
+        return qs
 
     @extend_schema(
         parameters=[
@@ -590,6 +632,10 @@ class WebhookSubscriptionViewSet(viewsets.ModelViewSet):
             "X-SoroScan-Signature": f"{prefix}={sig_hex}",
             "X-SoroScan-Timestamp": timezone.now().isoformat(),
         }
+        try:
+            headers["X-Signature"] = build_x_signature_header(payload_bytes)
+        except ValueError:
+            pass
 
         try:
             http_requests.post(
@@ -864,6 +910,31 @@ def record_event_view(request):
 
 @extend_schema(
     responses=inline_serializer(
+        name="WebhookSigningPublicKeyResponse",
+        fields={
+            "algorithm": serializers.CharField(),
+            "public_key": serializers.CharField(),
+            "header": serializers.CharField(),
+            "format": serializers.CharField(),
+        },
+    )
+)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def webhook_signing_public_key_view(request):
+    """Return the platform Ed25519 public key used for webhook X-Signature headers."""
+    return Response(
+        {
+            "algorithm": "ed25519",
+            "public_key": public_key_base64(),
+            "header": "X-Signature",
+            "format": "ed25519=<base64-signature>",
+        }
+    )
+
+
+@extend_schema(
+    responses=inline_serializer(
         name="HealthCheckResponse",
         fields={
             "status": serializers.CharField(),
@@ -1022,6 +1093,66 @@ def organization_cost_breakdown_view(request):
     return Response({"results": payload})
 
 
+@extend_schema(
+    summary="Get or update organization CORS origins",
+    description=(
+        "GET returns the current list of allowed CORS origins for an organization. "
+        "PATCH replaces the entire list. "
+        "Only the organization owner and admins may update this setting. "
+        "Staff users may access any organization."
+    ),
+    request=OrganizationCorsSerializer,
+    responses={200: OrganizationCorsSerializer},
+)
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def organization_cors_view(request, pk: int):
+    """
+    Retrieve or update the per-organization CORS allowed origins.
+
+    - **GET** — returns ``{id, name, cors_origins}`` for the organization.
+    - **PATCH** — replaces ``cors_origins`` with the supplied list.
+
+    Permission rules:
+    - Staff users can access any organization.
+    - Non-staff users may only access organizations where they hold an
+      ``owner`` or ``admin`` membership role.
+    """
+    try:
+        org = Organization.objects.get(pk=pk)
+    except Organization.DoesNotExist:
+        return Response({"error": "Organization not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Permission check: staff OR org owner/admin.
+    if not request.user.is_staff:
+        has_permission = OrganizationMembership.objects.filter(
+            organization=org,
+            user=request.user,
+            role__in=[OrganizationMembership.Role.OWNER, OrganizationMembership.Role.ADMIN],
+        ).exists()
+        if not has_permission:
+            return Response(
+                {"error": "You do not have permission to manage CORS settings for this organization."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+    if request.method == "GET":
+        serializer = OrganizationCorsSerializer(org)
+        return Response(serializer.data)
+
+    # PATCH
+    serializer = OrganizationCorsSerializer(org, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer.save()
+    logger.info(
+        "cors_origins updated for org=%s by user=%s",
+        org.slug,
+        request.user.username,
+    )
+    return Response(serializer.data)
+
+
 def contract_timeline_view(request, contract_id: str):
     """Redirect timeline requests to the frontend contract timeline page."""
     contract = get_cached_contract(contract_id)
@@ -1032,6 +1163,16 @@ def contract_timeline_view(request, contract_id: str):
     return redirect(f"{frontend_base}/contracts/{contract.contract_id}/timeline")
 
 
+@extend_schema(
+    responses=inline_serializer(
+        name="TransactionEventsResponse",
+        fields={
+            "transaction_id": serializers.CharField(),
+            "event_count": serializers.IntegerField(),
+            "events": ContractEventSerializer(many=True),
+        },
+    ),
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def transaction_events_view(request, tx_id: str):
@@ -1061,6 +1202,18 @@ def contract_event_explorer_view(request, contract_id: str):
     return redirect(f"{frontend_base}/contracts/{contract.contract_id}/events/explorer")
 
 
+@extend_schema(
+    responses=inline_serializer(
+        name="ContractEventTypesResponse",
+        fields={
+            "event_type": serializers.CharField(),
+            "count": serializers.IntegerField(),
+            "first_seen": serializers.DateTimeField(allow_null=True),
+            "last_seen": serializers.DateTimeField(allow_null=True),
+        },
+        many=True,
+    ),
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def contract_event_types_view(request, contract_id: str):
@@ -1086,6 +1239,79 @@ def contract_event_types_view(request, contract_id: str):
     
     result = get_or_set_json(cache_key, 60, _build)
     return Response(result)
+
+
+@extend_schema(
+    parameters=[
+        inline_serializer(
+            name="EventTypeStatisticsParams",
+            fields={
+                "contract_id": serializers.CharField(required=False),
+            },
+        )
+    ],
+    responses=inline_serializer(
+        name="EventTypeStatisticsResponse",
+        fields={
+            "contract_id": serializers.CharField(allow_null=True),
+            "total_events": serializers.IntegerField(),
+            "event_types": serializers.JSONField(),
+        },
+    ),
+)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def event_type_statistics_view(request):
+    """Return event type distribution globally or for a specific contract."""
+    contract_id = request.query_params.get("contract_id")
+
+    contract = None
+    if contract_id:
+        contract = get_cached_contract(contract_id)
+        if not contract:
+            from django.http import Http404
+            raise Http404
+
+    cache_key = stable_cache_key(
+        "event_type_statistics",
+        {"contract_id": contract_id or "all"},
+    )
+
+    def _build():
+        events = ContractEvent.objects.select_related("contract").all()
+
+        if contract:
+            events = events.filter(contract=contract)
+
+        total_events = events.count()
+
+        event_types = list(
+            events.values("contract__contract_id", "event_type")
+            .annotate(
+                count=Count("id"),
+                first_seen=Min("timestamp"),
+                last_seen=Max("timestamp"),
+            )
+            .order_by("contract__contract_id", "-count", "event_type")
+        )
+
+        return {
+            "contract_id": contract_id if contract_id else None,
+            "total_events": total_events,
+            "event_types": [
+                {
+                    "contract_id": item["contract__contract_id"],
+                    "event_type": item["event_type"],
+                    "count": item["count"],
+                    "first_seen": item["first_seen"],
+                    "last_seen": item["last_seen"],
+                }
+                for item in event_types
+            ],
+        }
+
+    payload = get_or_set_json(cache_key, query_cache_ttl(), _build)
+    return Response(payload)
 
 
 @extend_schema(
@@ -1253,6 +1479,19 @@ def audit_trail_view(request):
     return Response(serializer.data)
 
 
+@extend_schema(
+    responses=inline_serializer(
+        name="AdminIngestErrorsResponse",
+        fields={
+            "error_type": serializers.CharField(),
+            "contract_id": serializers.CharField(allow_null=True),
+            "count": serializers.IntegerField(),
+            "last_occurrence": serializers.DateTimeField(allow_null=True),
+            "sample_error": serializers.CharField(allow_null=True),
+        },
+        many=True,
+    ),
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def admin_ingest_errors_view(request):
@@ -1363,6 +1602,19 @@ class DataDeletionRequestSerializer(serializers.ModelSerializer):
         return list(obj.contracts.values_list("contract_id", flat=True))
 
 
+@extend_schema(
+    request=inline_serializer(
+        name="DeletionRequestCreate",
+        fields={
+            "subject_identifier": serializers.CharField(),
+            "contract_ids": serializers.ListField(
+                child=serializers.CharField(),
+                required=False,
+            ),
+        },
+    ),
+    responses=DataDeletionRequestSerializer(),
+)
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def deletion_requests_view(request):
@@ -1398,6 +1650,18 @@ def deletion_requests_view(request):
     return Response(DataDeletionRequestSerializer(req).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    parameters=[
+        inline_serializer(
+            name="ComplianceExportParams",
+            fields={
+                "from": serializers.DateTimeField(required=False),
+                "to": serializers.DateTimeField(required=False),
+            },
+        )
+    ],
+    responses={200: {"type": "string", "format": "binary", "description": "CSV audit trail export"}},
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def compliance_export_view(request):
@@ -1563,6 +1827,30 @@ def webhook_batch_delivery_status_view(request):
     return Response({"deliveries": deliveries})
 
 
+@extend_schema(
+    parameters=[
+        inline_serializer(
+            name="WebhookDeliveryMetricsParams",
+            fields={
+                "subscription_id": serializers.IntegerField(required=False),
+                "minutes": serializers.IntegerField(required=False),
+                "recent": serializers.IntegerField(required=False),
+            },
+        )
+    ],
+    responses=inline_serializer(
+        name="WebhookDeliveryMetricsResponse",
+        fields={
+            "total_deliveries": serializers.IntegerField(),
+            "success_count": serializers.IntegerField(),
+            "success_rate_percent": serializers.FloatField(allow_null=True),
+            "avg_latency_ms": serializers.FloatField(allow_null=True),
+            "recent_deliveries": serializers.JSONField(),
+            "failure_breakdown": serializers.JSONField(),
+            "time_range": serializers.JSONField(),
+        },
+    ),
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def webhook_delivery_metrics_view(request):
@@ -1678,6 +1966,17 @@ class ContractABIVersionSerializer(serializers.ModelSerializer):
         ]
 
 
+@extend_schema(
+    responses=inline_serializer(
+        name="DeploymentTimelineResponse",
+        fields={
+            "contract_id": serializers.CharField(),
+            "deployments": ContractDeploymentSerializer(many=True),
+            "abi_versions": ContractABIVersionSerializer(many=True),
+            "compatibility_warnings": serializers.JSONField(),
+        },
+    ),
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def deployment_timeline_view(request, contract_id):
@@ -1738,4 +2037,131 @@ def contract_identity_view(request):
         "contract_id": getattr(settings, "SOROSCAN_CONTRACT_ID", ""),
         "network_passphrase": getattr(settings, "STELLAR_NETWORK_PASSPHRASE", ""),
         "rpc_url": getattr(settings, "SOROBAN_RPC_URL", ""),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Issue #491: EXPLAIN ANALYZE endpoint for query debugging
+# ---------------------------------------------------------------------------
+
+_ALLOWED_STATEMENTS = re.compile(
+    r"^\s*(SELECT|WITH|EXPLAIN)\b",
+    re.IGNORECASE,
+)
+
+
+@extend_schema(
+    request=inline_serializer(
+        name="DBExplainRequest",
+        fields={
+            "query": serializers.CharField(
+                help_text="SQL SELECT statement to explain",
+            ),
+            "analyze": serializers.BooleanField(
+                default=False,
+                help_text="If true, runs EXPLAIN ANALYZE instead of EXPLAIN",
+            ),
+        },
+    ),
+    responses={
+        200: inline_serializer(
+            name="DBExplainResponse",
+            fields={
+                "query_plan": serializers.CharField(),
+                "analyzed": serializers.BooleanField(),
+            },
+        ),
+        400: inline_serializer(
+            name="DBExplainError",
+            fields={"error": serializers.CharField()},
+        ),
+    },
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+def db_explain_view(request):
+    """
+    POST /api/admin/db/explain/
+
+    Returns the query execution plan for a given SQL SELECT statement.
+    Secured to admin (staff) users only and rate-limited.
+    """
+    if not request.user or not request.user.is_staff:
+        return Response(
+            {"error": "Admin access required."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    sql = (request.data.get("query") or "").strip()
+    if not sql:
+        return Response(
+            {"error": "A SQL query is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not _ALLOWED_STATEMENTS.match(sql):
+        return Response(
+            {"error": "Only SELECT, WITH, and EXPLAIN statements are allowed."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    analyze = bool(request.data.get("analyze", False))
+    prefix = "EXPLAIN ANALYZE" if analyze else "EXPLAIN"
+
+    try:
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            try:
+                cursor.execute(f"{prefix} {sql}")
+            except Exception:
+                if analyze:
+                    # SQLite doesn't support EXPLAIN ANALYZE; fall back to EXPLAIN
+                    cursor.execute(f"EXPLAIN {sql}")
+                else:
+                    raise
+            plan = "\n".join(
+                " ".join(str(cell) for cell in row) for row in cursor.fetchall()
+            )
+    except Exception as exc:
+        return Response(
+            {"error": f"Failed to execute EXPLAIN: {exc}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return Response({"query_plan": plan, "analyzed": analyze})
+
+
+# ---------------------------------------------------------------------------
+# Issue #488: Cache stats endpoint
+# ---------------------------------------------------------------------------
+
+@extend_schema(
+    responses=inline_serializer(
+        name="CacheStatsResponse",
+        fields={
+            "backend": serializers.CharField(),
+            "default_ttl": serializers.IntegerField(),
+            "status": serializers.CharField(),
+        },
+    ),
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+def cache_stats_view(request):
+    """
+    GET /api/cache/stats/
+
+    Returns cache hit/miss statistics and current cache backend info.
+    """
+    from django.core.cache import cache as django_cache
+
+    backend_info = str(type(django_cache._cache).__name__)
+
+    return Response({
+        "backend": backend_info,
+        "default_ttl": getattr(settings, "QUERY_CACHE_TTL_SECONDS", 60),
+        "status": "ok",
     })

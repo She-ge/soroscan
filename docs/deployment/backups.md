@@ -1,5 +1,6 @@
 ---
-id: deployment/backups
+slug: /deployment/backups
+
 title: Backups & Disaster Recovery
 description: Backup strategies for PostgreSQL and Redis, retention policies, and restore procedures.
 sidebar_label: Backups & DR

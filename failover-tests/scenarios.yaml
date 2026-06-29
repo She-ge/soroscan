@@ -1,0 +1,60 @@
+scenarios:
+  - name: database_connection_failure
+    description: Readiness probe reports degraded when PostgreSQL is unreachable.
+    failure:
+      type: database
+      component: database
+    probes:
+      readiness_url: http://127.0.0.1:8000/ready/
+      worker_health_url: http://127.0.0.1:8000/api/health/workers/
+      liveness_url: http://127.0.0.1:8000/health/
+      degraded_status: 503
+      healthy_status: 200
+    recovery:
+      url: http://127.0.0.1:8000/ready/
+      timeout_seconds: 30
+
+  - name: redis_connection_failure
+    description: Readiness probe reports degraded when Redis cache is unreachable.
+    failure:
+      type: redis
+      component: redis
+    probes:
+      readiness_url: http://127.0.0.1:8000/ready/
+      worker_health_url: http://127.0.0.1:8000/api/health/workers/
+      liveness_url: http://127.0.0.1:8000/health/
+      degraded_status: 503
+      healthy_status: 200
+    recovery:
+      url: http://127.0.0.1:8000/ready/
+      timeout_seconds: 30
+
+  - name: rpc_timeout
+    description: Readiness probe reports degraded when Soroban RPC times out.
+    failure:
+      type: rpc_timeout
+      component: soroban_rpc
+    probes:
+      readiness_url: http://127.0.0.1:8000/ready/
+      worker_health_url: http://127.0.0.1:8000/api/health/workers/
+      liveness_url: http://127.0.0.1:8000/health/
+      degraded_status: 503
+      healthy_status: 200
+    recovery:
+      url: http://127.0.0.1:8000/ready/
+      timeout_seconds: 30
+
+  - name: multiple_worker_failures
+    description: Worker health probe reports unhealthy when Celery workers stop responding.
+    failure:
+      type: worker
+      component: workers
+    probes:
+      readiness_url: http://127.0.0.1:8000/ready/
+      worker_health_url: http://127.0.0.1:8000/api/health/workers/
+      liveness_url: http://127.0.0.1:8000/health/
+      degraded_status: 503
+      healthy_status: 200
+    recovery:
+      url: http://127.0.0.1:8000/api/health/workers/
+      timeout_seconds: 30
