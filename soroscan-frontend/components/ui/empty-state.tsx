@@ -53,18 +53,26 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
           </div>
         )}
         {action && (
-          <Button
-            variant={action.variant}
-            size={action.size}
-            onClick={action.onClick}
-            asChild={!!action.href}
-          >
-            {action.href ? (
-              <a href={action.href}>{action.label}</a>
-            ) : (
-              action.label
-            )}
-          </Button>
+          action.href ? (
+            <a
+              href={action.href}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all",
+                "bg-primary text-primary-foreground hover:bg-primary/90",
+                "h-9 px-4 py-2"
+              )}
+            >
+              {action.label}
+            </a>
+          ) : (
+            <Button
+              variant={action.variant}
+              size={action.size}
+              onClick={action.onClick}
+            >
+              {action.label}
+            </Button>
+          )
         )}
       </div>
     );

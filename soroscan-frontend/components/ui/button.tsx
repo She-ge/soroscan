@@ -1,6 +1,7 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
+import { Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -9,19 +10,27 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        /** Filled high-emphasis action — maps to the design system "Primary" */
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        /** Alias so callers can use variant="primary" explicitly */
+        primary: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+        /** Bordered, transparent-background button */
         outline:
           "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+        /** Muted filled button for secondary actions */
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        /** No background or border — low-emphasis action */
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
+        /** Alias: size="md" resolves to the default (medium) height */
+        md: "h-9 px-4 py-2 has-[>svg]:px-3",
         xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
@@ -38,16 +47,30 @@ const buttonVariants = cva(
   }
 )
 
+export interface ButtonProps
+  extends React.ComponentProps<"button">,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+  /** Shows a spinner and sets the button to a non-interactive loading state */
+  isLoading?: boolean
+  /** Icon rendered before the label */
+  leadingIcon?: React.ReactNode
+  /** Icon rendered after the label */
+  trailingIcon?: React.ReactNode
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  isLoading = false,
+  leadingIcon,
+  trailingIcon,
+  children,
+  disabled,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
+}: ButtonProps) {
   const Comp = asChild ? Slot.Root : "button"
 
   return (
@@ -55,9 +78,20 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      data-loading={isLoading || undefined}
+      disabled={disabled || isLoading}
+      aria-busy={isLoading || undefined}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {isLoading ? (
+        <Loader2 className="animate-spin" aria-hidden="true" />
+      ) : (
+        leadingIcon
+      )}
+      {children}
+      {!isLoading && trailingIcon}
+    </Comp>
   )
 }
 

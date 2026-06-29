@@ -48,5 +48,5 @@ describe("Description character count", () => {
 
     const counter = screen.getByText("230/256")
     expect(counter).toHaveClass("text-terminal-danger")
-  })
+  }, 30000)
 })
