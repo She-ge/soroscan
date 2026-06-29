@@ -26,7 +26,7 @@ class ApiSecurityTests(TestCase):
         self.assertEqual(response.status_code, 413)
         self.assertEqual(response.json().get("error"), "Payload Too Large")
 
-    @override_settings(DEPRECATED_ENDPOINTS={"api/ingest/audit-trail": {"sunset": "2026-12-31", "replacement": "/graphql/"}})
+    @override_settings(DEPRECATED_ENDPOINTS={"/api/ingest/audit-trail/": {"sunset": "2026-12-31", "replacement": "/graphql/"}})
     def test_deprecation_headers(self):
         """Verify that deprecated endpoints include correct headers."""
         self.client.force_login(self.user)
@@ -35,4 +35,4 @@ class ApiSecurityTests(TestCase):
         
         self.assertEqual(response.headers.get("Deprecation"), "true")
         self.assertEqual(response.headers.get("Sunset"), "2026-12-31")
-        self.assertIn('rel="replacement"', response.headers.get("Link", ""))
+        self.assertIn('rel="alternate"', response.headers.get("Link", ""))

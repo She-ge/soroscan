@@ -180,6 +180,6 @@ class ApiDeprecationMiddleware:
             if path.strip("/") == norm_request_path:
                 response["Deprecation"] = "true"
                 response["Sunset"] = config.get("sunset", "")
-                response["Link"] = f'<{config.get("replacement", "")}>; rel="replacement"'
+                response["Link"] = f'<{config.get("replacement", "")}>; rel="alternate"'
                 break
         return response
