@@ -11,7 +11,7 @@
 
 import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from '@storybook/test';
-import { Search, ArrowRight, Download, Loader2, Plus, Trash2, ExternalLink } from 'lucide-react';
+import { Search, ArrowRight, Download, Plus, Trash2, ExternalLink } from 'lucide-react';
 import React from 'react';
 
 import { Button } from '@/components/ui/button';
