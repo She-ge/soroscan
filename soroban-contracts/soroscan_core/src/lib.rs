@@ -293,9 +293,7 @@ impl SoroScanCore {
             };
 
             count = count.saturating_add(1);
-            env.storage()
-                .instance()
-                .set(&entry.event_type, &record);
+            env.storage().instance().set(&entry.event_type, &record);
 
             env.events().publish(
                 (symbol_short!("soroscan"), entry.event_type.clone()),
