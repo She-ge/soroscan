@@ -303,6 +303,33 @@ export interface WebhookListResponse {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SC-29: Batch event recording
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface EventEntry {
+  /** Target contract address */
+  contractId: ContractId;
+  /** Event type name (e.g. "transfer", "swap") */
+  eventType: EventType;
+  /** SHA-256 hash of the event payload (hex) */
+  payloadHash: string;
+}
+
+export interface RecordEventsBatchParams {
+  /** 1–25 event entries to record in a single transaction */
+  events: EventEntry[];
+}
+
+export interface RecordEventsBatchResponse {
+  status: string;
+  /** New total event count after the batch */
+  totalEvents: number;
+  txHash: string | null;
+  transactionStatus: string | null;
+  error: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Errors
 // ─────────────────────────────────────────────────────────────────────────────
 

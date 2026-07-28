@@ -1,7 +1,7 @@
 #![no_std]
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Map,
-    Symbol,
+    Symbol, Vec,
 };
 
 // Storage keys
@@ -25,6 +25,18 @@ pub struct EventRecord {
     pub timestamp: u64,
 }
 
+/// A single event entry used in batch recording (SC-29).
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EventEntry {
+    /// The contract that emitted the original event.
+    pub contract_id: Address,
+    /// The type/category of the event.
+    pub event_type: Symbol,
+    /// SHA-256 hash of the event payload for verification.
+    pub payload_hash: BytesN<32>,
+}
+
 /// Contract errors with explicit error codes.
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -37,6 +49,8 @@ pub enum ContractError {
     AlreadyInitialized = 3,
     /// Contract has not been initialized.
     NotInitialized = 4,
+    /// Batch is empty or exceeds the maximum allowed size.
+    InvalidBatchSize = 5,
 }
 
 #[contract]
@@ -231,6 +245,108 @@ impl SoroScanCore {
         }
     }
 
+    /// Record multiple events in a single transaction (SC-29).
+    /// Only authorized indexers can call this function.
+    /// Maximum batch size is 25 events.
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `indexer` - The indexer address (must be authorized)
+    /// * `events` - Vec of EventEntry structs to record
+    ///
+    /// # Returns
+    /// The new total event count after recording all events
+    pub fn record_events_batch(
+        env: Env,
+        indexer: Address,
+        events: Vec<EventEntry>,
+    ) -> Result<u64, ContractError> {
+        indexer.require_auth();
+
+        let batch_len = events.len();
+        if batch_len == 0 || batch_len > 25 {
+            return Err(ContractError::InvalidBatchSize);
+        }
+
+        let indexers: Map<Address, bool> = env
+            .storage()
+            .instance()
+            .get(&INDEXERS_KEY)
+            .ok_or(ContractError::NotInitialized)?;
+
+        let is_allowed = indexers.get(indexer.clone()).unwrap_or(false);
+        if !is_allowed {
+            return Err(ContractError::IndexerNotFound);
+        }
+
+        let ledger = env.ledger().sequence();
+        let timestamp = env.ledger().timestamp();
+        let mut count: u64 = env.storage().instance().get(&COUNTER_KEY).unwrap_or(0);
+
+        for entry in events.iter() {
+            let record = EventRecord {
+                contract_id: entry.contract_id.clone(),
+                event_type: entry.event_type.clone(),
+                payload_hash: entry.payload_hash.clone(),
+                ledger,
+                timestamp,
+            };
+
+            count = count.saturating_add(1);
+            env.storage()
+                .instance()
+                .set(&entry.event_type, &record);
+
+            env.events().publish(
+                (symbol_short!("soroscan"), entry.event_type.clone()),
+                record,
+            );
+        }
+
+        env.storage().instance().set(&COUNTER_KEY, &count);
+
+        // Emit a single batch summary event
+        env.events().publish(
+            (symbol_short!("soroscan"), symbol_short!("batch")),
+            (indexer, batch_len, count),
+        );
+
+        Ok(count)
+    }
+
+    /// Transfer admin rights to a new address (SC-29).
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `admin` - Current admin address
+    /// * `new_admin` - New admin address
+    pub fn transfer_admin(
+        env: Env,
+        admin: Address,
+        new_admin: Address,
+    ) -> Result<(), ContractError> {
+        admin.require_auth();
+
+        let stored_admin: Address = env
+            .storage()
+            .instance()
+            .get(&ADMIN_KEY)
+            .ok_or(ContractError::NotInitialized)?;
+
+        if admin != stored_admin {
+            return Err(ContractError::Unauthorized);
+        }
+
+        env.storage().instance().set(&ADMIN_KEY, &new_admin);
+
+        env.events().publish(
+            (symbol_short!("admin"), symbol_short!("xfer")),
+            (stored_admin, new_admin),
+        );
+
+        Ok(())
+    }
+
     /// Get the admin address.
     ///
     /// # Arguments
@@ -350,6 +466,149 @@ mod tests {
         // Non-whitelisted address tries to record — should fail with IndexerNotFound
         let result = client.try_record_event(&rogue, &target, &event_type, &payload_hash);
         assert_eq!(result, Err(Ok(ContractError::IndexerNotFound)));
+    }
+
+    #[test]
+    fn test_record_events_batch() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        let target1 = Address::generate(&env);
+        let target2 = Address::generate(&env);
+
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+
+        let mut entries = Vec::new(&env);
+        entries.push_back(EventEntry {
+            contract_id: target1,
+            event_type: symbol_short!("swap"),
+            payload_hash: BytesN::from_array(&env, &[1u8; 32]),
+        });
+        entries.push_back(EventEntry {
+            contract_id: target2,
+            event_type: symbol_short!("transfer"),
+            payload_hash: BytesN::from_array(&env, &[2u8; 32]),
+        });
+
+        let count = client.record_events_batch(&indexer, &entries);
+        assert_eq!(count, 2);
+        assert_eq!(client.total_events(), 2);
+
+        let swap = client.latest_by_type(&symbol_short!("swap"));
+        assert!(swap.is_some());
+        let transfer = client.latest_by_type(&symbol_short!("transfer"));
+        assert!(transfer.is_some());
+    }
+
+    #[test]
+    fn test_record_events_batch_empty() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+
+        let empty: Vec<EventEntry> = Vec::new(&env);
+        let result = client.try_record_events_batch(&indexer, &empty);
+        assert_eq!(result, Err(Ok(ContractError::InvalidBatchSize)));
+    }
+
+    #[test]
+    fn test_record_events_batch_too_large() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+
+        let mut entries = Vec::new(&env);
+        for _ in 0..26 {
+            entries.push_back(EventEntry {
+                contract_id: Address::generate(&env),
+                event_type: symbol_short!("ev"),
+                payload_hash: BytesN::from_array(&env, &[0u8; 32]),
+            });
+        }
+        let result = client.try_record_events_batch(&indexer, &entries);
+        assert_eq!(result, Err(Ok(ContractError::InvalidBatchSize)));
+    }
+
+    #[test]
+    fn test_record_events_batch_unauthorized_indexer() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let rogue = Address::generate(&env);
+
+        client.init(&admin);
+
+        let mut entries = Vec::new(&env);
+        entries.push_back(EventEntry {
+            contract_id: Address::generate(&env),
+            event_type: symbol_short!("swap"),
+            payload_hash: BytesN::from_array(&env, &[0u8; 32]),
+        });
+
+        let result = client.try_record_events_batch(&rogue, &entries);
+        assert_eq!(result, Err(Ok(ContractError::IndexerNotFound)));
+    }
+
+    #[test]
+    fn test_transfer_admin() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let new_admin = Address::generate(&env);
+
+        client.init(&admin);
+        assert_eq!(client.get_admin(), Some(admin.clone()));
+
+        client.transfer_admin(&admin, &new_admin);
+        assert_eq!(client.get_admin(), Some(new_admin.clone()));
+    }
+
+    #[test]
+    fn test_transfer_admin_unauthorized() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+
+        let admin = Address::generate(&env);
+        let non_admin = Address::generate(&env);
+        let new_admin = Address::generate(&env);
+
+        client.init(&admin);
+
+        let result = client.try_transfer_admin(&non_admin, &new_admin);
+        assert_eq!(result, Err(Ok(ContractError::Unauthorized)));
     }
 
     #[test]

@@ -89,3 +89,29 @@ class RecordEventResponse(BaseModel):
     tx_hash: str | None = Field(None, description="Transaction hash")
     transaction_status: str | None = Field(None, description="Transaction status")
     error: str | None = Field(None, description="Error message if failed")
+
+
+# ── SC-29: Batch event recording ──────────────────────────────────────────────
+
+class EventEntry(BaseModel):
+    """A single event entry for batch recording (SC-29)."""
+
+    contract_id: str = Field(..., max_length=56, description="Target contract address")
+    event_type: str = Field(..., max_length=100, description="Event type name")
+    payload_hash: str = Field(..., max_length=64, description="SHA-256 hash of payload (hex)")
+
+
+class RecordEventsBatchRequest(BaseModel):
+    """Request model for batch event recording (SC-29). Max 25 entries."""
+
+    events: list[EventEntry] = Field(..., min_length=1, max_length=25)
+
+
+class RecordEventsBatchResponse(BaseModel):
+    """Response from batch event recording (SC-29)."""
+
+    status: str = Field(..., description="Submission status")
+    total_events: int = Field(..., description="New total event count after batch")
+    tx_hash: str | None = Field(None, description="Transaction hash")
+    transaction_status: str | None = Field(None, description="Transaction status")
+    error: str | None = Field(None, description="Error message if failed")

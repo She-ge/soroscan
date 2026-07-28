@@ -47,6 +47,10 @@ export type {
   SubscribeWebhookParams,
   UpdateWebhookParams,
   WebhookListResponse,
+  // SC-29: Batch event recording
+  EventEntry,
+  RecordEventsBatchParams,
+  RecordEventsBatchResponse,
   // Errors
   SoroScanApiError,
 } from "./types.js";
