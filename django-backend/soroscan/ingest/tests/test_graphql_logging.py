@@ -10,7 +10,7 @@ Covers:
 - log_graphql_resolver decorator unit tests
 """
 import time
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -357,7 +357,7 @@ class TestGraphQLResolverLogging:
         with patch(
             "soroscan.ingest.schema._get_authenticated_user", return_value=user
         ):
-            result = schema.execute_sync(mutation)
+            schema.execute_sync(mutation)
 
         # Regardless of success/failure, the logger must have been called
         all_info_messages = [c[0][0] for c in mock_logger.info.call_args_list]

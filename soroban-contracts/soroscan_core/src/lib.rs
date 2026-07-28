@@ -360,57 +360,74 @@ impl SoroScanCore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::testutils::{Address as _, Events};
     use soroban_sdk::Env;
 
-    #[test]
-    fn test_init() {
-        let env = Env::default();
+    fn setup_contract(env: &Env) -> (SoroScanCoreClient<'_>, Address, Address) {
         let contract_id = env.register_contract(None, SoroScanCore);
-        let client = SoroScanCoreClient::new(&env, &contract_id);
-
-        let admin = Address::generate(&env);
+        let client = SoroScanCoreClient::new(env, &contract_id);
+        let admin = Address::generate(env);
+        let indexer = Address::generate(env);
         client.init(&admin);
-
-        assert_eq!(client.get_admin(), Some(admin));
-        assert_eq!(client.total_events(), 0);
+        (client, admin, indexer)
     }
 
     #[test]
-    fn test_add_and_remove_indexer() {
+    fn test_initialize() {
         let env = Env::default();
-        env.mock_all_auths();
-
         let contract_id = env.register_contract(None, SoroScanCore);
         let client = SoroScanCoreClient::new(&env, &contract_id);
 
         let admin = Address::generate(&env);
-        let indexer = Address::generate(&env);
-
         client.init(&admin);
+
+        assert_eq!(client.get_admin(), Some(admin.clone()));
+        assert_eq!(client.total_events(), 0);
+        assert!(!client.is_indexer(&admin));
+    }
+
+    #[test]
+    fn test_add_indexer_as_admin() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let (client, admin, indexer) = setup_contract(&env);
 
         assert!(!client.is_indexer(&indexer));
 
         client.add_indexer(&admin, &indexer);
+
         assert!(client.is_indexer(&indexer));
 
-        client.remove_indexer(&admin, &indexer);
-        assert!(!client.is_indexer(&indexer));
+        let events = env.events().all();
+        assert_eq!(events.len(), 1);
     }
 
     #[test]
-    fn test_record_event() {
+    fn test_add_indexer_as_non_admin() {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, SoroScanCore);
-        let client = SoroScanCoreClient::new(&env, &contract_id);
+        let (client, admin, indexer) = setup_contract(&env);
+        let non_admin = Address::generate(&env);
 
-        let admin = Address::generate(&env);
-        let indexer = Address::generate(&env);
+        let result = client.try_add_indexer(&non_admin, &indexer);
+        assert_eq!(result, Err(Ok(ContractError::Unauthorized)));
+        assert!(!client.is_indexer(&indexer));
+
+        // Admin can still add the indexer after the failed attempt.
+        client.add_indexer(&admin, &indexer);
+        assert!(client.is_indexer(&indexer));
+    }
+
+    #[test]
+    fn test_record_event_whitelisted() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let (client, admin, indexer) = setup_contract(&env);
         let target_contract = Address::generate(&env);
 
-        client.init(&admin);
         client.add_indexer(&admin, &indexer);
 
         let event_type = symbol_short!("swap");
@@ -420,28 +437,16 @@ mod tests {
         assert_eq!(count, 1);
         assert_eq!(client.total_events(), 1);
 
-        let latest = client.latest_by_type(&event_type);
-        assert!(latest.is_some());
-        assert_eq!(latest.unwrap().event_type, event_type);
-    }
+        let latest = client
+            .latest_by_type(&event_type)
+            .expect("event should be stored");
+        assert_eq!(latest.event_type, event_type);
+        assert_eq!(latest.contract_id, target_contract);
+        assert_eq!(latest.payload_hash, payload_hash);
 
-    #[test]
-    fn test_add_indexer_as_non_admin() {
-        let env = Env::default();
-        env.mock_all_auths();
-
-        let contract_id = env.register_contract(None, SoroScanCore);
-        let client = SoroScanCoreClient::new(&env, &contract_id);
-
-        let admin = Address::generate(&env);
-        let non_admin = Address::generate(&env);
-        let indexer = Address::generate(&env);
-
-        client.init(&admin);
-
-        // Non-admin tries to add indexer — should fail with Unauthorized
-        let result = client.try_add_indexer(&non_admin, &indexer);
-        assert_eq!(result, Err(Ok(ContractError::Unauthorized)));
+        // record_event publishes a soroscan event in addition to indexer add events.
+        let events = env.events().all();
+        assert!(events.len() >= 2);
     }
 
     #[test]
@@ -449,21 +454,31 @@ mod tests {
         let env = Env::default();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, SoroScanCore);
-        let client = SoroScanCoreClient::new(&env, &contract_id);
-
-        let admin = Address::generate(&env);
+        let (client, _admin, _indexer) = setup_contract(&env);
         let rogue = Address::generate(&env);
         let target = Address::generate(&env);
-
-        client.init(&admin);
 
         let event_type = symbol_short!("swap");
         let payload_hash = BytesN::from_array(&env, &[0u8; 32]);
 
-        // Non-whitelisted address tries to record — should fail with IndexerNotFound
         let result = client.try_record_event(&rogue, &target, &event_type, &payload_hash);
         assert_eq!(result, Err(Ok(ContractError::IndexerNotFound)));
+        assert_eq!(client.total_events(), 0);
+        assert!(client.latest_by_type(&event_type).is_none());
+    }
+
+    #[test]
+    fn test_remove_indexer() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let (client, admin, indexer) = setup_contract(&env);
+
+        client.add_indexer(&admin, &indexer);
+        assert!(client.is_indexer(&indexer));
+
+        client.remove_indexer(&admin, &indexer);
+        assert!(!client.is_indexer(&indexer));
     }
 
     #[test]
@@ -618,7 +633,6 @@ mod tests {
         let admin = Address::generate(&env);
         client.init(&admin);
 
-        // Second init should fail with AlreadyInitialized
         let result = client.try_init(&admin);
         assert_eq!(result, Err(Ok(ContractError::AlreadyInitialized)));
     }

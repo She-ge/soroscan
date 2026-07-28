@@ -6,9 +6,11 @@ import { Card } from "../Card"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../Table"
 import { Modal } from "../Modal"
 import { Input } from "../Input"
+import { ValidatedInput } from "../ValidatedInput"
 
 export default function TerminalGallery() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [demoEmail, setDemoEmail] = React.useState("");
 
   return (
     <div className="min-h-screen bg-terminal-black text-terminal-green p-8 font-terminal-mono space-y-12">
@@ -80,6 +82,16 @@ export default function TerminalGallery() {
       <section className="space-y-4 max-w-md">
         <h2 className="text-xl text-terminal-cyan border-l-4 border-terminal-cyan pl-2">04. USER_INTERACTION</h2>
         <Input label="COMMAND_PROMPT" placeholder="Enter instruction..." />
+        <ValidatedInput
+          id="gallery-email"
+          label="VALIDATED_EMAIL"
+          type="email"
+          value={demoEmail}
+          onChange={(e) => setDemoEmail(e.target.value)}
+          placeholder="operator@soroscan.io"
+          validators={{ required: true, email: true }}
+          hint="Built-in required + email validation"
+        />
         <Button 
           variant="secondary" 
           className="w-full"

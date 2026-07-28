@@ -1,6 +1,7 @@
 """
 Test settings for SoroScan project.
 """
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -120,6 +121,9 @@ PACT_PROVIDER_STATES_ENABLED = True
 # REST Framework
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "soroscan.exceptions.custom_exception_handler",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 50,
     "DEFAULT_FILTER_BACKENDS": [
@@ -128,7 +132,7 @@ REST_FRAMEWORK = {
         "rest_framework.filters.OrderingFilter",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "1000/hour",
@@ -136,6 +140,16 @@ REST_FRAMEWORK = {
         "ingest": "100/hour",
         "graphql": "500/hour",
     },
+}
+
+
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 # CORS
@@ -153,6 +167,9 @@ CELERY_RESULT_SERIALIZER = "json"
 SHUTDOWN_TIMEOUT_SECONDS = 30
 CELERY_WORKER_SOFT_SHUTDOWN_TIMEOUT = 30
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TIME_LIMIT = 600
+CELERY_TASK_SOFT_TIME_LIMIT = 540
+CELERY_BEAT_SCHEDULE = {}  # Disabled in tests — tasks run eagerly
 
 # Stellar / Soroban Configuration
 SOROBAN_RPC_URL = "https://soroban-testnet.stellar.org"
@@ -212,3 +229,25 @@ LOGGING = {
 
 MAX_REQUEST_BODY_SIZE = 10485760
 DEPRECATED_ENDPOINTS = {}
+
+# Issue #765 — webhook delivery log retention
+WEBHOOK_DELIVERY_RETENTION_DAYS = 30
+WEBHOOK_ESCALATION_TIMEOUT_SECONDS = 10
+WEBHOOK_ESCALATION_DEDUP_SECONDS = 300
+WEBHOOK_ESCALATION_SLACK_TARGET = ""
+
+# Issue #778 — cache TTL for contract name warmer
+CACHE_TTL_SECONDS = 300
+
+# Issue #798 — contract state snapshot settings
+CONTRACT_SNAPSHOT_INTERVAL = 1000
+CONTRACT_SNAPSHOT_MAX_BYTES = 1_048_576
+
+# Misc defaults needed by code under test
+DEDUP_LOG_RETENTION_DAYS = 90
+EVENT_RETENTION_DAYS = 30
+ALERT_DEDUP_WINDOW_SECONDS = 300
+WEBHOOK_MAX_RETRIES = 5
+INDEXER_SECRET_KEY = ""
+SENTRY_DSN = ""
+LOG_FORMAT = ""

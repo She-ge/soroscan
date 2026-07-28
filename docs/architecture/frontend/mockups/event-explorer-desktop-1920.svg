@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="Event Explorer desktop 1920 mockup">
+  <rect width="1920" height="1080" fill="#0a0e27"/>
+  <!-- Header 60px -->
+  <rect width="1920" height="60" fill="#1a1f3a"/>
+  <text x="24" y="38" fill="#00ff41" font-family="monospace" font-size="18" font-weight="700">Æ SoroScan</text>
+  <!-- Nav sidebar 240px -->
+  <rect y="60" width="240" height="1020" fill="#0a0e27" stroke="#00ff4133"/>
+  <rect x="8" y="80" width="224" height="44" fill="#00ff411a" stroke="#00ff41" stroke-width="0" />
+  <rect x="8" y="80" width="4" height="44" fill="#00ff41"/>
+  <text x="28" y="108" fill="#00ff41" font-family="monospace" font-size="14">£ Events</text>
+  <text x="28" y="160" fill="#94a3b8" font-family="monospace" font-size="14">£ Contracts</text>
+  <text x="28" y="204" fill="#94a3b8" font-family="monospace" font-size="14">£ Webhooks</text>
+  <text x="28" y="248" fill="#94a3b8" font-family="monospace" font-size="14">£ Admin</text>
+  <!-- Workspace -->
+  <text x="264" y="100" fill="#00d4ff" font-family="monospace" font-size="10">SOROSCAN</text>
+  <text x="264" y="130" fill="#00ff41" font-family="monospace" font-size="28" font-weight="700">Event Explorer</text>
+  <!-- Filter sidebar 280px -->
+  <rect x="264" y="160" width="280" height="880" fill="#0d1522" stroke="#00ff414d"/>
+  <text x="280" y="190" fill="#00d4ff" font-family="monospace" font-size="14">FILTERS</text>
+  <rect x="280" y="210" width="248" height="36" fill="#1a1f3a" stroke="#94a3b866"/>
+  <rect x="280" y="260" width="248" height="36" fill="#1a1f3a" stroke="#94a3b866"/>
+  <rect x="280" y="310" width="248" height="36" fill="#1a1f3a" stroke="#94a3b866"/>
+  <rect x="280" y="380" width="110" height="40" fill="#00ff4126" stroke="#00ff41"/>
+  <text x="300" y="405" fill="#00ff41" font-family="monospace" font-size="12">Apply</text>
+  <!-- Main table panel -->
+  <rect x="560" y="160" width="1320" height="880" fill="#0d1522" stroke="#00ff414d"/>
+  <text x="580" y="190" fill="#00ff41" font-family="monospace" font-size="14">CONTRACT EVENTS</text>
+  <rect x="580" y="210" width="1280" height="40" fill="#00d4ff14"/>
+  <text x="600" y="235" fill="#00d4ff" font-family="monospace" font-size="12">CONTRACT</text>
+  <text x="780" y="235" fill="#00d4ff" font-family="monospace" font-size="12">TYPE</text>
+  <text x="920" y="235" fill="#00d4ff" font-family="monospace" font-size="12">LEDGER</text>
+  <text x="1060" y="235" fill="#00d4ff" font-family="monospace" font-size="12">TIME</text>
+  <rect x="580" y="250" width="1280" height="48" fill="#00ff4108"/>
+  <text x="600" y="280" fill="#94a3b8" font-family="monospace" font-size="12">CCAA&8a9b · Transfer · 54321 · 2m ago</text>
+  <rect x="580" y="298" width="1280" height="48" fill="transparent"/>
+  <text x="600" y="328" fill="#94a3b8" font-family="monospace" font-size="12">CCBB&4c1d · Init · 54320 · 5m ago</text>
+  <text x="24" y="1060" fill="#64748b" font-family="monospace" font-size="11">#910 · Desktop 1920 · filter 280 + main · nav 240 · header 60 · row 48</text>
+</svg>

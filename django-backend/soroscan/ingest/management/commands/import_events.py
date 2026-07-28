@@ -10,10 +10,12 @@ Usage examples:
     python manage.py import_events --file events.json --format json
     python manage.py import_events --file events.parquet --format parquet --dry-run
 """
+
 from django.core.management.base import BaseCommand, CommandError
 
 from soroscan.ingest.services.export_import import (
     ImportResult,
+    import_avro,
     import_csv,
     import_json,
     import_parquet,
@@ -27,7 +29,7 @@ class Command(BaseCommand):
         parser.add_argument("--file", required=True, help="Input file path")
         parser.add_argument(
             "--format",
-            choices=["parquet", "csv", "json"],
+            choices=["parquet", "csv", "json", "avro"],
             default=None,
             help="Input format (auto-detected from extension if omitted)",
         )
@@ -73,9 +75,7 @@ class Command(BaseCommand):
 
         if result.errors:
             self.stderr.write(
-                self.style.WARNING(
-                    f"{result.errors} row(s) skipped due to errors:"
-                )
+                self.style.WARNING(f"{result.errors} row(s) skipped due to errors:")
             )
             for detail in result.error_details[:20]:
                 self.stderr.write(f"  - {detail}")
@@ -95,6 +95,8 @@ class Command(BaseCommand):
                 return import_csv(f, result, dry_run=dry_run)
         elif fmt == "parquet":
             return import_parquet(path, result, dry_run=dry_run)
+        elif fmt == "avro":
+            return import_avro(path, result, dry_run=dry_run)
         raise CommandError(f"Unknown format: {fmt}")
 
     @staticmethod
@@ -106,4 +108,6 @@ class Command(BaseCommand):
             return "csv"
         if lower.endswith(".parquet"):
             return "parquet"
+        if lower.endswith(".avro"):
+            return "avro"
         return None

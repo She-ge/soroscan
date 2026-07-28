@@ -20,7 +20,8 @@ export function HamburgerToggle({
   return (
     <button
       className={cn(
-        "md:hidden text-terminal-green hover:text-terminal-cyan transition-colors p-2",
+        "md:hidden text-terminal-green hover:text-terminal-cyan transition-colors",
+        "min-w-[44px] min-h-[44px] flex items-center justify-center",
         "focus:outline-none focus:ring-1 focus:ring-terminal-green/50 rounded-sm",
         className
       )}

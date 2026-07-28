@@ -31,7 +31,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: sdk/typescript
-        run: npm ci
+        run: npm ci --workspaces=false
 
       - name: Run Pact consumer tests
         working-directory: sdk/typescript

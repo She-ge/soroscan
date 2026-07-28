@@ -31,7 +31,8 @@ describe("Description character count", () => {
     expect(textarea).toHaveAttribute("maxLength", "256")
   })
 
-  it("applies warning styling when the count is near limit", () => {
+  it("applies warning styling when the count is near limit", async () => {
+    const user = userEvent.setup({ delay: null })
     render(
       <ContractForm
         contract={mockContract}
@@ -43,7 +44,8 @@ describe("Description character count", () => {
     const textarea = screen.getByPlaceholderText("Optional description...")
     const longText = "x".repeat(230)
 
-    fireEvent.change(textarea, { target: { value: longText } })
+    await user.click(textarea)
+    await user.paste(longText)
 
     const counter = screen.getByText("230/256")
     expect(counter).toHaveClass("text-terminal-danger")

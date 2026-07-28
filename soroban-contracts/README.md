@@ -20,12 +20,17 @@ cargo build --target wasm32-unknown-unknown --release
 
 ## Testing
 
-The contract includes comprehensive unit tests covering:
+Unit tests live in `soroscan_core/src/lib.rs` under `#[cfg(test)]` and use
+`soroban_sdk::testutils` (`Env::default()`, `register_contract`, `mock_all_auths`).
 
-- **Initialization**: deploy and init with admin, double-init prevention
-- **Access control**: admin vs non-admin indexer management
-- **Event recording**: whitelisted indexer records, non-whitelisted rejection
-- **Indexer lifecycle**: add, verify, remove indexer
+| Test | Scenario | Expected |
+|------|----------|----------|
+| `test_initialize` | Deploy and init with admin | Admin set correctly |
+| `test_add_indexer_as_admin` | Admin adds indexer | Indexer whitelisted |
+| `test_add_indexer_as_non_admin` | Non-admin adds indexer | `ContractError::Unauthorized` |
+| `test_record_event_whitelisted` | Whitelisted indexer records event | Event emitted, counter incremented |
+| `test_record_event_not_whitelisted` | Non-whitelisted address records | `ContractError::IndexerNotFound` |
+| `test_remove_indexer` | Admin removes indexer | Indexer no longer whitelisted |
 
 Run all tests:
 

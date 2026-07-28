@@ -5,10 +5,12 @@ import AccountSettings from "./components/AccountSettings";
 import APIKeyManager from "./components/APIKeyManager";
 import BillingOverview from "./components/BillingOverview";
 import NotificationPrefs from "./components/NotificationPrefs";
+import ThemeSelector from "./components/ThemeSelector";
 import WebhookManager from "./components/WebhookManager";
 
 const tabs = [
   { id: "account", label: "Account" },
+  { id: "theme", label: "Theme" },
   { id: "notifications", label: "Notifications" },
   { id: "apiKeys", label: "API Keys" },
   { id: "webhooks", label: "Webhooks" },
@@ -102,6 +104,7 @@ export default function SettingsShell() {
 
         <section className="space-y-6">
           {activeTab === "account" && <AccountSettings />}
+          {activeTab === "theme" && <ThemeSelector />}
           {activeTab === "notifications" && <NotificationPrefs />}
           {activeTab === "apiKeys" && <APIKeyManager />}
           {activeTab === "webhooks" && <WebhookManager />}

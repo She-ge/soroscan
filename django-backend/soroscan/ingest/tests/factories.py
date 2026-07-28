@@ -10,6 +10,7 @@ from soroscan.ingest.models import (
     RemediationIncident,
     RemediationRule,
     TrackedContract,
+    WebhookDeadLetter,
     WebhookDeliveryLog,
     WebhookSubscription,
 )
@@ -104,9 +105,28 @@ class WebhookDeliveryLogFactory(DjangoModelFactory):
     subscription = factory.SubFactory(WebhookSubscriptionFactory)
     event = factory.SubFactory(ContractEventFactory)
     attempt_number = 1
+    status = WebhookDeliveryLog.STATUS_SUCCESS
     status_code = 200
     success = True
     error = ""
+    response_body = ""
+    latency_ms = 120
+    duration_ms = 120
+
+
+class WebhookDeadLetterFactory(DjangoModelFactory):
+    """Factory for WebhookDeadLetter (Issue #760 / #765)."""
+
+    class Meta:
+        model = WebhookDeadLetter
+
+    subscription = factory.SubFactory(WebhookSubscriptionFactory)
+    event = factory.SubFactory(ContractEventFactory)
+    payload = factory.LazyFunction(dict)
+    status_code = 503
+    error = "Service Unavailable"
+    retries_exhausted = 6
+    resolved = False
 
 
 class ContractABIFactory(DjangoModelFactory):
@@ -167,3 +187,19 @@ class ContractMetadataFactory(DjangoModelFactory):
     documentation_url = ""
     github_repo = ""
     team_email = ""
+
+
+class EventAggregationFactory(DjangoModelFactory):
+    class Meta:
+        model = "ingest.EventAggregation"
+
+    contract = factory.SubFactory(TrackedContractFactory)
+    event_type = "swap"
+    # Round to top of current hour
+    timestamp = factory.LazyFunction(
+        lambda: __import__("django.utils.timezone", fromlist=["now"]).now().replace(
+            minute=0, second=0, microsecond=0
+        )
+    )
+    event_count = 100
+    is_anomaly = False

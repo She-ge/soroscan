@@ -158,6 +158,54 @@ python manage.py spectacular --file schema.yml
 
 This generates a valid OpenAPI 3.0 YAML file that can be imported into Postman, used to generate client SDKs, or published as part of your API contract.
 
+### Auto-Generated Endpoint Reference (from docstrings)
+
+View docstrings are the source of truth for human-readable REST endpoint docs.
+A management command walks all URL patterns, extracts docstrings from views and
+ViewSet actions, and writes a Markdown (or JSON) reference file.
+
+```bash
+cd django-backend
+
+# Markdown reference (default) → docs/api_reference.md
+python manage.py generate_api_docs
+
+# JSON output for downstream tooling
+python manage.py generate_api_docs --format json --output docs/api_reference.json
+
+# Print to stdout (useful in CI)
+python manage.py generate_api_docs --stdout --no-examples
+
+# Makefile shortcut
+make docs
+```
+
+Standalone script (same behaviour):
+
+```bash
+python scripts/generate_api_docs.py --output docs/api_reference.md
+```
+
+**Docstring format** — the parser recognises these sections:
+
+```
+One-line summary shown as the endpoint title.
+
+Optional description paragraph.
+
+Query params:
+- param_name (type) - Description (required)
+
+Request body:
+- field_name (type) - Description
+
+- 200: Success response description
+- 401: Unauthorized
+```
+
+Re-run after changing `views.py` or `urls.py`. Do not edit `docs/api_reference.md`
+by hand — it is regenerated on every run.
+
 ### REST API
 
 #### Public Endpoints (No Authentication Required)
