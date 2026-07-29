@@ -10,18 +10,20 @@ import time
 from datetime import timedelta
 
 from django.conf import settings
-from django.db.models import Count, Max, Min, Q, Avg
+from django.db.models import Count, Max, Min, Q, Avg, Sum
 from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import serializers, status, viewsets
+from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiParameter
+from rest_framework import renderers, serializers, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+from rest_framework.pagination import PageNumberPagination
 
 import requests as http_requests
 
@@ -29,12 +31,15 @@ from soroscan.throttles import IngestRateThrottle
 from soroscan.webhook_signing import build_x_signature_header, public_key_base64
 
 from .cache_utils import cache_result, get_or_set_json, query_cache_ttl, stable_cache_key
+from .decorators import validate_webhook_signature
 from .models import (
     APIKey,
     AdminAction,
     ArchivedEventBatch,
     ContractEvent,
+    ContractHealthCheck,
     ContractInvocation,
+    ContractSnapshot,
     ContractSource,
     ContractVerification,
     Organization,
@@ -54,6 +59,7 @@ from .serializers import (
     APIKeySerializer,
     ContractEventSerializer,
     ContractInvocationSerializer,
+    ContractSnapshotSerializer,
     ContractSourceSerializer,
     ContractVerificationSerializer,
     EventSearchSerializer,
@@ -65,11 +71,17 @@ from .serializers import (
     TeamMemberAddSerializer,
     TeamSerializer,
     TrackedContractSerializer,
+    WebhookDeliveryLogSerializer,
     WebhookSubscriptionSerializer,
 )
 from .stellar_client import SorobanClient
 
 logger = logging.getLogger(__name__)
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = "page_size"
+    max_page_size = 1000
 
 
 class AdminActionSerializer(serializers.ModelSerializer):
@@ -109,6 +121,7 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
 
     queryset = TrackedContract.objects.all()
     serializer_class = TrackedContractSerializer
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["is_active"]
     search_fields = ["name", "alias", "contract_id"]
@@ -205,6 +218,41 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
+        request=inline_serializer(
+            name="ContractPauseRequest",
+            fields={
+                "reason": serializers.CharField(required=False, allow_blank=True),
+                "resume_at": serializers.DateTimeField(required=False, allow_null=True),
+            },
+        ),
+        responses=TrackedContractSerializer,
+    )
+    @action(detail=True, methods=["post"])
+    def pause(self, request, pk=None):
+        """Suspend indexing for this contract; historical data stays queryable."""
+        contract = self.get_object()
+        reason = request.data.get("reason", "")
+        resume_at_raw = request.data.get("resume_at")
+        resume_at = parse_datetime(resume_at_raw) if resume_at_raw else None
+        if resume_at_raw and resume_at is None:
+            return Response(
+                {"detail": "resume_at must be a valid ISO 8601 datetime."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        contract.pause(reason=reason, resume_at=resume_at)
+        contract.refresh_from_db()
+        return Response(TrackedContractSerializer(contract).data)
+
+    @extend_schema(responses=TrackedContractSerializer)
+    @action(detail=True, methods=["post"])
+    def resume(self, request, pk=None):
+        """Resume indexing for a previously paused contract."""
+        contract = self.get_object()
+        contract.resume()
+        contract.refresh_from_db()
+        return Response(TrackedContractSerializer(contract).data)
+
+    @extend_schema(
         responses=inline_serializer(
             name="ContractStats",
             fields={
@@ -253,6 +301,23 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
         from .tasks import _calculate_completeness
 
         return Response(_calculate_completeness(contract))
+
+    @extend_schema(responses=ContractSnapshotSerializer(many=True))
+    @action(detail=True, methods=["get"], url_path="snapshots")
+    def snapshots(self, request, pk=None):
+        """List contract state snapshots, optionally filtered by ledger range."""
+        contract = self.get_object()
+        qs = ContractSnapshot.objects.filter(contract=contract).prefetch_related("changes")
+
+        ledger_min = request.query_params.get("ledger_min")
+        ledger_max = request.query_params.get("ledger_max")
+        if ledger_min is not None:
+            qs = qs.filter(ledger_sequence__gte=int(ledger_min))
+        if ledger_max is not None:
+            qs = qs.filter(ledger_sequence__lte=int(ledger_max))
+
+        serializer = ContractSnapshotSerializer(qs.order_by("-ledger_sequence"), many=True)
+        return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
     def completeness_dashboard(self, request):
@@ -345,6 +410,7 @@ class ContractEventViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = ContractEvent.objects.all()
     serializer_class = ContractEventSerializer
+    pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = [
         "contract__contract_id",
@@ -713,6 +779,60 @@ class WebhookSubscriptionViewSet(viewsets.ModelViewSet):
         matched = evaluate_condition(webhook.filter_condition, sample_event)
         return Response({"matched": bool(matched)})
 
+    @extend_schema(
+        responses={200: WebhookDeliveryLogSerializer(many=True)},
+        parameters=[
+            inline_serializer(
+                name="DeliveriesFilterParams",
+                fields={
+                    "status": serializers.CharField(required=False),
+                    "since": serializers.DateTimeField(required=False),
+                    "until": serializers.DateTimeField(required=False),
+                },
+            )
+        ],
+    )
+    @action(detail=True, methods=["get"])
+    def deliveries(self, request, pk=None):
+        """
+        Return paginated delivery log history for a webhook subscription.
+
+        Query params:
+        - ``status``  — filter by delivery status (pending/success/failed/dead_letter)
+        - ``since``   — ISO datetime lower bound for ``timestamp``
+        - ``until``   — ISO datetime upper bound for ``timestamp``
+
+        Issue #765.
+        """
+        from .models import WebhookDeliveryLog
+
+        webhook = self.get_object()
+        qs = (
+            WebhookDeliveryLog.objects.filter(subscription=webhook)
+            .select_related("event")
+            .order_by("-timestamp")
+        )
+
+        delivery_status = request.query_params.get("status")
+        if delivery_status:
+            qs = qs.filter(status=delivery_status)
+
+        since = request.query_params.get("since")
+        if since:
+            qs = qs.filter(timestamp__gte=since)
+
+        until = request.query_params.get("until")
+        if until:
+            qs = qs.filter(timestamp__lte=until)
+
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = WebhookDeliveryLogSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = WebhookDeliveryLogSerializer(qs, many=True)
+        return Response(serializer.data)
+
 
 class TeamViewSet(viewsets.ModelViewSet):
     """
@@ -978,6 +1098,7 @@ def webhook_signing_public_key_view(request):
 )
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def health_check(request):
     """Health check endpoint."""
     return Response({"status": "healthy", "service": "soroscan"})
@@ -1788,6 +1909,7 @@ def compliance_export_view(request):
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@validate_webhook_signature(lambda request: getattr(settings, "INDEXER_SECRET_KEY", "") or "")
 def webhook_batch_delivery_status_view(request):
     """
     POST /api/webhooks/deliveries/batch-status/
@@ -1887,6 +2009,7 @@ def webhook_batch_delivery_status_view(request):
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@validate_webhook_signature(lambda request: getattr(settings, "INDEXER_SECRET_KEY", "") or "")
 def webhook_delivery_metrics_view(request):
     """
     GET /api/webhooks/deliveries/metrics/
@@ -2199,3 +2322,598 @@ def cache_stats_view(request):
         "default_ttl": getattr(settings, "QUERY_CACHE_TTL_SECONDS", 60),
         "status": "ok",
     })
+
+
+# ---------------------------------------------------------------------------
+# Contract health endpoint (Issue: indexing failure alerting)
+# ---------------------------------------------------------------------------
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            name="contract_id",
+            location=OpenApiParameter.PATH,
+            description="Stellar contract address (C…, 56 chars)",
+            required=True,
+            type=str,
+        )
+    ],
+    responses=inline_serializer(
+        name="ContractHealthResponse",
+        fields={
+            "contract_id": serializers.CharField(),
+            "status": serializers.ChoiceField(choices=["healthy", "degraded", "failed"]),
+            "last_event_time": serializers.DateTimeField(allow_null=True),
+            "minutes_since_last_event": serializers.IntegerField(),
+            "abi_decode_errors_1h": serializers.IntegerField(),
+            "consecutive_failures": serializers.IntegerField(),
+            "error_message": serializers.CharField(allow_blank=True),
+            "checked_at": serializers.DateTimeField(allow_null=True),
+        },
+    ),
+    description=(
+        "Return the current indexing health of a contract. "
+        "Status is **healthy** (events flowing normally), **degraded** (no events for "
+        ">30 min or ABI decode spike), or **failed** (no events for >2 hours). "
+        "Updated every 5 minutes by the ``check_contract_health`` Celery task."
+    ),
+)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def contract_health_view(request, contract_id: str):
+    """GET /api/ingest/contracts/{contract_id}/health/"""
+    contract = get_cached_contract(contract_id)
+    if not contract:
+        return Response(
+            {"detail": f"Contract '{contract_id}' not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    try:
+        health = ContractHealthCheck.objects.get(contract=contract)
+    except ContractHealthCheck.DoesNotExist:
+        # No health record yet — infer from last_event_at on the contract itself
+        last_event_time = contract.last_event_at
+        if last_event_time:
+            minutes_since = int(
+                (timezone.now() - last_event_time).total_seconds() / 60
+            )
+        else:
+            minutes_since = None
+
+        return Response(
+            {
+                "contract_id": contract_id,
+                "status": "healthy",
+                "last_event_time": last_event_time,
+                "minutes_since_last_event": minutes_since,
+                "abi_decode_errors_1h": 0,
+                "consecutive_failures": 0,
+                "error_message": "",
+                "checked_at": None,
+            }
+        )
+
+    return Response(
+        {
+            "contract_id": contract_id,
+            "status": health.status,
+            "last_event_time": health.last_event_time,
+            "minutes_since_last_event": health.minutes_since_last_event,
+            "abi_decode_errors_1h": health.abi_decode_errors_1h,
+            "consecutive_failures": health.consecutive_failures,
+            "error_message": health.error_message,
+            "checked_at": health.checked_at,
+        }
+    )
+
+
+@extend_schema(
+    responses=inline_serializer(
+        name="AllContractHealthResponse",
+        fields={
+            "total": serializers.IntegerField(),
+            "healthy": serializers.IntegerField(),
+            "degraded": serializers.IntegerField(),
+            "failed": serializers.IntegerField(),
+            "contracts": serializers.JSONField(),
+        },
+    ),
+    description="Return health status for all active contracts. Staff only.",
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def all_contracts_health_view(request):
+    """GET /api/analytics/contracts/health/ — overview for admin dashboard."""
+    if not request.user.is_staff:
+        return Response(
+            {"detail": "Staff access required."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    health_qs = (
+        ContractHealthCheck.objects.select_related("contract")
+        .order_by("status", "-checked_at")
+    )
+
+    contracts_data = [
+        {
+            "contract_id": h.contract.contract_id,
+            "name": h.contract.name,
+            "network": h.contract.network,
+            "status": h.status,
+            "last_event_time": h.last_event_time.isoformat() if h.last_event_time else None,
+            "minutes_since_last_event": h.minutes_since_last_event,
+            "abi_decode_errors_1h": h.abi_decode_errors_1h,
+            "consecutive_failures": h.consecutive_failures,
+            "error_message": h.error_message,
+            "checked_at": h.checked_at.isoformat() if h.checked_at else None,
+        }
+        for h in health_qs
+    ]
+
+    counts: dict = {"healthy": 0, "degraded": 0, "failed": 0}
+    for c in contracts_data:
+        counts[c["status"]] = counts.get(c["status"], 0) + 1
+
+    return Response(
+        {
+            "total": len(contracts_data),
+            "healthy": counts["healthy"],
+            "degraded": counts["degraded"],
+            "failed": counts["failed"],
+            "contracts": contracts_data,
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Analytics endpoint — event volume, trends, anomalies, export
+# ---------------------------------------------------------------------------
+
+# Maximum range allowed for analytics queries (1 year)
+_ANALYTICS_MAX_RANGE_DAYS = 365
+
+# Map of API granularity → (truncation unit, roll-up key function)
+_GRANULARITY_TRUNC: dict[str, str] = {
+    "hourly": "hour",
+    "daily": "day",
+    "weekly": "week",
+    "monthly": "month",
+}
+
+_RANGE_ALIASES: dict[str, int] = {
+    "1d": 1,
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+    "1y": 365,
+}
+
+
+def _parse_range(raw: str | None) -> int:
+    """Return number of days for a range string like '30d' or plain int string."""
+    if not raw:
+        return 30
+    if raw in _RANGE_ALIASES:
+        return _RANGE_ALIASES[raw]
+    try:
+        days = int(raw.rstrip("d"))
+        return min(max(days, 1), _ANALYTICS_MAX_RANGE_DAYS)
+    except (ValueError, AttributeError):
+        return 30
+
+
+class AnalyticsViewSet(viewsets.ViewSet):
+    """
+    ViewSet for pre-computed event analytics.
+
+    GET /api/ingest/analytics/                     — platform-wide summary widget data
+    GET /api/ingest/analytics/event_volume/        — time-series event counts
+    GET /api/ingest/analytics/top_contracts/       — most active contracts
+    GET /api/ingest/analytics/event_type_breakdown/ — event type distribution
+    GET /api/ingest/analytics/anomalies/           — buckets flagged as anomalies
+    GET /api/ingest/analytics/export/              — CSV / JSON export
+
+    All read-only, authentication required.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    # ── Platform summary (dashboard widgets) ─────────────────────────────────
+
+    @extend_schema(
+        responses=inline_serializer(
+            name="AnalyticsSummary",
+            fields={
+                "total_events": serializers.IntegerField(),
+                "active_contracts": serializers.IntegerField(),
+                "events_last_24h": serializers.IntegerField(),
+                "events_last_7d": serializers.IntegerField(),
+                "unique_event_types": serializers.IntegerField(),
+                "anomalies_last_7d": serializers.IntegerField(),
+                "top_event_type": serializers.CharField(allow_null=True),
+            },
+        )
+    )
+    def list(self, request):
+        """
+        GET /api/ingest/analytics/
+        Platform-wide summary numbers for dashboard stat widgets.
+        Cached for QUERY_CACHE_TTL_SECONDS.
+        """
+        from .models import EventAggregation  # noqa: PLC0415
+
+        cache_key = stable_cache_key("analytics_summary", {"user_id": request.user.pk})
+
+        def _build():
+            now = timezone.now()
+            cutoff_24h = now - timedelta(hours=24)
+            cutoff_7d = now - timedelta(days=7)
+
+            base_qs = EventAggregation.objects.filter(event_type="")
+
+            totals = base_qs.aggregate(
+                total=Sum("event_count"),
+                last_24h=Sum("event_count", filter=Q(timestamp__gte=cutoff_24h)),
+                last_7d=Sum("event_count", filter=Q(timestamp__gte=cutoff_7d)),
+                anomalies_7d=Count("id", filter=Q(is_anomaly=True, timestamp__gte=cutoff_7d)),
+            )
+
+            active_contracts = TrackedContract.objects.filter(is_active=True).count()
+            unique_types = (
+                EventAggregation.objects.exclude(event_type="")
+                .values("event_type")
+                .distinct()
+                .count()
+            )
+            top_row = (
+                EventAggregation.objects.exclude(event_type="")
+                .filter(timestamp__gte=cutoff_7d)
+                .values("event_type")
+                .annotate(total=Sum("event_count"))
+                .order_by("-total")
+                .first()
+            )
+
+            return {
+                "total_events": totals["total"] or 0,
+                "active_contracts": active_contracts,
+                "events_last_24h": totals["last_24h"] or 0,
+                "events_last_7d": totals["last_7d"] or 0,
+                "unique_event_types": unique_types,
+                "anomalies_last_7d": totals["anomalies_7d"] or 0,
+                "top_event_type": top_row["event_type"] if top_row else None,
+            }
+
+        return Response(get_or_set_json(cache_key, query_cache_ttl(), _build))
+
+    # ── Time-series: event volume ─────────────────────────────────────────────
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("granularity", str, description="hourly|daily|weekly|monthly", default="daily"),
+            OpenApiParameter("range", str, description="Range alias (7d, 30d, 90d, 1y) or Nd", default="30d"),
+            OpenApiParameter("contract_id", str, description="Filter to a single contract", required=False),
+            OpenApiParameter("event_type", str, description="Filter to a single event type", required=False),
+        ],
+        responses=inline_serializer(
+            name="EventVolumeResponse",
+            fields={
+                "metric": serializers.CharField(),
+                "granularity": serializers.CharField(),
+                "range_days": serializers.IntegerField(),
+                "data": serializers.ListField(child=serializers.JSONField()),
+            },
+        ),
+    )
+    @action(detail=False, methods=["get"], url_path="event_volume")
+    def event_volume(self, request):
+        """
+        GET /api/ingest/analytics/event_volume/
+
+        Returns time-series event count data.
+        Queries pre-computed EventAggregation rows; rolls up to requested granularity.
+        """
+        from .models import EventAggregation  # noqa: PLC0415
+        from django.db.models.functions import TruncHour, TruncDay, TruncWeek, TruncMonth  # noqa: PLC0415
+
+        granularity = request.query_params.get("granularity", "daily")
+        if granularity not in _GRANULARITY_TRUNC:
+            return Response(
+                {"detail": f"granularity must be one of: {', '.join(_GRANULARITY_TRUNC)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        range_days = _parse_range(request.query_params.get("range", "30d"))
+        since = timezone.now() - timedelta(days=range_days)
+
+        qs = EventAggregation.objects.filter(timestamp__gte=since)
+
+        contract_id = request.query_params.get("contract_id")
+        if contract_id:
+            contract = get_cached_contract(contract_id)
+            if not contract:
+                return Response(
+                    {"detail": f"Contract '{contract_id}' not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            qs = qs.filter(contract=contract)
+
+        event_type = request.query_params.get("event_type")
+        if event_type is not None:
+            qs = qs.filter(event_type=event_type)
+        else:
+            # Default: return totals (event_type='')
+            qs = qs.filter(event_type="")
+
+        trunc_fn_map = {
+            "hourly": TruncHour,
+            "daily": TruncDay,
+            "weekly": TruncWeek,
+            "monthly": TruncMonth,
+        }
+        TruncFn = trunc_fn_map[granularity]
+
+        rows = (
+            qs.annotate(bucket=TruncFn("timestamp"))
+            .values("bucket", "contract_id")
+            .annotate(
+                count=Sum("event_count"),
+                has_anomaly=Count("id", filter=Q(is_anomaly=True)),
+            )
+            .order_by("bucket")
+        )
+
+        # Enrich with contract_id strings (avoid N+1 by pre-fetching id→contract_id map)
+        contract_pks = {r["contract_id"] for r in rows}
+        pk_to_cid = dict(
+            TrackedContract.objects.filter(pk__in=contract_pks).values_list("id", "contract_id")
+        )
+
+        data = [
+            {
+                "timestamp": r["bucket"].isoformat(),
+                "contract_id": pk_to_cid.get(r["contract_id"], ""),
+                "count": r["count"] or 0,
+                "has_anomaly": r["has_anomaly"] > 0,
+            }
+            for r in rows
+        ]
+
+        return Response(
+            {
+                "metric": "event_volume",
+                "granularity": granularity,
+                "range_days": range_days,
+                "data": data,
+            }
+        )
+
+    # ── Top contracts ─────────────────────────────────────────────────────────
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("range", str, default="7d"),
+            OpenApiParameter("limit", int, default=10),
+        ],
+        responses=inline_serializer(
+            name="TopContractsResponse",
+            fields={
+                "range_days": serializers.IntegerField(),
+                "contracts": serializers.ListField(child=serializers.JSONField()),
+            },
+        ),
+    )
+    @action(detail=False, methods=["get"], url_path="top_contracts")
+    def top_contracts(self, request):
+        """Most active contracts by total event count over the requested range."""
+        from .models import EventAggregation  # noqa: PLC0415
+
+        range_days = _parse_range(request.query_params.get("range", "7d"))
+        limit = min(int(request.query_params.get("limit", 10)), 100)
+        since = timezone.now() - timedelta(days=range_days)
+
+        rows = (
+            EventAggregation.objects.filter(timestamp__gte=since, event_type="")
+            .values("contract_id")
+            .annotate(total=Sum("event_count"))
+            .order_by("-total")[:limit]
+        )
+
+        contract_pks = [r["contract_id"] for r in rows]
+        pk_to_info = {
+            c.pk: {"contract_id": c.contract_id, "name": c.name, "network": c.network}
+            for c in TrackedContract.objects.filter(pk__in=contract_pks)
+        }
+
+        contracts = [
+            {
+                **pk_to_info.get(r["contract_id"], {"contract_id": "", "name": "", "network": ""}),
+                "event_count": r["total"] or 0,
+            }
+            for r in rows
+        ]
+
+        return Response({"range_days": range_days, "contracts": contracts})
+
+    # ── Event type breakdown ──────────────────────────────────────────────────
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("range", str, default="7d"),
+            OpenApiParameter("contract_id", str, required=False),
+        ],
+        responses=inline_serializer(
+            name="EventTypeBreakdownResponse",
+            fields={
+                "range_days": serializers.IntegerField(),
+                "breakdown": serializers.ListField(child=serializers.JSONField()),
+            },
+        ),
+    )
+    @action(detail=False, methods=["get"], url_path="event_type_breakdown")
+    def event_type_breakdown(self, request):
+        """Distribution of event types by count over the requested range."""
+        from .models import EventAggregation  # noqa: PLC0415
+
+        range_days = _parse_range(request.query_params.get("range", "7d"))
+        since = timezone.now() - timedelta(days=range_days)
+
+        qs = EventAggregation.objects.filter(
+            timestamp__gte=since,
+        ).exclude(event_type="")
+
+        contract_id = request.query_params.get("contract_id")
+        if contract_id:
+            contract = get_cached_contract(contract_id)
+            if not contract:
+                return Response(
+                    {"detail": f"Contract '{contract_id}' not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            qs = qs.filter(contract=contract)
+
+        rows = (
+            qs.values("event_type")
+            .annotate(total=Sum("event_count"))
+            .order_by("-total")
+        )
+
+        grand_total = sum(r["total"] or 0 for r in rows)
+
+        breakdown = [
+            {
+                "event_type": r["event_type"],
+                "count": r["total"] or 0,
+                "pct": round((r["total"] or 0) / grand_total * 100, 2) if grand_total else 0.0,
+            }
+            for r in rows
+        ]
+
+        return Response({"range_days": range_days, "breakdown": breakdown})
+
+    # ── Anomalies ─────────────────────────────────────────────────────────────
+
+    @extend_schema(
+        parameters=[OpenApiParameter("range", str, default="7d")],
+        responses=inline_serializer(
+            name="AnomalyListResponse",
+            fields={
+                "range_days": serializers.IntegerField(),
+                "anomalies": serializers.ListField(child=serializers.JSONField()),
+            },
+        ),
+    )
+    @action(detail=False, methods=["get"], url_path="anomalies")
+    def anomalies(self, request):
+        """Return aggregation buckets flagged as anomalies within the range."""
+        from .models import EventAggregation  # noqa: PLC0415
+
+        range_days = _parse_range(request.query_params.get("range", "7d"))
+        since = timezone.now() - timedelta(days=range_days)
+
+        rows = (
+            EventAggregation.objects.filter(
+                is_anomaly=True,
+                event_type="",
+                timestamp__gte=since,
+            )
+            .select_related("contract")
+            .order_by("-timestamp")
+        )
+
+        anomaly_data = [
+            {
+                "timestamp": r.timestamp.isoformat(),
+                "contract_id": r.contract.contract_id,
+                "contract_name": r.contract.name,
+                "event_count": r.event_count,
+            }
+            for r in rows
+        ]
+
+        return Response({"range_days": range_days, "anomalies": anomaly_data})
+
+    # ── CSV / JSON export ─────────────────────────────────────────────────────
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("range", str, default="30d"),
+            OpenApiParameter("contract_id", str, required=False),
+            OpenApiParameter("export_format", str, description="csv or json", default="json"),
+        ],
+        responses={200: serializers.CharField()},
+    )
+    @action(detail=False, methods=["get"], url_path="export",
+            renderer_classes=[renderers.JSONRenderer, renderers.BrowsableAPIRenderer])
+    def export(self, request):
+        """
+        GET /api/ingest/analytics/export/
+
+        Download analytics data as CSV or JSON.
+        Range capped at 1 year.  CSV streams efficiently for large result sets.
+        """
+        from .models import EventAggregation  # noqa: PLC0415
+        import csv as csv_module  # noqa: PLC0415
+        from django.http import StreamingHttpResponse  # noqa: PLC0415
+
+        range_days = _parse_range(request.query_params.get("range", "30d"))
+        since = timezone.now() - timedelta(days=range_days)
+        fmt = request.query_params.get("export_format", request.query_params.get("format", "json")).lower()
+
+        qs = (
+            EventAggregation.objects.filter(timestamp__gte=since)
+            .select_related("contract")
+            .order_by("contract_id", "event_type", "timestamp")
+        )
+
+        contract_id = request.query_params.get("contract_id")
+        if contract_id:
+            contract = get_cached_contract(contract_id)
+            if not contract:
+                return Response(
+                    {"detail": f"Contract '{contract_id}' not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            qs = qs.filter(contract=contract)
+
+        if fmt == "csv":
+            columns = ["timestamp", "contract_id", "contract_name", "event_type", "event_count", "is_anomaly"]
+
+            class _Echo:
+                def write(self, v):
+                    return v
+
+            def _stream():
+                buf = _Echo()
+                writer = csv_module.writer(buf)
+                yield writer.writerow(columns)
+                for row in qs.iterator(chunk_size=2000):
+                    yield writer.writerow([
+                        row.timestamp.isoformat(),
+                        row.contract.contract_id,
+                        row.contract.name,
+                        row.event_type,
+                        row.event_count,
+                        row.is_anomaly,
+                    ])
+
+            filename = f"soroscan_analytics_{range_days}d.csv"
+            resp = StreamingHttpResponse(_stream(), content_type="text/csv")
+            resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return resp
+
+        # JSON
+        data = [
+            {
+                "timestamp": row.timestamp.isoformat(),
+                "contract_id": row.contract.contract_id,
+                "contract_name": row.contract.name,
+                "event_type": row.event_type,
+                "event_count": row.event_count,
+                "is_anomaly": row.is_anomaly,
+            }
+            for row in qs.iterator(chunk_size=2000)
+        ]
+        return Response({"range_days": range_days, "data": data})

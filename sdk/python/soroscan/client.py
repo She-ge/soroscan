@@ -20,10 +20,12 @@ from soroscan.exceptions import (
 from soroscan.models import (
     ContractEvent,
     ContractStats,
+    EventEntry,
     PaginatedResponse,
     RecordEventRequest,
     RecordEventResponse,
-    StructuredEventRequest,
+    RecordEventsBatchRequest,
+    RecordEventsBatchResponse,
     TrackedContract,
     WebhookSubscription,
 )
@@ -396,28 +398,27 @@ class SoroScanClient:
         data = self._handle_response(response)
         return RecordEventResponse.model_validate(data)
 
-    def record_structured_event(
+    def record_events_batch(
         self,
-        contract_id: str,
-        event_type: str,
-        payload_hash: str,
-        schema_version: int,
-        correlation_id: str,
-    ) -> RecordEventResponse:
-        """Submit an idempotent SC-38 structured event."""
-        request = StructuredEventRequest(
-            contract_id=contract_id,
-            event_type=event_type,
-            payload_hash=payload_hash,
-            schema_version=schema_version,
-            correlation_id=correlation_id,
-        )
+        events: list[EventEntry],
+    ) -> RecordEventsBatchResponse:
+        """
+        Record multiple events in a single transaction (SC-29).
+        Maximum 25 events per batch.
+
+        Args:
+            events: List of EventEntry objects (1–25 entries)
+
+        Returns:
+            Batch submission result including new total event count
+        """
+        url = urljoin(self.base_url, "/api/record-events-batch/")
+        request = RecordEventsBatchRequest(events=events)
         response = self._client.post(
-            urljoin(self.base_url, "/api/record/structured/"),
-            headers=self._get_headers(),
-            json=request.model_dump(),
+            url, headers=self._get_headers(), json=request.model_dump()
         )
-        return RecordEventResponse.model_validate(self._handle_response(response))
+        data = self._handle_response(response)
+        return RecordEventsBatchResponse.model_validate(data)
 
     def get_webhooks(
         self,
@@ -906,28 +907,27 @@ class AsyncSoroScanClient:
         data = self._handle_response(response)
         return RecordEventResponse.model_validate(data)
 
-    async def record_structured_event(
+    async def record_events_batch(
         self,
-        contract_id: str,
-        event_type: str,
-        payload_hash: str,
-        schema_version: int,
-        correlation_id: str,
-    ) -> RecordEventResponse:
-        """Submit an idempotent SC-38 structured event asynchronously."""
-        request = StructuredEventRequest(
-            contract_id=contract_id,
-            event_type=event_type,
-            payload_hash=payload_hash,
-            schema_version=schema_version,
-            correlation_id=correlation_id,
-        )
+        events: list[EventEntry],
+    ) -> RecordEventsBatchResponse:
+        """
+        Record multiple events in a single transaction (SC-29).
+        Maximum 25 events per batch.
+
+        Args:
+            events: List of EventEntry objects (1–25 entries)
+
+        Returns:
+            Batch submission result including new total event count
+        """
+        url = urljoin(self.base_url, "/api/record-events-batch/")
+        request = RecordEventsBatchRequest(events=events)
         response = await self._client.post(
-            urljoin(self.base_url, "/api/record/structured/"),
-            headers=self._get_headers(),
-            json=request.model_dump(),
+            url, headers=self._get_headers(), json=request.model_dump()
         )
-        return RecordEventResponse.model_validate(self._handle_response(response))
+        data = self._handle_response(response)
+        return RecordEventsBatchResponse.model_validate(data)
 
     async def get_webhooks(
         self,

@@ -51,6 +51,22 @@ def contract_cache_key(contract_id: str) -> str:
     return f"soroscan:contract:obj:{contract_id}"
 
 
+# 24-hour TTL for contract-name cache entries (Issue #778)
+CONTRACT_NAME_CACHE_TTL = 86_400
+
+
+def contract_name_cache_key(contract_id: str) -> str:
+    """Return the Redis key for the contract_address → contract_name mapping.
+
+    Used by ``warm_contract_name_cache`` to pre-populate a lightweight lookup
+    that does not require loading full TrackedContract instances.
+
+    Key pattern: ``soroscan:contract:name:{contract_id}``
+    TTL: 24 hours (see CONTRACT_NAME_CACHE_TTL).
+    """
+    return f"soroscan:contract:name:{contract_id}"
+
+
 def get_cached_contract(contract_id: str) -> Any:
     """Get a TrackedContract instance from cache, or load from DB and cache it."""
     with tracer.start_as_current_span(

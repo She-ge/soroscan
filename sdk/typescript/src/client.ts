@@ -22,6 +22,8 @@ import type {
   Webhook,
   WebhookListResponse,
   PaginatedResponse,
+  RecordEventsBatchParams,
+  RecordEventsBatchResponse,
 } from "./types.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -274,6 +276,29 @@ export class SoroScanClient {
   }
 
   // ─── Webhooks ──────────────────────────────────────────────────────────────
+
+  /**
+   * Record multiple events in a single transaction (SC-29).
+   * Maximum 25 events per batch.
+   *
+   * @example
+   * const result = await client.recordEventsBatch({
+   *   events: [
+   *     { contractId: 'CCAAA...', eventType: 'transfer', payloadHash: 'abc...' },
+   *     { contractId: 'CCAAA...', eventType: 'swap', payloadHash: 'def...' },
+   *   ],
+   * });
+   * console.log('Total events:', result.totalEvents);
+   */
+  async recordEventsBatch(
+    params: RecordEventsBatchParams
+  ): Promise<RecordEventsBatchResponse> {
+    return this.#request<RecordEventsBatchResponse>(
+      "POST",
+      "/v1/record-events-batch",
+      { body: params }
+    );
+  }
 
   /**
    * Create a new webhook subscription.

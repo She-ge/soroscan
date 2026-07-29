@@ -258,6 +258,7 @@ describe("CreateWebhookModal", () => {
         eventTypes: ["ALL"],
         contractFilter: undefined,
         status: "ACTIVE",
+        isActive: true,
         timeoutSeconds: 45,
         filterExpression: undefined,
       })

@@ -3,18 +3,27 @@ import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { Providers } from "./providers"
 import { SkipToContent } from "@/components/ui/SkipToContent"
+import { WebVitalsReporter } from "@/components/WebVitalsReporter"
+import CookieConsentBanner from "@/components/compliance/CookieConsentBanner"
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 })
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
+  display: "swap",
 })
 
 const BASE_URL = "https://soroscan.io"
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -71,7 +80,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"
@@ -82,10 +91,12 @@ export default function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-terminal-black text-terminal-green`}
       >
         <SkipToContent />
+        <WebVitalsReporter />
         <Providers>
           <main id="main-content">
             {children}
           </main>
+          <CookieConsentBanner />
         </Providers>
       </body>
     </html>

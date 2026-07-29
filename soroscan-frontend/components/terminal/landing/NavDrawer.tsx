@@ -44,7 +44,7 @@ export function NavDrawer({
               href={link.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-terminal-green transition-colors py-3 px-2 border border-transparent hover:border-terminal-green/20 rounded-sm font-terminal-mono"
+              className="hover:text-terminal-green transition-colors min-h-[44px] flex items-center py-3 px-2 border border-transparent hover:border-terminal-green/20 rounded-sm font-terminal-mono"
               onClick={onClose}
             >
               {link.label}
@@ -53,7 +53,7 @@ export function NavDrawer({
             <Link
               key={link.href}
               href={link.href}
-              className={`hover:text-terminal-green transition-colors py-3 px-2 border rounded-sm font-terminal-mono ${
+              className={`hover:text-terminal-green transition-colors min-h-[44px] flex items-center py-3 px-2 border rounded-sm font-terminal-mono ${
                 pathname === link.href
                   ? "border-terminal-green/30 text-terminal-green bg-terminal-green/10"
                   : "border-transparent"
@@ -71,7 +71,7 @@ export function NavDrawer({
               handleLogout();
               onClose();
             }}
-            className="flex items-center gap-2 hover:text-terminal-danger transition-colors py-3 px-2 text-left border border-transparent hover:border-terminal-danger/20 rounded-sm font-terminal-mono"
+            className="flex items-center gap-2 hover:text-terminal-danger transition-colors min-h-[44px] py-3 px-2 text-left border border-transparent hover:border-terminal-danger/20 rounded-sm font-terminal-mono"
           >
             <LogOut size={14} />
             LOGOUT

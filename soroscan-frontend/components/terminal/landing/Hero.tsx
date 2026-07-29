@@ -32,7 +32,7 @@ export function Hero() {
     <section className="flex flex-col items-center text-center space-y-10 py-8 md:py-16">
       {/* Headline */}
       <div className="relative">
-        <div className="text-[10px] md:text-xs text-terminal-cyan/60 tracking-[0.3em] uppercase mb-3">
+        <div className="text-[10px] md:text-xs text-terminal-cyan tracking-[0.3em] uppercase mb-3">
           Soroban Event Indexing, Reimagined
         </div>
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-terminal-green font-terminal-mono leading-none">

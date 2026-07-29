@@ -1,92 +1,133 @@
 "use client"
 
 import * as React from "react"
+
 import { cn } from "@/lib/utils"
 
 export interface CheckboxProps
-  extends Omit<React.ComponentPropsWithoutRef<"input">, "type" | "onChange"> {
+  extends Omit<
+    React.ComponentPropsWithoutRef<"input">,
+    "type" | "checked" | "defaultChecked" | "onChange"
+  > {
   label: React.ReactNode
   checked: boolean
   indeterminate?: boolean
   onCheckedChange?: (checked: boolean) => void
 }
 
-const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
-  {
-    id,
-    className,
-    label,
-    checked,
-    indeterminate = false,
-    disabled = false,
-    onCheckedChange,
-    ...props
-  },
-  ref
-) {
-  const generatedId = React.useId()
-  const checkboxId = id ?? `checkbox-${generatedId}`
-  const internalRef = React.useRef<HTMLInputElement>(null)
+const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
+  function Checkbox(
+    {
+      id,
+      className,
+      label,
+      checked,
+      indeterminate = false,
+      disabled = false,
+      onCheckedChange,
+      ...props
+    },
+    forwardedRef,
+  ) {
+    const generatedId = React.useId()
+    const checkboxId = id ?? `checkbox-${generatedId}`
+    const internalRef = React.useRef<HTMLInputElement>(null)
 
-  React.useImperativeHandle(ref, () => internalRef.current as HTMLInputElement)
+    React.useImperativeHandle(
+      forwardedRef,
+      () => internalRef.current as HTMLInputElement,
+    )
 
-  React.useEffect(() => {
-    if (!internalRef.current) {
-      return
-    }
+    React.useEffect(() => {
+      if (!internalRef.current) {
+        return
+      }
 
-    // `indeterminate` is a DOM property and must be set imperatively.
-    internalRef.current.indeterminate = indeterminate
-  }, [indeterminate])
+      internalRef.current.indeterminate = indeterminate
+    }, [indeterminate])
 
-  return (
-    <div className={cn("inline-flex items-center", disabled && "cursor-not-allowed", className)}>
-      <input
-        ref={internalRef}
-        id={checkboxId}
-        type="checkbox"
-        role="checkbox"
-        className="peer sr-only"
-        checked={checked}
-        disabled={disabled}
-        aria-checked={indeterminate ? "mixed" : checked}
-        aria-disabled={disabled}
-        onChange={(event) => onCheckedChange?.(event.target.checked)}
-        {...props}
-      />
+    const state = indeterminate
+      ? "indeterminate"
+      : checked
+        ? "checked"
+        : "unchecked"
 
-      <label
-        htmlFor={checkboxId}
+    return (
+      <div
         className={cn(
-          "inline-flex items-center gap-2 text-sm font-medium",
-          disabled ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer"
+          "inline-flex items-center",
+          disabled && "cursor-not-allowed",
+          className,
         )}
+        data-disabled={disabled || undefined}
+        data-state={state}
       >
-        <span
-          aria-hidden="true"
+        <input
+          {...props}
+          ref={internalRef}
+          id={checkboxId}
+          type="checkbox"
+          className="peer sr-only"
+          checked={checked}
+          disabled={disabled}
+          aria-checked={indeterminate ? "mixed" : checked}
+          aria-disabled={disabled}
+          data-state={state}
+          onChange={(event) => {
+            onCheckedChange?.(event.currentTarget.checked)
+          }}
+        />
+
+        <label
+          htmlFor={checkboxId}
           className={cn(
-            "flex h-4 w-4 items-center justify-center rounded border transition-colors",
-            "peer-focus-visible:ring-ring/50 peer-focus-visible:ring-[3px]",
-            checked || indeterminate
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-input bg-background",
-            disabled && "opacity-60"
+            "inline-flex items-center gap-2 text-sm font-medium",
+            disabled
+              ? "cursor-not-allowed text-muted-foreground"
+              : "cursor-pointer",
           )}
         >
-          {indeterminate ? (
-            <span className="h-0.5 w-2 rounded bg-current" />
-          ) : checked ? (
-            <svg viewBox="0 0 16 16" className="h-3 w-3 fill-none stroke-current" aria-hidden="true">
-              <path d="M3.5 8.5 6.5 11.5 12.5 4.5" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          ) : null}
-        </span>
+          <span
+            aria-hidden="true"
+            data-testid="checkbox-indicator"
+            data-state={state}
+            className={cn(
+              "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+              "peer-focus-visible:ring-ring/50 peer-focus-visible:ring-[3px]",
+              checked || indeterminate
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-input bg-background",
+              disabled && "opacity-60",
+            )}
+          >
+            {indeterminate ? (
+              <span
+                data-testid="indeterminate-icon"
+                className="h-0.5 w-2 rounded bg-current"
+              />
+            ) : checked ? (
+              <svg
+                data-testid="checked-icon"
+                viewBox="0 0 16 16"
+                className="h-3 w-3 fill-none stroke-current"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3.5 8.5 6.5 11.5 12.5 4.5"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : null}
+          </span>
 
-        <span>{label}</span>
-      </label>
-    </div>
-  )
-})
+          <span>{label}</span>
+        </label>
+      </div>
+    )
+  },
+)
 
 Checkbox.displayName = "Checkbox"
 

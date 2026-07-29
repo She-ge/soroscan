@@ -138,7 +138,7 @@ class TestDeletionRequestsView:
 
     def test_unauthenticated_rejected(self, api_client):
         response = api_client.get("/api/ingest/deletion-requests/")
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ---------------------------------------------------------------------------

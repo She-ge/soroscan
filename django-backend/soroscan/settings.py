@@ -295,11 +295,19 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-# CORS
-origins_str = env("ALLOWED_ORIGINS", default="")
-CORS_ALLOWED_ORIGINS = [o.strip() for o in origins_str.split(",") if o.strip()] if origins_str else []
-CORS_ALLOW_ALL_ORIGINS = DEBUG
-CORS_ALLOW_CREDENTIALS = True  # Required for Apollo Client with credentials: 'include'
+# CORS Configuration
+ALLOWED_ORIGINS_ENV = env.str("ALLOWED_ORIGINS", default="")
+if ALLOWED_ORIGINS_ENV:
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip() 
+        for origin in ALLOWED_ORIGINS_ENV.split(",") 
+        if origin.strip()
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+
+CORS_ALLOW_ALL_ORIGINS = DEBUG and not CORS_ALLOWED_ORIGINS
+CORS_ALLOW_CREDENTIALS = True
 
 # Channels
 CHANNEL_LAYERS = {
@@ -321,6 +329,9 @@ CELERY_TIMEZONE = TIME_ZONE
 # Graceful shutdown: wait up to 30s for active tasks after SIGTERM
 CELERY_WORKER_SOFT_SHUTDOWN_TIMEOUT = 30
 SHUTDOWN_TIMEOUT_SECONDS = env.int("SHUTDOWN_TIMEOUT_SECONDS", default=30)
+# Task timeout limits — hard limit kills the task, soft limit raises SoftTimeLimitExceeded
+CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=600)
+CELERY_TASK_SOFT_TIME_LIMIT = env.int("CELERY_TASK_SOFT_TIME_LIMIT", default=540)
 CELERY_TASK_ROUTES = {
     "ingest.tasks.ingest_latest_events": {"queue": "high_priority"},
     "ingest.tasks.dispatch_webhook": {"queue": "default"},
@@ -371,13 +382,44 @@ CELERY_BEAT_SCHEDULE = {
         "task": "ingest.tasks.warm_event_count_cache",
         "schedule": 300,  # every 5 minutes
     },
+    "snapshot-contract-state": {
+        "task": "ingest.tasks.snapshot_contract_state",
+        "schedule": 600,  # every 10 minutes
+    },
+    "auto-resume-paused-contracts": {
+        "task": "ingest.tasks.auto_resume_paused_contracts",
+        "schedule": 300,  # every 5 minutes
+    },
+    # Issue #778 — warm contract name lookup cache daily
+    "warm-contract-name-cache": {
+        "task": "soroscan.ingest.tasks.warm_contract_name_cache",
+        "schedule": 86400,  # daily
+    },
 }
+
+# Analytics — anomaly detection threshold
+# Volume drop percentage that triggers an anomaly flag on an aggregation bucket.
+# e.g. 50 means: flag the bucket if current count < 50 % of the 7-day rolling avg.
+ANALYTICS_ANOMALY_DROP_PCT = env.int("ANALYTICS_ANOMALY_DROP_PCT", default=50)
+# Minimum events in the rolling average before anomaly detection kicks in.
+# Prevents false positives on very low-traffic contracts.
+ANALYTICS_ANOMALY_MIN_BASELINE = env.int("ANALYTICS_ANOMALY_MIN_BASELINE", default=10)
+
+# Contract health check thresholds (configurable via environment)
+# Minutes without a new event before a contract is considered degraded
+HEALTH_DEGRADED_MINUTES = env.int("HEALTH_DEGRADED_MINUTES", default=30)
+# Minutes without a new event before a contract is considered failed
+HEALTH_FAILED_MINUTES = env.int("HEALTH_FAILED_MINUTES", default=120)
+# ABI decode error count in the last hour that triggers degraded status
+HEALTH_ABI_ERROR_THRESHOLD = env.int("HEALTH_ABI_ERROR_THRESHOLD", default=5)
 
 # Data Retention Configuration
 # Number of days to retain deduplication logs before cleanup
 DEDUP_LOG_RETENTION_DAYS = env("DEDUP_LOG_RETENTION_DAYS", default=90, cast=int)
 # Number of days to retain contract events before pruning
 EVENT_RETENTION_DAYS = env("EVENT_RETENTION_DAYS", default=30, cast=int)
+# Issue #765 — number of days to retain webhook delivery logs
+WEBHOOK_DELIVERY_RETENTION_DAYS = env.int("WEBHOOK_DELIVERY_RETENTION_DAYS", default=30)
 
 # Alert deduplication window
 ALERT_DEDUP_WINDOW_SECONDS = env.int("ALERT_DEDUP_WINDOW_SECONDS", default=300)
@@ -460,6 +502,10 @@ GRAPHQL_N1_DETECTION_ENABLED = env.bool(
     "GRAPHQL_N1_DETECTION_ENABLED",
     default=DEBUG,
 )
+
+# Contract state snapshot capture (issue #798)
+CONTRACT_SNAPSHOT_INTERVAL = env.int("CONTRACT_SNAPSHOT_INTERVAL", default=1000)
+CONTRACT_SNAPSHOT_MAX_BYTES = env.int("CONTRACT_SNAPSHOT_MAX_BYTES", default=1_048_576)
 
 # Ed25519 seed (32 bytes hex) for webhook X-Signature headers.
 WEBHOOK_ED25519_SIGNING_SEED = env("WEBHOOK_ED25519_SIGNING_SEED", default="")

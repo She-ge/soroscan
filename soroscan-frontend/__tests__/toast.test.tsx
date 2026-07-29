@@ -1,143 +1,368 @@
-import React from "react";
-import { render, screen, act, fireEvent } from "@testing-library/react";
-import { ToastProvider, useToast, showToast } from "../context/ToastContext";
+import * as React from "react"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react"
+import "@testing-library/jest-dom"
 
-// Helper component to trigger toasts
-const ToastTrigger = () => {
-  const { showToast: show } = useToast();
+import {
+  ToastProvider,
+  showToast,
+  useToast,
+  type ToastType,
+} from "../context/ToastContext"
+
+function ToastTrigger({
+  type = "success",
+  title = "Test Title",
+  message = "Test message",
+}: {
+  type?: ToastType
+  title?: string
+  message?: string
+}) {
+  const { showToast: show } = useToast()
+
   return (
-    <button onClick={() => show("Test message", "success", "Test Title")}>
+    <button
+      type="button"
+      onClick={() => show(message, type, title)}
+    >
       Show Toast
     </button>
-  );
-};
+  )
+}
 
-describe("Toast System", () => {
+describe("Toast system", () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-  });
+    jest.useFakeTimers()
+  })
 
   afterEach(() => {
     act(() => {
-      jest.runOnlyPendingTimers();
-    });
-    jest.useRealTimers();
-  });
+      jest.runOnlyPendingTimers()
+    })
 
-  it("renders a toast when showToast is called", () => {
+    jest.useRealTimers()
+  })
+
+  it("renders a toast with an icon, title, and message", () => {
     render(
       <ToastProvider>
         <ToastTrigger />
-      </ToastProvider>
-    );
+      </ToastProvider>,
+    )
 
-    fireEvent.click(screen.getByText("Show Toast"));
+    fireEvent.click(screen.getByRole("button", {
+      name: "Show Toast",
+    }))
 
-    expect(screen.getByText("Test Title")).toBeInTheDocument();
-    expect(screen.getByText("Test message")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toBeInTheDocument();
-  });
+    const toast = screen.getByTestId("toast")
 
-  it("auto-dismisses after 4 seconds", async () => {
+    expect(toast).toHaveAttribute(
+      "data-toast-type",
+      "success",
+    )
+    expect(
+      screen.getByTestId("toast-icon-success"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Test Title")).toBeInTheDocument()
+    expect(screen.getByText("Test message")).toBeInTheDocument()
+    expect(screen.getByRole("status")).toBeInTheDocument()
+  })
+
+  it("places the toast container at the bottom-right by default", () => {
+    render(
+      <ToastProvider>
+        <ToastTrigger />
+      </ToastProvider>,
+    )
+
+    const container = screen.getByTestId("toast-container")
+
+    expect(container).toHaveAttribute(
+      "data-position",
+      "bottom-right",
+    )
+    expect(container).toHaveClass("bottom-4", "right-4")
+  })
+
+  it("supports an optional top-right position", () => {
+    render(
+      <ToastProvider position="top-right">
+        <ToastTrigger />
+      </ToastProvider>,
+    )
+
+    const container = screen.getByTestId("toast-container")
+
+    expect(container).toHaveAttribute(
+      "data-position",
+      "top-right",
+    )
+    expect(container).toHaveClass("top-4", "right-4")
+  })
+
+  it("auto-dismisses after four seconds", () => {
     render(
       <ToastProvider duration={4000}>
         <ToastTrigger />
-      </ToastProvider>
-    );
+      </ToastProvider>,
+    )
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Show Toast",
+    }))
+
+    expect(screen.getByText("Test Title")).toBeInTheDocument()
 
     act(() => {
-      fireEvent.click(screen.getByText("Show Toast"));
-    });
-    
-    expect(screen.getByText("Test Title")).toBeInTheDocument();
+      jest.advanceTimersByTime(3999)
+    })
 
-    // Fast-forward 4 seconds - wrap in act to handle state updates from timer
+    expect(screen.getByText("Test Title")).toBeInTheDocument()
+
     act(() => {
-      jest.advanceTimersByTime(4000);
-    });
+      jest.advanceTimersByTime(1)
+    })
 
-    expect(screen.queryByText("Test Title")).not.toBeInTheDocument();
-  });
+    expect(
+      screen.queryByText("Test Title"),
+    ).not.toBeInTheDocument()
+  })
 
-  it("manual dismiss button works", () => {
+  it("supports a custom auto-dismiss duration", () => {
+    render(
+      <ToastProvider duration={1500}>
+        <ToastTrigger />
+      </ToastProvider>,
+    )
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Show Toast",
+    }))
+
+    act(() => {
+      jest.advanceTimersByTime(1500)
+    })
+
+    expect(
+      screen.queryByText("Test Title"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps a toast visible when duration is zero", () => {
+    render(
+      <ToastProvider duration={0}>
+        <ToastTrigger />
+      </ToastProvider>,
+    )
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Show Toast",
+    }))
+
+    act(() => {
+      jest.advanceTimersByTime(10000)
+    })
+
+    expect(screen.getByText("Test Title")).toBeInTheDocument()
+  })
+
+  it("dismisses a toast using its close button", () => {
     render(
       <ToastProvider>
         <ToastTrigger />
-      </ToastProvider>
-    );
+      </ToastProvider>,
+    )
 
-    fireEvent.click(screen.getByText("Show Toast"));
-    expect(screen.getByText("Test Title")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", {
+      name: "Show Toast",
+    }))
 
-    const closeButton = screen.getByLabelText("Dismiss notification");
-    fireEvent.click(closeButton);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Dismiss Test Title notification",
+      }),
+    )
 
-    expect(screen.queryByText("Test Title")).not.toBeInTheDocument();
-  });
+    expect(
+      screen.queryByText("Test Title"),
+    ).not.toBeInTheDocument()
+  })
 
-  it("multiple toasts stack vertically", () => {
-    const MultiToastTrigger = () => {
-      const { showToast: show } = useToast();
+  it("stacks multiple toasts vertically with the newest first", () => {
+    function MultipleToastTrigger() {
+      const { showToast: show } = useToast()
+
       return (
-        <button onClick={() => {
-          show("Message 1", "info", "Title 1");
-          show("Message 2", "info", "Title 2");
-        }}>
+        <button
+          type="button"
+          onClick={() => {
+            show("First message", "info", "First title")
+            show("Second message", "warning", "Second title")
+          }}
+        >
           Show Multiple
         </button>
-      );
-    };
+      )
+    }
 
     render(
       <ToastProvider>
-        <MultiToastTrigger />
-      </ToastProvider>
-    );
+        <MultipleToastTrigger />
+      </ToastProvider>,
+    )
 
-    fireEvent.click(screen.getByText("Show Multiple"));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Show Multiple",
+      }),
+    )
 
-    expect(screen.getByText("Title 1")).toBeInTheDocument();
-    expect(screen.getByText("Title 2")).toBeInTheDocument();
-    
-    const toasts = screen.getAllByRole("status");
-    expect(toasts.length).toBe(2);
-  });
+    const container = screen.getByTestId("toast-container")
+    const toasts = within(container).getAllByTestId("toast")
+
+    expect(container).toHaveClass("flex-col", "gap-3")
+    expect(toasts).toHaveLength(2)
+    expect(toasts[0]).toHaveAttribute(
+      "data-toast-type",
+      "warning",
+    )
+    expect(
+      within(toasts[0]).getByText("Second title"),
+    ).toBeInTheDocument()
+    expect(
+      within(toasts[1]).getByText("First title"),
+    ).toBeInTheDocument()
+  })
 
   it.each([
-    ["success", "status"],
-    ["error", "alert"],
-    ["info", "status"],
-    ["warning", "status"],
+    [
+      "success",
+      "status",
+      "border-terminal-green",
+      "toast-icon-success",
+    ],
+    [
+      "error",
+      "alert",
+      "border-terminal-danger",
+      "toast-icon-error",
+    ],
+    [
+      "info",
+      "status",
+      "border-terminal-cyan",
+      "toast-icon-info",
+    ],
+    [
+      "warning",
+      "status",
+      "border-terminal-warning",
+      "toast-icon-warning",
+    ],
   ] as const)(
-    "renders %s toast with correct accessibility role",
-    (type, role) => {
+    "renders the %s variant with its colour and accessibility role",
+    (type, role, expectedClass, iconTestId) => {
       render(
         <ToastProvider>
-          <div />
+          <ToastTrigger
+            type={type}
+            title={`${type} title`}
+            message={`${type} message`}
+          />
         </ToastProvider>,
-      );
+      )
 
-      act(() => {
-        showToast(`${type} message`, type, `${type} title`);
-      });
+      fireEvent.click(screen.getByRole("button", {
+        name: "Show Toast",
+      }))
 
-      expect(screen.getByText(`${type} title`)).toBeInTheDocument();
-      expect(screen.getByRole(role)).toBeInTheDocument();
+      const toast = screen.getByTestId("toast")
+
+      expect(toast).toHaveAttribute("data-toast-type", type)
+      expect(toast).toHaveClass(expectedClass)
+      expect(screen.getByRole(role)).toBeInTheDocument()
+      expect(screen.getByTestId(iconTestId)).toBeInTheDocument()
     },
-  );
+  )
 
-  it("works with global showToast helper", () => {
+  it("works with the global showToast helper", () => {
     render(
       <ToastProvider>
-        <div>Content</div>
-      </ToastProvider>
-    );
+        <div>Application content</div>
+      </ToastProvider>,
+    )
 
     act(() => {
-      showToast("Global message", "warning", "Global Title");
-    });
+      showToast(
+        "Global message",
+        "warning",
+        "Global title",
+      )
+    })
 
-    expect(screen.getByText("Global Title")).toBeInTheDocument();
-    expect(screen.getByText("Global message")).toBeInTheDocument();
-  });
-});
+    expect(screen.getByText("Global title")).toBeInTheDocument()
+    expect(screen.getByText("Global message")).toBeInTheDocument()
+  })
+
+  it("allows all toasts to be dismissed together", () => {
+    function DismissAllTrigger() {
+      const {
+        showToast: show,
+        dismissAllToasts,
+      } = useToast()
+
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              show("Message one", "info", "Toast one")
+              show("Message two", "success", "Toast two")
+            }}
+          >
+            Add Toasts
+          </button>
+
+          <button type="button" onClick={dismissAllToasts}>
+            Dismiss All
+          </button>
+        </>
+      )
+    }
+
+    render(
+      <ToastProvider>
+        <DismissAllTrigger />
+      </ToastProvider>,
+    )
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Add Toasts",
+    }))
+
+    expect(screen.getAllByTestId("toast")).toHaveLength(2)
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Dismiss All",
+    }))
+
+    expect(screen.queryAllByTestId("toast")).toHaveLength(0)
+  })
+
+  it("throws when useToast is used outside ToastProvider", () => {
+    function InvalidConsumer() {
+      useToast()
+      return null
+    }
+
+    expect(() => render(<InvalidConsumer />)).toThrow(
+      "useToast must be used within a ToastProvider",
+    )
+  })
+})

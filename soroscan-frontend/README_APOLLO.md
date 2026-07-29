@@ -49,7 +49,7 @@ localStorage.setItem('access_token', yourJwtToken);
 
 - **Technical Details**: `lib/apollo-client.README.md`
 - **Integration Guide**: `APOLLO_INTEGRATION.md`
-- **Implementation Summary**: `../APOLLO_CLIENT_IMPLEMENTATION.md`
+- **Implementation Summary**: `../docs/architecture/frontend/APOLLO_CLIENT_IMPLEMENTATION.md`
 
 ## ✅ Status
 
