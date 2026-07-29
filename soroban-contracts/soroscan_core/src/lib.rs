@@ -25,6 +25,30 @@ pub struct EventRecord {
     pub timestamp: u64,
 }
 
+/// SC-38 structured event record.  This is deliberately separate from
+/// `EventRecord` so clients using the original ABI continue to decode the
+/// legacy event payload without a schema change.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StructuredEventRecord {
+    pub contract_id: Address,
+    pub event_type: Symbol,
+    pub payload_hash: BytesN<32>,
+    /// Producer-defined payload schema version. Must be greater than zero.
+    pub schema_version: u32,
+    /// Stable id supplied by the producer for safe retry/deduplication.
+    pub correlation_id: BytesN<32>,
+    pub ledger: u32,
+    pub timestamp: u64,
+}
+
+#[contracttype]
+#[derive(Clone)]
+enum DataKey {
+    StructuredByCorrelation(BytesN<32>),
+    LatestStructuredByType(Symbol),
+}
+
 /// Contract errors with explicit error codes.
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -37,6 +61,10 @@ pub enum ContractError {
     AlreadyInitialized = 3,
     /// Contract has not been initialized.
     NotInitialized = 4,
+    /// SC-38 structured events require a non-zero schema version.
+    InvalidSchemaVersion = 5,
+    /// A structured event with this correlation ID was already submitted.
+    DuplicateCorrelation = 6,
 }
 
 #[contract]
@@ -190,6 +218,79 @@ impl SoroScanCore {
             .publish((symbol_short!("soroscan"), event_type), record);
 
         Ok(count)
+    }
+
+    /// Record an SC-38 structured event.
+    ///
+    /// `correlation_id` makes producer retries safe: a duplicate is rejected
+    /// before incrementing the counter or publishing a second event.
+    pub fn record_structured_event(
+        env: Env,
+        indexer: Address,
+        contract_id: Address,
+        event_type: Symbol,
+        payload_hash: BytesN<32>,
+        schema_version: u32,
+        correlation_id: BytesN<32>,
+    ) -> Result<u64, ContractError> {
+        indexer.require_auth();
+
+        if schema_version == 0 {
+            return Err(ContractError::InvalidSchemaVersion);
+        }
+
+        let indexers: Map<Address, bool> = env
+            .storage()
+            .instance()
+            .get(&INDEXERS_KEY)
+            .ok_or(ContractError::NotInitialized)?;
+        if !indexers.get(indexer).unwrap_or(false) {
+            return Err(ContractError::IndexerNotFound);
+        }
+
+        let correlation_key = DataKey::StructuredByCorrelation(correlation_id.clone());
+        if env.storage().instance().has(&correlation_key) {
+            return Err(ContractError::DuplicateCorrelation);
+        }
+
+        let record = StructuredEventRecord {
+            contract_id,
+            event_type: event_type.clone(),
+            payload_hash,
+            schema_version,
+            correlation_id,
+            ledger: env.ledger().sequence(),
+            timestamp: env.ledger().timestamp(),
+        };
+
+        let count = env
+            .storage()
+            .instance()
+            .get::<Symbol, u64>(&COUNTER_KEY)
+            .unwrap_or(0)
+            .saturating_add(1);
+        env.storage().instance().set(&COUNTER_KEY, &count);
+        env.storage().instance().set(&correlation_key, &record);
+        env.storage().instance().set(
+            &DataKey::LatestStructuredByType(event_type.clone()),
+            &record,
+        );
+        env.events().publish(
+            (symbol_short!("soroscan"), symbol_short!("sc38"), event_type),
+            record,
+        );
+
+        Ok(count)
+    }
+
+    /// Get a structured event by its SC-38 correlation ID.
+    pub fn structured_by_correlation(
+        env: Env,
+        correlation_id: BytesN<32>,
+    ) -> Option<StructuredEventRecord> {
+        env.storage()
+            .instance()
+            .get(&DataKey::StructuredByCorrelation(correlation_id))
     }
 
     /// Get the latest event record for a specific event type.
@@ -350,6 +451,72 @@ mod tests {
         // Non-whitelisted address tries to record — should fail with IndexerNotFound
         let result = client.try_record_event(&rogue, &target, &event_type, &payload_hash);
         assert_eq!(result, Err(Ok(ContractError::IndexerNotFound)));
+    }
+
+    #[test]
+    fn test_record_structured_event_and_deduplicates_correlation_id() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        let target = Address::generate(&env);
+        let payload_hash = BytesN::from_array(&env, &[1u8; 32]);
+        let correlation_id = BytesN::from_array(&env, &[2u8; 32]);
+
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+        assert_eq!(
+            client.record_structured_event(
+                &indexer,
+                &target,
+                &symbol_short!("transfer"),
+                &payload_hash,
+                &1,
+                &correlation_id,
+            ),
+            1
+        );
+        let record = client.structured_by_correlation(&correlation_id).unwrap();
+        assert_eq!(record.schema_version, 1);
+        assert_eq!(record.correlation_id, correlation_id);
+        assert_eq!(client.total_events(), 1);
+        assert_eq!(
+            client.try_record_structured_event(
+                &indexer,
+                &target,
+                &symbol_short!("transfer"),
+                &payload_hash,
+                &1,
+                &correlation_id,
+            ),
+            Err(Ok(ContractError::DuplicateCorrelation))
+        );
+    }
+
+    #[test]
+    fn test_structured_event_rejects_zero_schema_version() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+
+        assert_eq!(
+            client.try_record_structured_event(
+                &indexer,
+                &Address::generate(&env),
+                &symbol_short!("swap"),
+                &BytesN::from_array(&env, &[0u8; 32]),
+                &0,
+                &BytesN::from_array(&env, &[3u8; 32]),
+            ),
+            Err(Ok(ContractError::InvalidSchemaVersion))
+        );
     }
 
     #[test]

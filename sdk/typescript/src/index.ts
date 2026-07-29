@@ -17,6 +17,10 @@ export type {
   ContractEvent,
   GetEventsParams,
   GetEventsResponse,
+  GetEventsByContractsParams,
+  GetEventsByContractsResponse,
+  RecordStructuredEventParams,
+  RecordStructuredEventResponse,
   // Contracts
   ContractType,
   ContractSpec,

@@ -89,3 +89,12 @@ class RecordEventResponse(BaseModel):
     tx_hash: str | None = Field(None, description="Transaction hash")
     transaction_status: str | None = Field(None, description="Transaction status")
     error: str | None = Field(None, description="Error message if failed")
+
+
+class StructuredEventRequest(RecordEventRequest):
+    """SC-38 versioned event submission payload."""
+
+    schema_version: int = Field(..., ge=1, description="Payload schema version")
+    correlation_id: str = Field(
+        ..., min_length=64, max_length=64, description="32-byte hexadecimal retry ID"
+    )

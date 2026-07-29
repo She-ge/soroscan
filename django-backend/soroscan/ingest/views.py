@@ -61,6 +61,7 @@ from .serializers import (
     OrganizationCorsSerializer,
     OrganizationCostSnapshotSerializer,
     RecordEventRequestSerializer,
+    StructuredEventRequestSerializer,
     TeamMemberAddSerializer,
     TeamSerializer,
     TrackedContractSerializer,
@@ -906,6 +907,39 @@ def record_event_view(request):
             {"status": "error", "error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@extend_schema(request=StructuredEventRequestSerializer)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([IngestRateThrottle, AnonRateThrottle, UserRateThrottle])
+def record_structured_event_view(request):
+    """Relay a versioned, deduplicated SC-38 event to the core contract."""
+    serializer = StructuredEventRequestSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    data = serializer.validated_data
+    result = SorobanClient().record_structured_event(
+        target_contract_id=data["contract_id"],
+        event_type=data["event_type"],
+        payload_hash_hex=data["payload_hash"],
+        schema_version=data["schema_version"],
+        correlation_id_hex=data["correlation_id"],
+    )
+    if result.success:
+        return Response(
+            {
+                "status": "submitted",
+                "tx_hash": result.tx_hash,
+                "transaction_status": result.status,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+    return Response(
+        {"status": "failed", "error": result.error, "transaction_status": result.status},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 @extend_schema(

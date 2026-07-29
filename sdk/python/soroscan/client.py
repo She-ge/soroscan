@@ -23,6 +23,7 @@ from soroscan.models import (
     PaginatedResponse,
     RecordEventRequest,
     RecordEventResponse,
+    StructuredEventRequest,
     TrackedContract,
     WebhookSubscription,
 )
@@ -394,6 +395,29 @@ class SoroScanClient:
         response = self._client.post(url, headers=self._get_headers(), json=request.model_dump())
         data = self._handle_response(response)
         return RecordEventResponse.model_validate(data)
+
+    def record_structured_event(
+        self,
+        contract_id: str,
+        event_type: str,
+        payload_hash: str,
+        schema_version: int,
+        correlation_id: str,
+    ) -> RecordEventResponse:
+        """Submit an idempotent SC-38 structured event."""
+        request = StructuredEventRequest(
+            contract_id=contract_id,
+            event_type=event_type,
+            payload_hash=payload_hash,
+            schema_version=schema_version,
+            correlation_id=correlation_id,
+        )
+        response = self._client.post(
+            urljoin(self.base_url, "/api/record/structured/"),
+            headers=self._get_headers(),
+            json=request.model_dump(),
+        )
+        return RecordEventResponse.model_validate(self._handle_response(response))
 
     def get_webhooks(
         self,
@@ -881,6 +905,29 @@ class AsyncSoroScanClient:
         )
         data = self._handle_response(response)
         return RecordEventResponse.model_validate(data)
+
+    async def record_structured_event(
+        self,
+        contract_id: str,
+        event_type: str,
+        payload_hash: str,
+        schema_version: int,
+        correlation_id: str,
+    ) -> RecordEventResponse:
+        """Submit an idempotent SC-38 structured event asynchronously."""
+        request = StructuredEventRequest(
+            contract_id=contract_id,
+            event_type=event_type,
+            payload_hash=payload_hash,
+            schema_version=schema_version,
+            correlation_id=correlation_id,
+        )
+        response = await self._client.post(
+            urljoin(self.base_url, "/api/record/structured/"),
+            headers=self._get_headers(),
+            json=request.model_dump(),
+        )
+        return RecordEventResponse.model_validate(self._handle_response(response))
 
     async def get_webhooks(
         self,

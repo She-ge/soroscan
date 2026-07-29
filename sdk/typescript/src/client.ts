@@ -3,6 +3,10 @@ import type {
   SoroScanApiError,
   GetEventsParams,
   GetEventsResponse,
+  GetEventsByContractsParams,
+  GetEventsByContractsResponse,
+  RecordStructuredEventParams,
+  RecordStructuredEventResponse,
   GetContractsParams,
   GetContractsResponse,
   GetContractParams,
@@ -145,6 +149,44 @@ export class SoroScanClient {
     return this.#request<GetEventsResponse>("GET", "/v1/events", {
       query: params as Record<string, unknown>,
     });
+  }
+
+  /** Fetch events for several contracts with one indexed query. */
+  async getEventsByContracts(
+    params: GetEventsByContractsParams
+  ): Promise<GetEventsByContractsResponse> {
+    return this.#request<GetEventsByContractsResponse>("POST", "/v1/events/by-contracts", {
+      body: params,
+    });
+  }
+
+  /**
+   * Submit an SC-38 structured event. The correlation ID makes retry handling
+   * explicit: the contract rejects a repeated ID without publishing twice.
+   */
+  async recordStructuredEvent(
+    params: RecordStructuredEventParams
+  ): Promise<RecordStructuredEventResponse> {
+    const response = await this.#request<{
+      status: "submitted" | "failed";
+      tx_hash?: string;
+      transaction_status: string;
+      error?: string;
+    }>("POST", "/api/record/structured/", {
+      body: {
+        contract_id: params.contractId,
+        event_type: params.eventType,
+        payload_hash: params.payloadHash,
+        schema_version: params.schemaVersion,
+        correlation_id: params.correlationId,
+      },
+    });
+    return {
+      status: response.status,
+      txHash: response.tx_hash,
+      transactionStatus: response.transaction_status,
+      error: response.error,
+    };
   }
 
   // ─── Contracts ─────────────────────────────────────────────────────────────
