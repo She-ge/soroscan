@@ -466,6 +466,38 @@ class StructuredEventRequestSerializer(RecordEventRequestSerializer):
     )
 
 
+class EventsByContractsRequestSerializer(serializers.Serializer):
+    """Validated payload for the SC-23 multi-contract event query."""
+
+    contract_ids = serializers.ListField(
+        child=serializers.CharField(max_length=56), min_length=1, max_length=10
+    )
+    event_type = serializers.CharField(max_length=100, required=False)
+    ledger_min = serializers.IntegerField(min_value=0, required=False)
+    ledger_max = serializers.IntegerField(min_value=0, required=False)
+    ordering = serializers.ChoiceField(
+        choices=("timestamp", "-timestamp", "ledger", "-ledger"),
+        default="-timestamp",
+        required=False,
+    )
+    page = serializers.IntegerField(min_value=1, default=1, required=False)
+    page_size = serializers.IntegerField(min_value=1, max_value=200, default=50, required=False)
+
+    def validate_contract_ids(self, value):
+        """Reject malformed addresses and preserve the caller's request order."""
+        invalid_ids = [contract_id for contract_id in value if not _CONTRACT_ID_RE.fullmatch(contract_id)]
+        if invalid_ids:
+            raise serializers.ValidationError("Each contract ID must be a Stellar contract address.")
+        return value
+
+    def validate(self, attrs):
+        ledger_min = attrs.get("ledger_min")
+        ledger_max = attrs.get("ledger_max")
+        if ledger_min is not None and ledger_max is not None and ledger_min > ledger_max:
+            raise serializers.ValidationError({"ledger_max": "Must be greater than or equal to ledger_min."})
+        return attrs
+
+
 class APIKeySerializer(serializers.ModelSerializer):
     """
     Serializer for APIKey model.

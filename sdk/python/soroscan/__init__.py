@@ -24,6 +24,8 @@ from soroscan.webhook_verification import verify_webhook_signature
 from soroscan.models import (
     ContractEvent,
     ContractStats,
+    GetEventsByContractsRequest,
+    GetEventsByContractsResponse,
     PaginatedResponse,
     TrackedContract,
     WebhookSubscription,
@@ -43,6 +45,8 @@ __all__ = [
     "TrackedContract",
     "WebhookSubscription",
     "ContractStats",
+    "GetEventsByContractsRequest",
+    "GetEventsByContractsResponse",
     "PaginatedResponse",
     "SoroScanError",
     "SoroScanAPIError",

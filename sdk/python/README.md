@@ -168,6 +168,25 @@ client.get_contract_stats(contract_id: str) -> ContractStats
 
 ### Events
 
+#### Query Events Across Contracts (SC-23)
+
+Use one request when a service needs a unified, ledger-ordered event stream from
+several related contracts. A query can include up to ten contract addresses.
+
+```python
+events = client.get_events_by_contracts(
+    contract_ids=["CCAAA...", "CCBBB..."],
+    event_type="transfer",
+    ledger_min=100_000,
+    page_size=100,
+)
+
+for event in events.results:
+    print(event.contract_id, event.event_type, event.ledger)
+```
+
+`AsyncSoroScanClient.get_events_by_contracts()` accepts the same arguments.
+
 #### Query Events
 ```python
 client.get_events(

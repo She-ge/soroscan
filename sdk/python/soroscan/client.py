@@ -20,6 +20,8 @@ from soroscan.exceptions import (
 from soroscan.models import (
     ContractEvent,
     ContractStats,
+    GetEventsByContractsRequest,
+    GetEventsByContractsResponse,
     PaginatedResponse,
     RecordEventRequest,
     RecordEventResponse,
@@ -368,6 +370,27 @@ class SoroScanClient:
         response = self._client.get(url, headers=self._get_headers())
         data = self._handle_response(response)
         return ContractEvent.model_validate(data)
+
+    def get_events_by_contracts(
+        self,
+        contract_ids: list[str],
+        event_type: str | None = None,
+        ledger_min: int | None = None,
+        ledger_max: int | None = None,
+        ordering: str = "-timestamp",
+        page: int = 1,
+        page_size: int = 50,
+    ) -> GetEventsByContractsResponse:
+        """Query indexed events across up to ten contracts (SC-23)."""
+        request = GetEventsByContractsRequest(
+            contract_ids=contract_ids, event_type=event_type, ledger_min=ledger_min,
+            ledger_max=ledger_max, ordering=ordering, page=page, page_size=page_size,
+        )
+        response = self._client.post(
+            urljoin(self.base_url, "/api/events/by-contracts/"),
+            headers=self._get_headers(), json=request.model_dump(exclude_none=True),
+        )
+        return GetEventsByContractsResponse.model_validate(self._handle_response(response))
 
     def record_event(
         self,
@@ -876,6 +899,27 @@ class AsyncSoroScanClient:
         response = await self._client.get(url, headers=self._get_headers())
         data = self._handle_response(response)
         return ContractEvent.model_validate(data)
+
+    async def get_events_by_contracts(
+        self,
+        contract_ids: list[str],
+        event_type: str | None = None,
+        ledger_min: int | None = None,
+        ledger_max: int | None = None,
+        ordering: str = "-timestamp",
+        page: int = 1,
+        page_size: int = 50,
+    ) -> GetEventsByContractsResponse:
+        """Query indexed events across up to ten contracts asynchronously (SC-23)."""
+        request = GetEventsByContractsRequest(
+            contract_ids=contract_ids, event_type=event_type, ledger_min=ledger_min,
+            ledger_max=ledger_max, ordering=ordering, page=page, page_size=page_size,
+        )
+        response = await self._client.post(
+            urljoin(self.base_url, "/api/events/by-contracts/"),
+            headers=self._get_headers(), json=request.model_dump(exclude_none=True),
+        )
+        return GetEventsByContractsResponse.model_validate(self._handle_response(response))
 
     async def record_event(
         self,

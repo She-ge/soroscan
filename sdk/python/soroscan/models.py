@@ -74,6 +74,24 @@ class PaginatedResponse(BaseModel, Generic[T]):
     results: list[T] = Field(..., description="Page results")
 
 
+class GetEventsByContractsRequest(BaseModel):
+    """SC-23 request for a single query spanning several Soroban contracts."""
+
+    contract_ids: list[str] = Field(min_length=1, max_length=10)
+    event_type: str | None = None
+    ledger_min: int | None = Field(default=None, ge=0)
+    ledger_max: int | None = Field(default=None, ge=0)
+    ordering: str = "-timestamp"
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=50, ge=1, le=200)
+
+
+class GetEventsByContractsResponse(PaginatedResponse[ContractEvent]):
+    """A page of events and the contract addresses used to produce it."""
+
+    contract_ids: list[str]
+
+
 class RecordEventRequest(BaseModel):
     """Request model for recording a new event."""
 

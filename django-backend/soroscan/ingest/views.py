@@ -57,6 +57,7 @@ from .serializers import (
     ContractSourceSerializer,
     ContractVerificationSerializer,
     EventSearchSerializer,
+    EventsByContractsRequestSerializer,
     OrganizationBudgetSerializer,
     OrganizationCorsSerializer,
     OrganizationCostSnapshotSerializer,
@@ -372,6 +373,41 @@ class ContractEventViewSet(viewsets.ReadOnlyModelViewSet):
                 qs = qs.filter(event_type__in=types_list)
                 
         return qs
+
+    @extend_schema(
+        request=EventsByContractsRequestSerializer,
+        responses=ContractEventSerializer(many=True),
+    )
+    @action(detail=False, methods=["post"], url_path="by-contracts")
+    def by_contracts(self, request):
+        """Return one ordered page of events emitted by up to ten contracts."""
+        payload = EventsByContractsRequestSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        filters = payload.validated_data
+
+        queryset = ContractEvent.objects.select_related("contract").filter(
+            contract__contract_id__in=filters["contract_ids"]
+        )
+        if filters.get("event_type"):
+            queryset = queryset.filter(event_type=filters["event_type"])
+        if filters.get("ledger_min") is not None:
+            queryset = queryset.filter(ledger__gte=filters["ledger_min"])
+        if filters.get("ledger_max") is not None:
+            queryset = queryset.filter(ledger__lte=filters["ledger_max"])
+
+        queryset = queryset.order_by(filters["ordering"], "-id")
+        count = queryset.count()
+        offset = (filters["page"] - 1) * filters["page_size"]
+        events = queryset[offset : offset + filters["page_size"]]
+        return Response(
+            {
+                "count": count,
+                "next": None,
+                "previous": None,
+                "results": self.get_serializer(events, many=True).data,
+                "contract_ids": filters["contract_ids"],
+            }
+        )
 
     @extend_schema(
         parameters=[
