@@ -17,6 +17,9 @@ export type {
   ContractEvent,
   GetEventsParams,
   GetEventsResponse,
+  // SC-23: multi-contract event query
+  GetEventsByContractsParams,
+  GetEventsByContractsResponse,
   // Contracts
   ContractType,
   ContractSpec,
@@ -47,6 +50,12 @@ export type {
   SubscribeWebhookParams,
   UpdateWebhookParams,
   WebhookListResponse,
+  // SC-38: structured event submission
+  RecordStructuredEventParams,
+  RecordStructuredEventResponse,
+  // SC-24: tagged event submission
+  RecordTaggedEventParams,
+  RecordTaggedEventResponse,
   // Errors
   SoroScanApiError,
-} from "./types.js";
+} from "./types.js";

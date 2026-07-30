@@ -20,9 +20,14 @@ from soroscan.exceptions import (
 from soroscan.models import (
     ContractEvent,
     ContractStats,
+    GetEventsByContractsRequest,
+    GetEventsByContractsResponse,
     PaginatedResponse,
     RecordEventRequest,
     RecordEventResponse,
+    StructuredEventRequest,
+    TaggedEventRequest,
+    TaggedEventResponse,
     TrackedContract,
     WebhookSubscription,
 )
@@ -392,8 +397,65 @@ class SoroScanClient:
             payload_hash=payload_hash,
         )
         response = self._client.post(url, headers=self._get_headers(), json=request.model_dump())
-        data = self._handle_response(response)
-        return RecordEventResponse.model_validate(data)
+        return RecordEventResponse.model_validate(self._handle_response(response))
+
+    def record_structured_event(
+        self,
+        contract_id: str,
+        event_type: str,
+        payload_hash: str,
+        schema_version: int,
+        correlation_id: str,
+    ) -> RecordEventResponse:
+        """Submit an idempotent SC-38 structured event."""
+        request = StructuredEventRequest(
+            contract_id=contract_id,
+            event_type=event_type,
+            payload_hash=payload_hash,
+            schema_version=schema_version,
+            correlation_id=correlation_id,
+        )
+        response = self._client.post(
+            urljoin(self.base_url, "/api/record/structured/"),
+            headers=self._get_headers(),
+            json=request.model_dump(),
+        )
+        return RecordEventResponse.model_validate(self._handle_response(response))
+
+    def record_tagged_event(
+        self,
+        contract_id: str,
+        event_type: str,
+        payload_hash: str,
+        tags: list[str] | None = None,
+    ) -> TaggedEventResponse:
+        """Submit an SC-24 tagged event.
+
+        Tags are short producer-defined classification strings that allow
+        off-chain indexers to filter events without decoding the full payload.
+        At most 4 tags may be supplied per event.
+
+        Args:
+            contract_id: Target contract address
+            event_type: Event type name
+            payload_hash: SHA-256 hash of payload (hex)
+            tags: Up to 4 classification tag strings (default: empty list)
+
+        Returns:
+            TaggedEventResponse with submission status and echoed tags
+        """
+        request = TaggedEventRequest(
+            contract_id=contract_id,
+            event_type=event_type,
+            payload_hash=payload_hash,
+            tags=tags or [],
+        )
+        response = self._client.post(
+            urljoin(self.base_url, "/api/record/tagged/"),
+            headers=self._get_headers(),
+            json=request.model_dump(),
+        )
+        return TaggedEventResponse.model_validate(self._handle_response(response))
 
     def get_webhooks(
         self,
@@ -881,6 +943,86 @@ class AsyncSoroScanClient:
         )
         data = self._handle_response(response)
         return RecordEventResponse.model_validate(data)
+
+    async def record_structured_event(
+        self,
+        contract_id: str,
+        event_type: str,
+        payload_hash: str,
+        schema_version: int,
+        correlation_id: str,
+    ) -> RecordEventResponse:
+        """Submit an idempotent SC-38 structured event asynchronously."""
+        request = StructuredEventRequest(
+            contract_id=contract_id,
+            event_type=event_type,
+            payload_hash=payload_hash,
+            schema_version=schema_version,
+            correlation_id=correlation_id,
+        )
+        response = await self._client.post(
+            urljoin(self.base_url, "/api/record/structured/"),
+            headers=self._get_headers(),
+            json=request.model_dump(),
+        )
+        return RecordEventResponse.model_validate(self._handle_response(response))
+
+    async def record_tagged_event(
+        self,
+        contract_id: str,
+        event_type: str,
+        payload_hash: str,
+        tags: list[str] | None = None,
+    ) -> TaggedEventResponse:
+        """Submit an SC-24 tagged event asynchronously.
+
+        Tags are short producer-defined classification strings that allow
+        off-chain indexers to filter events without decoding the full payload.
+        At most 4 tags may be supplied per event.
+
+        Args:
+            contract_id: Target contract address
+            event_type: Event type name
+            payload_hash: SHA-256 hash of payload (hex)
+            tags: Up to 4 classification tag strings (default: empty list)
+
+        Returns:
+            TaggedEventResponse with submission status and echoed tags
+        """
+        request = TaggedEventRequest(
+            contract_id=contract_id,
+            event_type=event_type,
+            payload_hash=payload_hash,
+            tags=tags or [],
+        )
+        response = await self._client.post(
+            urljoin(self.base_url, "/api/record/tagged/"),
+            headers=self._get_headers(),
+            json=request.model_dump(),
+        )
+        return TaggedEventResponse.model_validate(self._handle_response(response))
+
+    async def get_events_by_contracts(
+        self,
+        contract_ids: list[str],
+        event_type: str | None = None,
+        ledger_min: int | None = None,
+        ledger_max: int | None = None,
+        ordering: str = "-timestamp",
+        page: int = 1,
+        page_size: int = 50,
+    ) -> "GetEventsByContractsResponse":
+        """Query indexed events across up to ten contracts asynchronously (SC-23)."""
+        from soroscan.models import GetEventsByContractsRequest, GetEventsByContractsResponse as _Resp
+        request = GetEventsByContractsRequest(
+            contract_ids=contract_ids, event_type=event_type, ledger_min=ledger_min,
+            ledger_max=ledger_max, ordering=ordering, page=page, page_size=page_size,
+        )
+        response = await self._client.post(
+            urljoin(self.base_url, "/api/events/by-contracts/"),
+            headers=self._get_headers(), json=request.model_dump(exclude_none=True),
+        )
+        return _Resp.model_validate(self._handle_response(response))
 
     async def get_webhooks(
         self,

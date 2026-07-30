@@ -74,6 +74,24 @@ class PaginatedResponse(BaseModel, Generic[T]):
     results: list[T] = Field(..., description="Page results")
 
 
+class GetEventsByContractsRequest(BaseModel):
+    """SC-23 request for a single query spanning several Soroban contracts."""
+
+    contract_ids: list[str] = Field(min_length=1, max_length=10)
+    event_type: str | None = None
+    ledger_min: int | None = Field(default=None, ge=0)
+    ledger_max: int | None = Field(default=None, ge=0)
+    ordering: str = "-timestamp"
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=50, ge=1, le=200)
+
+
+class GetEventsByContractsResponse(PaginatedResponse[ContractEvent]):
+    """A page of events and the contract addresses used to produce it."""
+
+    contract_ids: list[str]
+
+
 class RecordEventRequest(BaseModel):
     """Request model for recording a new event."""
 
@@ -89,3 +107,49 @@ class RecordEventResponse(BaseModel):
     tx_hash: str | None = Field(None, description="Transaction hash")
     transaction_status: str | None = Field(None, description="Transaction status")
     error: str | None = Field(None, description="Error message if failed")
+
+
+class StructuredEventRequest(RecordEventRequest):
+    """SC-38 versioned event submission payload."""
+
+    schema_version: int = Field(..., ge=1, description="Payload schema version")
+    correlation_id: str = Field(
+        ..., min_length=64, max_length=64, description="32-byte hexadecimal retry ID"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SC-24 – Tagged event
+# ─────────────────────────────────────────────────────────────────────────────
+
+MAX_TAGS: int = 4
+"""Maximum number of producer-defined tags per SC-24 event (mirrors contract constant)."""
+
+
+class TaggedEventRequest(RecordEventRequest):
+    """SC-24 event submission payload with optional producer-defined tags.
+
+    Tags are short classification strings (e.g. ``["defi", "token"]``) that
+    allow off-chain indexers to bucket events without decoding the full payload.
+    The list may be empty but must not exceed :data:`MAX_TAGS` (4) items.
+    Each tag is at most 32 characters.
+    """
+
+    tags: list[str] = Field(
+        default_factory=list,
+        max_length=MAX_TAGS,
+        description=(
+            f"Up to {MAX_TAGS} producer-defined classification tags. "
+            "Each tag must be at most 32 characters."
+        ),
+    )
+
+
+class TaggedEventResponse(BaseModel):
+    """Response from submitting an SC-24 tagged event."""
+
+    status: str = Field(..., description="Submission status")
+    tx_hash: str | None = Field(None, description="Transaction hash")
+    transaction_status: str | None = Field(None, description="Transaction status")
+    error: str | None = Field(None, description="Error message if failed")
+    tags: list[str] = Field(default_factory=list, description="Echo of submitted tags")

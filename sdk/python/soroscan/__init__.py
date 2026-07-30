@@ -24,7 +24,10 @@ from soroscan.webhook_verification import verify_webhook_signature
 from soroscan.models import (
     ContractEvent,
     ContractStats,
+    MAX_TAGS,
     PaginatedResponse,
+    TaggedEventRequest,
+    TaggedEventResponse,
     TrackedContract,
     WebhookSubscription,
 )
@@ -44,6 +47,9 @@ __all__ = [
     "WebhookSubscription",
     "ContractStats",
     "PaginatedResponse",
+    "MAX_TAGS",
+    "TaggedEventRequest",
+    "TaggedEventResponse",
     "SoroScanError",
     "SoroScanAPIError",
     "SoroScanAuthError",

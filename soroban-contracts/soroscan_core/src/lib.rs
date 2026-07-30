@@ -11,6 +11,35 @@ const COUNTER_KEY: Symbol = symbol_short!("count");
 
 /// Represents a recorded event from an indexed contract.
 #[contracttype]
+#[derive(Clone)]
+enum DataKey {
+    StructuredByCorrelation(BytesN<32>),
+    LatestStructuredByType(Symbol),
+    /// SC-24: latest tagged event keyed by event_type
+    LatestTaggedByType(Symbol),
+}
+
+/// Maximum number of producer-defined tags per SC-24 event.
+const MAX_TAGS: u32 = 4;
+
+/// SC-24 tagged event record.  Tags are short producer-defined strings that
+/// allow off-chain indexers to filter events without decoding the full payload.
+/// Kept separate from `EventRecord` and `StructuredEventRecord` to preserve
+/// backward-compatible ABI for existing on-chain consumers.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TaggedEventRecord {
+    pub contract_id: Address,
+    pub event_type: Symbol,
+    pub payload_hash: BytesN<32>,
+    /// Producer-defined tags (max 4). Empty tags are permitted but ignored by
+    /// the indexer when building the tag index.
+    pub tags: soroban_sdk::Vec<Symbol>,
+    pub ledger: u32,
+    pub timestamp: u64,
+}
+
+#[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EventRecord {
     /// The contract that emitted the original event.
@@ -22,6 +51,23 @@ pub struct EventRecord {
     /// Ledger sequence number when recorded.
     pub ledger: u32,
     /// Unix timestamp when recorded.
+    pub timestamp: u64,
+}
+
+/// SC-38 structured event record.  This is deliberately separate from
+/// `EventRecord` so clients using the original ABI continue to decode the
+/// legacy event payload without a schema change.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StructuredEventRecord {
+    pub contract_id: Address,
+    pub event_type: Symbol,
+    pub payload_hash: BytesN<32>,
+    /// Producer-defined payload schema version. Must be greater than zero.
+    pub schema_version: u32,
+    /// Stable id supplied by the producer for safe retry/deduplication.
+    pub correlation_id: BytesN<32>,
+    pub ledger: u32,
     pub timestamp: u64,
 }
 
@@ -37,6 +83,12 @@ pub enum ContractError {
     AlreadyInitialized = 3,
     /// Contract has not been initialized.
     NotInitialized = 4,
+    /// SC-38 structured events require a non-zero schema version.
+    InvalidSchemaVersion = 5,
+    /// A structured event with this correlation ID was already submitted.
+    DuplicateCorrelation = 6,
+    /// SC-24: the tags list exceeds the per-event maximum.
+    TooManyTags = 7,
 }
 
 #[contract]
@@ -241,6 +293,83 @@ impl SoroScanCore {
     pub fn get_admin(env: Env) -> Option<Address> {
         env.storage().instance().get(&ADMIN_KEY)
     }
+
+    /// Record an SC-24 tagged event.
+    ///
+    /// Works like `record_event` but accepts an optional list of producer-
+    /// defined tag symbols (maximum `MAX_TAGS = 4`).  The tagged record is
+    /// stored separately so the existing `record_event` / `latest_by_type`
+    /// interface is unaffected.
+    ///
+    /// # Arguments
+    /// * `env`          - The contract environment
+    /// * `indexer`      - Authorized indexer address
+    /// * `contract_id`  - Contract that emitted the original event
+    /// * `event_type`   - Event category symbol
+    /// * `payload_hash` - SHA-256 hash of the event payload (32 bytes)
+    /// * `tags`         - Up to `MAX_TAGS` producer-defined classification symbols
+    ///
+    /// # Returns
+    /// The updated global event counter, same as `record_event`.
+    pub fn record_tagged_event(
+        env: Env,
+        indexer: Address,
+        contract_id: Address,
+        event_type: Symbol,
+        payload_hash: BytesN<32>,
+        tags: soroban_sdk::Vec<Symbol>,
+    ) -> Result<u64, ContractError> {
+        indexer.require_auth();
+
+        if tags.len() > MAX_TAGS {
+            return Err(ContractError::TooManyTags);
+        }
+
+        let indexers: Map<Address, bool> = env
+            .storage()
+            .instance()
+            .get(&INDEXERS_KEY)
+            .ok_or(ContractError::NotInitialized)?;
+        if !indexers.get(indexer).unwrap_or(false) {
+            return Err(ContractError::IndexerNotFound);
+        }
+
+        let record = TaggedEventRecord {
+            contract_id,
+            event_type: event_type.clone(),
+            payload_hash,
+            tags,
+            ledger: env.ledger().sequence(),
+            timestamp: env.ledger().timestamp(),
+        };
+
+        let count = env
+            .storage()
+            .instance()
+            .get::<Symbol, u64>(&COUNTER_KEY)
+            .unwrap_or(0)
+            .saturating_add(1);
+        env.storage().instance().set(&COUNTER_KEY, &count);
+        env.storage().instance().set(
+            &DataKey::LatestTaggedByType(event_type.clone()),
+            &record,
+        );
+
+        env.events().publish(
+            (symbol_short!("soroscan"), symbol_short!("sc24"), event_type),
+            record,
+        );
+
+        Ok(count)
+    }
+
+    /// Return the latest SC-24 tagged event for the given `event_type`, or
+    /// `None` if no tagged event of that type has been recorded yet.
+    pub fn latest_tagged_by_type(env: Env, event_type: Symbol) -> Option<TaggedEventRecord> {
+        env.storage()
+            .instance()
+            .get(&DataKey::LatestTaggedByType(event_type))
+    }
 }
 
 #[cfg(test)]
@@ -364,5 +493,171 @@ mod tests {
         // Second init should fail with AlreadyInitialized
         let result = client.try_init(&admin);
         assert_eq!(result, Err(Ok(ContractError::AlreadyInitialized)));
+    }
+
+    // ── SC-24 tagged event tests ──────────────────────────────────────────────
+
+    #[test]
+    fn test_record_tagged_event_happy_path() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        let target = Address::generate(&env);
+        let payload_hash = BytesN::from_array(&env, &[5u8; 32]);
+
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+
+        let event_type = symbol_short!("transfer");
+        let tags = soroban_sdk::vec![
+            &env,
+            symbol_short!("defi"),
+            symbol_short!("token"),
+        ];
+
+        let count = client.record_tagged_event(
+            &indexer,
+            &target,
+            &event_type,
+            &payload_hash,
+            &tags,
+        );
+        assert_eq!(count, 1);
+        assert_eq!(client.total_events(), 1);
+
+        let latest = client.latest_tagged_by_type(&event_type).unwrap();
+        assert_eq!(latest.event_type, event_type);
+        assert_eq!(latest.payload_hash, payload_hash);
+        assert_eq!(latest.tags.len(), 2);
+    }
+
+    #[test]
+    fn test_record_tagged_event_empty_tags() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+
+        let event_type = symbol_short!("mint");
+        let empty_tags = soroban_sdk::vec![&env];
+
+        let count = client.record_tagged_event(
+            &indexer,
+            &Address::generate(&env),
+            &event_type,
+            &BytesN::from_array(&env, &[6u8; 32]),
+            &empty_tags,
+        );
+        assert_eq!(count, 1);
+        let latest = client.latest_tagged_by_type(&event_type).unwrap();
+        assert_eq!(latest.tags.len(), 0);
+    }
+
+    #[test]
+    fn test_record_tagged_event_rejects_too_many_tags() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+
+        // Build a tags vec with 5 elements (exceeds MAX_TAGS = 4)
+        let five_tags = soroban_sdk::vec![
+            &env,
+            symbol_short!("a"),
+            symbol_short!("b"),
+            symbol_short!("c"),
+            symbol_short!("d"),
+            symbol_short!("e"),
+        ];
+        let result = client.try_record_tagged_event(
+            &indexer,
+            &Address::generate(&env),
+            &symbol_short!("burn"),
+            &BytesN::from_array(&env, &[7u8; 32]),
+            &five_tags,
+        );
+        assert_eq!(result, Err(Ok(ContractError::TooManyTags)));
+    }
+
+    #[test]
+    fn test_record_tagged_event_rejects_unauthorized_indexer() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        // No indexer registered
+        let rogue = Address::generate(&env);
+        let result = client.try_record_tagged_event(
+            &rogue,
+            &Address::generate(&env),
+            &symbol_short!("swap"),
+            &BytesN::from_array(&env, &[8u8; 32]),
+            &soroban_sdk::vec![&env],
+        );
+        assert_eq!(result, Err(Ok(ContractError::IndexerNotFound)));
+    }
+
+    #[test]
+    fn test_latest_tagged_by_type_returns_none_before_first_event() {
+        let env = Env::default();
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        client.init(&admin);
+
+        assert_eq!(client.latest_tagged_by_type(&symbol_short!("swap")), None);
+    }
+
+    #[test]
+    fn test_tagged_and_legacy_event_coexist() {
+        // Record both a legacy and a tagged event for the same event_type and
+        // verify that the two storage slots remain independent.
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let client = SoroScanCoreClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        let indexer = Address::generate(&env);
+        let target = Address::generate(&env);
+        client.init(&admin);
+        client.add_indexer(&admin, &indexer);
+
+        let event_type = symbol_short!("swap");
+        let hash_legacy = BytesN::from_array(&env, &[9u8; 32]);
+        let hash_tagged = BytesN::from_array(&env, &[10u8; 32]);
+
+        client.record_event(&indexer, &target, &event_type, &hash_legacy);
+        client.record_tagged_event(
+            &indexer,
+            &target,
+            &event_type,
+            &hash_tagged,
+            &soroban_sdk::vec![&env, symbol_short!("dex")],
+        );
+
+        // Legacy slot reflects legacy hash
+        assert_eq!(
+            client.latest_by_type(&event_type).unwrap().payload_hash,
+            hash_legacy
+        );
+        // Tagged slot reflects tagged hash
+        assert_eq!(
+            client.latest_tagged_by_type(&event_type).unwrap().payload_hash,
+            hash_tagged
+        );
     }
 }

@@ -44,8 +44,23 @@ async def main():
 
 asyncio.run(main())
 ```
+### Tagged Events (SC-24)
+
+SoroScan supports recording and indexing events with up to 4 producer-defined tags. This allows off-chain indexers to categorize and filter events efficiently:
+
+```python
+# Submit a tagged event
+response = client.record_tagged_event(
+    contract_id="CCAAA...",
+    event_type="transfer",
+    payload_hash="a" * 64,
+    tags=["defi", "token"]
+)
+print(f"Status: {response.status} | Echoed Tags: {response.tags}")
+```
 
 ## Features
+
 
 - **Type Safety**: Built with Pydantic v2 for robust data validation.
 - **Full Coverage**: 100% endpoint coverage for Contracts, Events, and Webhooks.

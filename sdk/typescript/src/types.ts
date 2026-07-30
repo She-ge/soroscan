@@ -106,6 +106,27 @@ export interface GetEventsParams {
 
 export type GetEventsResponse = PaginatedResponse<ContractEvent>;
 
+/**
+ * SC-23: Query events across multiple contracts in a single request.
+ */
+export interface GetEventsByContractsParams {
+  /** One or more contract addresses to query. */
+  contractIds: ContractId[];
+  /** Optional event type filter (e.g. "transfer"). */
+  eventType?: EventType;
+  /** Return events at or after this ledger sequence number. */
+  startLedger?: number;
+  /** Return events at or before this ledger sequence number. */
+  endLedger?: number;
+}
+
+export interface GetEventsByContractsResponse {
+  count: number;
+  results: ContractEvent[];
+  /** Echo of the contract IDs that were queried. */
+  contractIds: ContractId[];
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Contracts
 // ─────────────────────────────────────────────────────────────────────────────
@@ -218,6 +239,54 @@ export interface Ledger {
   totalFees: string;
   baseFee: number;
   baseReserve: number;
+}
+
+/**
+ * SC-38: Input for submitting a structured, deduplicated event.
+ * The `correlationId` must be unique per event; duplicate submissions are
+ * rejected by the contract so callers can safely retry on network error.
+ */
+export interface RecordStructuredEventParams {
+  contractId: ContractId;
+  eventType: EventType;
+  payloadHash: string;
+  /** Must be > 0. Used by the contract to select the correct decoder. */
+  schemaVersion: number;
+  /** 32-byte hex correlation id for idempotent submission. */
+  correlationId: string;
+}
+
+export interface RecordStructuredEventResponse {
+  status: "submitted" | "failed";
+  txHash?: string;
+  transactionStatus: string;
+  error?: string;
+}
+
+/** Maximum number of producer-defined tags per SC-24 event. */
+export const MAX_TAGS = 4;
+
+/**
+ * SC-24 input for a tagged event. Tags are short producer-defined
+ * classification strings (e.g. ["defi", "token"]) that allow off-chain
+ * indexers to filter events without decoding the full payload.
+ * At most {@link MAX_TAGS} tags may be supplied.
+ */
+export interface RecordTaggedEventParams {
+  contractId: ContractId;
+  eventType: EventType;
+  payloadHash: string;
+  /** Up to {@link MAX_TAGS} producer-defined classification tags. */
+  tags?: string[];
+}
+
+export interface RecordTaggedEventResponse {
+  status: "submitted" | "failed";
+  txHash?: string;
+  transactionStatus: string;
+  error?: string;
+  /** Echo of the tags that were submitted with the event. */
+  tags: string[];
 }
 
 export interface GetLedgersParams {
