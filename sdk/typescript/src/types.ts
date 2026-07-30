@@ -335,6 +335,105 @@ export interface WebhookListResponse {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SC-17: Contract event type info
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ContractEventTypeInfo {
+  /** Event type name */
+  eventType: string;
+  /** Number of events of this type */
+  count: number;
+  /** ISO timestamp of first occurrence */
+  firstSeen: string;
+  /** ISO timestamp of last occurrence */
+  lastSeen: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SC-29: Batch event recording
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface EventEntry {
+  /** Target contract address */
+  contractId: ContractId;
+  /** Event type name (e.g. "transfer", "swap") */
+  eventType: EventType;
+  /** SHA-256 hash of the event payload (hex) */
+  payloadHash: string;
+}
+
+export interface RecordEventsBatchParams {
+  /** 1–25 event entries to record in a single transaction */
+  events: EventEntry[];
+}
+
+export interface RecordEventsBatchResponse {
+  status: string;
+  /** New total event count after the batch */
+  totalEvents: number;
+  txHash: string | null;
+  transactionStatus: string | null;
+  error: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SC-30: Recent contract events
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Maximum number of events that can be requested via `getContractRecentEvents`. */
+export const MAX_RECENT_EVENTS_LIMIT = 20;
+
+export interface GetContractRecentEventsParams {
+  /** Contract address to fetch recent events for */
+  contractId: ContractId;
+  /** Maximum number of events to return (1-20, default 10) */
+  limit?: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WebSocket
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface WebSocketClientConfig {
+  /** Base URL of the SoroScan WebSocket server (e.g., "wss://api.soroscan.io") */
+  wsUrl: string;
+
+  /** Optional API key for authentication */
+  apiKey?: string;
+
+  /** Initial reconnection delay in milliseconds (default: 1000) */
+  initialReconnectDelay?: number;
+
+  /** Maximum reconnection delay in milliseconds (default: 30000) */
+  maxReconnectDelay?: number;
+
+  /** Backoff multiplier for exponential backoff (default: 2) */
+  backoffMultiplier?: number;
+
+  /** Whether to add jitter to reconnection delays (default: true) */
+  useJitter?: boolean;
+
+  /** Maximum messages to buffer while disconnected (default: 1000) */
+  maxBufferSize?: number;
+}
+
+export type EventCallback = (event: ContractEvent) => void;
+export type ConnectionCallback = () => void;
+export type ErrorCallback = (error: Error) => void;
+export type ReconnectingCallback = (attempt: number, delay: number) => void;
+
+export interface EventFilter {
+  /** Filter by contract ID */
+  contractId?: string;
+
+  /** Filter by event type */
+  eventType?: EventType;
+
+  /** Filter by topics */
+  topics?: Partial<ContractEventTopic>[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Errors
 // ─────────────────────────────────────────────────────────────────────────────
 

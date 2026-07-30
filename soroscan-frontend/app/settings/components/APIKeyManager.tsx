@@ -104,7 +104,7 @@ export default function APIKeyManager() {
                     {copied === key.key ? "✓" : "COPY"}
                   </button>
                   <button
-                    onClick={() => handleRevoke(key.id)}
+                    onClick={() => requestRevoke(key.id)}
                     className="rounded-lg border border-red-500/30 px-3 py-1 text-xs text-red-400 hover:border-red-400"
                   >
                     DEL
@@ -115,6 +115,16 @@ export default function APIKeyManager() {
           </div>
         )}
       </div>
+      <ConfirmationDialog
+        open={confirmingKey !== null}
+        title="Revoke API Key"
+        description="This action is permanent. The key will stop working immediately."
+        confirmText="Revoke"
+        cancelText="Cancel"
+        loading={isRevoking}
+        onConfirm={handleConfirmRevoke}
+        onCancel={() => setConfirmingKey(null)}
+      />
     </div>
   );
 }

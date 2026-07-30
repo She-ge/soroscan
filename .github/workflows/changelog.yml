@@ -32,9 +32,10 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
 
       - name: Create Pull Request
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
           commit-message: "chore(changelog): update changelog"
           title: "chore(changelog): Update Changelog"
           body: |

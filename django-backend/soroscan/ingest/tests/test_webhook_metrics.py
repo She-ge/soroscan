@@ -24,7 +24,7 @@ class TestWebhookDeliveryMetrics:
     def test_requires_authentication(self, api_client):
         url = reverse("webhook-delivery-metrics")
         response = api_client.get(url)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_returns_metrics_and_recent_deliveries(self, authenticated_client):
         # Create deliveries: two successes and one failure

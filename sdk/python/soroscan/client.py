@@ -18,14 +18,16 @@ from soroscan.exceptions import (
     SoroScanConnectionError,
 )
 from soroscan.models import (
+    MAX_RECENT_EVENTS_LIMIT,
     ContractEvent,
+    ContractEventTypeInfo,
     ContractStats,
-    GetEventsByContractsRequest,
-    GetEventsByContractsResponse,
+    EventEntry,
     PaginatedResponse,
     RecordEventRequest,
     RecordEventResponse,
-    StructuredEventRequest,
+    RecordEventsBatchRequest,
+    RecordEventsBatchResponse,
     TrackedContract,
     WebhookSubscription,
 )
@@ -302,6 +304,47 @@ class SoroScanClient:
         data = self._handle_response(response)
         return ContractStats.model_validate(data)
 
+    def get_contract_event_types(self, contract_id: str) -> list[ContractEventTypeInfo]:
+        """
+        Get event types and their counts for a specific contract (SC-17).
+
+        Args:
+            contract_id: Contract address (C...)
+
+        Returns:
+            List of event type info with counts and first/last seen timestamps
+        """
+        url = urljoin(self.base_url, f"/api/contracts/{contract_id}/event-types/")
+        response = self._client.get(url, headers=self._get_headers())
+        data = self._handle_response(response)
+        return [ContractEventTypeInfo.model_validate(item) for item in data]
+
+    def get_contract_recent_events(
+        self,
+        contract_id: str,
+        limit: int = 10,
+    ) -> list[ContractEvent]:
+        """
+        Get the most recent events for a specific contract, newest first (SC-30).
+
+        Args:
+            contract_id: Contract address (C...)
+            limit: Maximum number of events to return (1-20, default 10)
+
+        Returns:
+            List of the most recent events, ordered newest first
+
+        Raises:
+            ValueError: If limit is not between 1 and MAX_RECENT_EVENTS_LIMIT
+        """
+        if not 1 <= limit <= MAX_RECENT_EVENTS_LIMIT:
+            raise ValueError(f"limit must be between 1 and {MAX_RECENT_EVENTS_LIMIT}")
+
+        url = urljoin(self.base_url, f"/api/contracts/{contract_id}/recent-events/")
+        response = self._client.get(url, headers=self._get_headers(), params={"limit": limit})
+        data = self._handle_response(response)
+        return [ContractEvent.model_validate(item) for item in data]
+
     def get_events(
         self,
         contract_id: str | None = None,
@@ -419,28 +462,27 @@ class SoroScanClient:
         data = self._handle_response(response)
         return RecordEventResponse.model_validate(data)
 
-    def record_structured_event(
+    def record_events_batch(
         self,
-        contract_id: str,
-        event_type: str,
-        payload_hash: str,
-        schema_version: int,
-        correlation_id: str,
-    ) -> RecordEventResponse:
-        """Submit an idempotent SC-38 structured event."""
-        request = StructuredEventRequest(
-            contract_id=contract_id,
-            event_type=event_type,
-            payload_hash=payload_hash,
-            schema_version=schema_version,
-            correlation_id=correlation_id,
-        )
+        events: list[EventEntry],
+    ) -> RecordEventsBatchResponse:
+        """
+        Record multiple events in a single transaction (SC-29).
+        Maximum 25 events per batch.
+
+        Args:
+            events: List of EventEntry objects (1–25 entries)
+
+        Returns:
+            Batch submission result including new total event count
+        """
+        url = urljoin(self.base_url, "/api/record-events-batch/")
+        request = RecordEventsBatchRequest(events=events)
         response = self._client.post(
-            urljoin(self.base_url, "/api/record/structured/"),
-            headers=self._get_headers(),
-            json=request.model_dump(),
+            url, headers=self._get_headers(), json=request.model_dump()
         )
-        return RecordEventResponse.model_validate(self._handle_response(response))
+        data = self._handle_response(response)
+        return RecordEventsBatchResponse.model_validate(data)
 
     def get_webhooks(
         self,
@@ -831,6 +873,49 @@ class AsyncSoroScanClient:
         data = self._handle_response(response)
         return ContractStats.model_validate(data)
 
+    async def get_contract_event_types(self, contract_id: str) -> list[ContractEventTypeInfo]:
+        """
+        Get event types and their counts for a specific contract (SC-17).
+
+        Args:
+            contract_id: Contract address (C...)
+
+        Returns:
+            List of event type info with counts and first/last seen timestamps
+        """
+        url = urljoin(self.base_url, f"/api/contracts/{contract_id}/event-types/")
+        response = await self._client.get(url, headers=self._get_headers())
+        data = self._handle_response(response)
+        return [ContractEventTypeInfo.model_validate(item) for item in data]
+
+    async def get_contract_recent_events(
+        self,
+        contract_id: str,
+        limit: int = 10,
+    ) -> list[ContractEvent]:
+        """
+        Get the most recent events for a specific contract, newest first (SC-30).
+
+        Args:
+            contract_id: Contract address (C...)
+            limit: Maximum number of events to return (1-20, default 10)
+
+        Returns:
+            List of the most recent events, ordered newest first
+
+        Raises:
+            ValueError: If limit is not between 1 and MAX_RECENT_EVENTS_LIMIT
+        """
+        if not 1 <= limit <= MAX_RECENT_EVENTS_LIMIT:
+            raise ValueError(f"limit must be between 1 and {MAX_RECENT_EVENTS_LIMIT}")
+
+        url = urljoin(self.base_url, f"/api/contracts/{contract_id}/recent-events/")
+        response = await self._client.get(
+            url, headers=self._get_headers(), params={"limit": limit}
+        )
+        data = self._handle_response(response)
+        return [ContractEvent.model_validate(item) for item in data]
+
     async def get_events(
         self,
         contract_id: str | None = None,
@@ -950,28 +1035,27 @@ class AsyncSoroScanClient:
         data = self._handle_response(response)
         return RecordEventResponse.model_validate(data)
 
-    async def record_structured_event(
+    async def record_events_batch(
         self,
-        contract_id: str,
-        event_type: str,
-        payload_hash: str,
-        schema_version: int,
-        correlation_id: str,
-    ) -> RecordEventResponse:
-        """Submit an idempotent SC-38 structured event asynchronously."""
-        request = StructuredEventRequest(
-            contract_id=contract_id,
-            event_type=event_type,
-            payload_hash=payload_hash,
-            schema_version=schema_version,
-            correlation_id=correlation_id,
-        )
+        events: list[EventEntry],
+    ) -> RecordEventsBatchResponse:
+        """
+        Record multiple events in a single transaction (SC-29).
+        Maximum 25 events per batch.
+
+        Args:
+            events: List of EventEntry objects (1–25 entries)
+
+        Returns:
+            Batch submission result including new total event count
+        """
+        url = urljoin(self.base_url, "/api/record-events-batch/")
+        request = RecordEventsBatchRequest(events=events)
         response = await self._client.post(
-            urljoin(self.base_url, "/api/record/structured/"),
-            headers=self._get_headers(),
-            json=request.model_dump(),
+            url, headers=self._get_headers(), json=request.model_dump()
         )
-        return RecordEventResponse.model_validate(self._handle_response(response))
+        data = self._handle_response(response)
+        return RecordEventsBatchResponse.model_validate(data)
 
     async def get_webhooks(
         self,

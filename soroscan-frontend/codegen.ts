@@ -33,6 +33,20 @@ const config: CodegenConfig = {
         noExport: false,
       },
     },
+    './src/generated/apollo-hooks.ts': {
+      plugins: [
+        'typescript',
+        'typescript-operations',
+        'typescript-react-apollo',
+      ],
+      config: {
+        withHooks: true,
+        withHOC: false,
+        withComponent: false,
+        useTypeImports: true,
+        skipTypename: false,
+      },
+    },
   },
   ignoreNoDocuments: true,
 };

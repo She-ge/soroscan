@@ -145,3 +145,35 @@ def test_contracts_get_json(
     assert exit_code == 0
     data = json.loads(capsys.readouterr().out)
     assert data["name"] == "Test Token"
+
+
+def test_record_event_json_output(
+    base_url: str,
+    httpx_mock: HTTPXMock,
+    capsys,
+) -> None:
+    httpx_mock.add_response(
+        url=f"{base_url}/api/record-event/",
+        json={"status": "submitted", "tx_hash": "tx123", "transaction_status": "pending"},
+    )
+
+    exit_code = main(
+        [
+            "--base-url",
+            base_url,
+            "record",
+            "--contract",
+            "CCAAA111222333444555666777888999AAABBBCCCDDDEEEFFF",
+            "--event-type",
+            "transfer",
+            "--payload-hash",
+            "a" * 64,
+            "--output",
+            "json",
+        ]
+    )
+
+    assert exit_code == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "submitted"
+    assert data["tx_hash"] == "tx123"

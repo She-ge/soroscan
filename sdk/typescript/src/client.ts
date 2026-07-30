@@ -1,6 +1,9 @@
 import type {
   SoroScanClientConfig,
   SoroScanApiError,
+  ContractEvent,
+  ContractEventTypeInfo,
+  GetContractRecentEventsParams,
   GetEventsParams,
   GetEventsResponse,
   GetEventsByContractsParams,
@@ -22,7 +25,11 @@ import type {
   Webhook,
   WebhookListResponse,
   PaginatedResponse,
+  RecordEventsBatchParams,
+  RecordEventsBatchResponse,
 } from "./types.js";
+import { MAX_RECENT_EVENTS_LIMIT } from "./types.js";
+import { EventQueryBuilder, ContractQueryBuilder } from "./builder.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Error class
@@ -136,6 +143,38 @@ export class SoroScanClient {
     return json as T;
   }
 
+  // ─── Builder factories (SC-10) ────────────────────────────────────────────
+
+  /**
+   * Create a fluent event query builder (SC-10).
+   *
+   * @example
+   * const result = await client
+   *   .events()
+   *   .filterByContract("CCAAA...")
+   *   .filterByEventType("transfer")
+   *   .filterByLedgerRange(1_000, 2_000)
+   *   .execute();
+   */
+  events(): EventQueryBuilder {
+    return new EventQueryBuilder(this);
+  }
+
+  /**
+   * Create a fluent contract query builder (SC-10).
+   *
+   * @example
+   * const result = await client
+   *   .contracts()
+   *   .filterByType("token")
+   *   .filterByVerified(true)
+   *   .search("my-token")
+   *   .execute();
+   */
+  contracts(): ContractQueryBuilder {
+    return new ContractQueryBuilder(this);
+  }
+
   // ─── Events ────────────────────────────────────────────────────────────────
 
   /**
@@ -219,6 +258,49 @@ export class SoroScanClient {
     );
   }
 
+  /**
+   * Get event types and their counts for a specific contract (SC-17).
+   *
+   * @example
+   * const types = await client.getContractEventTypes('CCAAA...');
+   * for (const t of types) {
+   *   console.log(t.eventType, t.count);
+   * }
+   */
+  async getContractEventTypes(
+    contractId: string
+  ): Promise<ContractEventTypeInfo[]> {
+    return this.#request<ContractEventTypeInfo[]>(
+      "GET",
+      `/v1/contracts/${encodeURIComponent(contractId)}/event-types`
+    );
+  }
+
+  /**
+   * Get the most recent events for a specific contract, newest first (SC-30).
+   *
+   * @example
+   * const events = await client.getContractRecentEvents({
+   *   contractId: 'CCAAA...',
+   *   limit: 5,
+   * });
+   */
+  async getContractRecentEvents(
+    params: GetContractRecentEventsParams
+  ): Promise<ContractEvent[]> {
+    const { contractId, limit = 10 } = params;
+    if (limit < 1 || limit > MAX_RECENT_EVENTS_LIMIT) {
+      throw new Error(
+        `getContractRecentEvents: limit must be between 1 and ${MAX_RECENT_EVENTS_LIMIT}`
+      );
+    }
+    return this.#request<ContractEvent[]>(
+      "GET",
+      `/v1/contracts/${encodeURIComponent(contractId)}/recent-events`,
+      { query: { limit } }
+    );
+  }
+
   // ─── Transactions ──────────────────────────────────────────────────────────
 
   /**
@@ -274,6 +356,29 @@ export class SoroScanClient {
   }
 
   // ─── Webhooks ──────────────────────────────────────────────────────────────
+
+  /**
+   * Record multiple events in a single transaction (SC-29).
+   * Maximum 25 events per batch.
+   *
+   * @example
+   * const result = await client.recordEventsBatch({
+   *   events: [
+   *     { contractId: 'CCAAA...', eventType: 'transfer', payloadHash: 'abc...' },
+   *     { contractId: 'CCAAA...', eventType: 'swap', payloadHash: 'def...' },
+   *   ],
+   * });
+   * console.log('Total events:', result.totalEvents);
+   */
+  async recordEventsBatch(
+    params: RecordEventsBatchParams
+  ): Promise<RecordEventsBatchResponse> {
+    return this.#request<RecordEventsBatchResponse>(
+      "POST",
+      "/v1/record-events-batch",
+      { body: params }
+    );
+  }
 
   /**
    * Create a new webhook subscription.

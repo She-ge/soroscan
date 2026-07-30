@@ -1,5 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import {
+  ValidatedInput,
+  type ValidatedInputHandle,
+} from "@/components/terminal/ValidatedInput";
 
 type Webhook = {
   id: string;
@@ -26,7 +30,8 @@ export default function WebhookManager() {
   });
   const [newUrl, setNewUrl] = useState("");
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
+  const [urlKey, setUrlKey] = useState(0);
+  const urlRef = useRef<ValidatedInputHandle>(null);
 
   const persist = (next: Webhook[]) => {
     setWebhooks(next);
@@ -34,10 +39,8 @@ export default function WebhookManager() {
   };
 
   const handleAddWebhook = () => {
-    if (!newUrl.trim()) {
-      setError("Enter a valid webhook URL.");
-      return;
-    }
+    const ok = urlRef.current?.validate() ?? false;
+    if (!ok) return;
     const nextWebhook: Webhook = {
       id: Date.now().toString(),
       url: newUrl.trim(),
@@ -50,7 +53,7 @@ export default function WebhookManager() {
     };
     persist([nextWebhook, ...webhooks]);
     setNewUrl("");
-    setError("");
+    setUrlKey((k) => k + 1);
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2000);
   };
@@ -71,22 +74,30 @@ export default function WebhookManager() {
     <div className="border border-green-500/30 rounded-xl p-5 bg-[#08102a]/80">
       <h2 className="text-green-400 text-sm font-mono mb-3">[ WEBHOOKS ]</h2>
       <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto] items-center">
-          <input
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto] items-end">
+          <ValidatedInput
+            key={urlKey}
+            ref={urlRef}
+            id="settings-webhook-url"
+            label="WEBHOOK_URL"
+            type="url"
             value={newUrl}
             onChange={(event) => setNewUrl(event.target.value)}
             placeholder="https://hooks.example.com/events"
-            className="w-full rounded-lg border border-green-500/30 bg-transparent px-3 py-2 font-mono text-sm text-green-300 focus:outline-none focus:border-green-400"
+            validators={{
+              required: "Enter a valid webhook URL.",
+              url: "Enter a valid webhook URL.",
+            }}
+            hint="HTTPS endpoint for delivery callbacks"
+            containerClassName="min-w-0"
           />
           <button
             onClick={handleAddWebhook}
-            className="rounded-lg border border-green-400 px-4 py-2 text-sm font-mono text-green-400 hover:bg-green-400/10 transition-colors"
+            className="rounded-lg border border-green-400 px-4 py-2 text-sm font-mono text-green-400 hover:bg-green-400/10 transition-colors h-11"
           >
             + Add Webhook
           </button>
         </div>
-
-        {error && <p className="text-red-400 text-sm">{error}</p>}
 
         {webhooks.length === 0 ? (
           <p className="text-green-600 text-sm font-mono">No webhook subscriptions configured yet.</p>

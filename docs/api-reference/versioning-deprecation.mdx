@@ -27,7 +27,7 @@ Deprecated responses include:
 
 - `Deprecation: true`
 - `Sunset: <YYYY-MM-DD>`
-- `Link: <replacement-url>; rel="replacement"` (when configured)
+- `Link: <replacement-url>; rel="alternate"` (when configured)
 
 ### Example
 
@@ -35,7 +35,7 @@ Deprecated responses include:
 HTTP/1.1 200 OK
 Deprecation: true
 Sunset: 2026-12-31
-Link: </graphql/>; rel="replacement"
+Link: </graphql/>; rel="alternate"
 ```
 
 ### Current deprecation example

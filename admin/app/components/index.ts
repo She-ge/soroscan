@@ -21,3 +21,6 @@ export type { VerifiedSourceBadgeProps, VerificationDetails } from './VerifiedSo
 
 export { ContractEventTimeline } from './ContractEventTimeline';
 export type { ContractEvent, ContractEventTimelineProps } from './ContractEventTimeline';
+
+export { default as Pagination } from './Pagination';
+export type { PaginationProps } from './Pagination';

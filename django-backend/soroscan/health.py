@@ -6,7 +6,7 @@ import requests
 
 from django.core.cache import cache
 from django.db import connection
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.conf import settings
@@ -39,6 +39,7 @@ def get_uptime_payload() -> dict:
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def health_view(request):
     """Liveness probe - app is running."""
     return Response(
@@ -51,6 +52,7 @@ def health_view(request):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def readiness_view(request):
     """Readiness probe - DB, Redis, and Soroban RPC are connected."""
     components = {
@@ -110,6 +112,7 @@ def readiness_view(request):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def worker_health_view(request):
     """Worker health probe - checks Celery workers are responding."""
     try:

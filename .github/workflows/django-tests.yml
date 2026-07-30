@@ -60,6 +60,12 @@ jobs:
           DEBUG: "False"
           DJANGO_SETTINGS_MODULE: soroscan.settings_test
           CELERY_TASK_ALWAYS_EAGER: "True"
+          SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+          STELLAR_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015"
+          SOROSCAN_CONTRACT_ID: CCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          WEBHOOK_DELIVERY_RETENTION_DAYS: "30"
+          LOG_FORMAT: ""
+          SENTRY_DSN: ""
         run: |
           python -m pytest \
             --cov=soroscan \
@@ -67,7 +73,7 @@ jobs:
             --cov-report=xml \
             --cov-report=html \
             --cov-report=json \
-            --cov-fail-under=70
+            --cov-fail-under=80
 
       - name: Upload HTML coverage report as artifact
         if: always()

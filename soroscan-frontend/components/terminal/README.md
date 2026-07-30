@@ -4,21 +4,28 @@ This UI system provides a retro-futuristic terminal aesthetic for the Soroscan f
 
 ## Colors
 - **Terminal Black:** `#0a0e27` (Deep space background)
-- **Terminal Green:** `#00ff41` (Classic phosphor phosphor green)
+- **Terminal Green:** `#00ff41` (Classic phosphor green)
 - **Terminal Cyan:** `#00d4ff` (Bright operational accent)
 - **Terminal Danger:** `#ff3366` (Hot pink/red warning)
 - **Terminal Warning:** `#ffaa00` (Amber alert)
-- **Terminal Gray:** `#64748b` (Dimmed inactive text)
+- **Terminal Info:** `#38bdf8` (Informational)
+- **Terminal Gray:** `#94a3b8` (Accessible muted text — WCAG AA+)
 
 ## Typography
-- **UI Sans:** `Inter` (Set via `--font-inter`)
-- **Terminal Mono:** `JetBrains Mono` (Set via `--font-jetbrains-mono`)
+- **UI Sans:** `IBM Plex Sans` / `Source Sans 3` (via `--font-terminal-sans`)
+- **Terminal Mono:** `JetBrains Mono` (via `--font-terminal-mono`)
+
+See also:
+- `docs/architecture/frontend/DESIGN_TOKENS.md`
+- `docs/architecture/frontend/ANIMATION_GUIDELINES.md`
+- `docs/architecture/frontend/ACCESSIBILITY_CONTRAST_AUDIT.md`
 
 ## Design Principles
 1. **Glow Effects:** Use `shadow-glow-green`, `shadow-glow-cyan`, and `shadow-glow-danger` for interactive elements.
 2. **Box Drawing:** Use `border-terminal` and custom corner decorations for containers.
 3. **Scanlines:** Components like `Card` and `Button` feature a scanline animation on hover.
 4. **Prompts:** Use the `>` prefix for interactive inputs and buttons.
+5. **Motion:** Prefer `animate-terminal-*` utilities and `components/terminal/Motion.tsx` for micro-interactions.
 
 ## Component Usage
 

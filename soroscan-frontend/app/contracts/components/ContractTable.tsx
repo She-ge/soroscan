@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Star } from "lucide-react";
+import { Star, FileCode2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,8 +12,8 @@ import {
   TableRow,
 } from "@/components/terminal/Table";
 import { Button } from "@/components/terminal/Button";
+import { EmptyState, EmptyStateIcon } from "@/components/ui/empty-state";
 import type { Contract } from "@/components/ingest/contract-types";
-import { ContractEmptyState } from "./ContractEmptyState";
 import { useFavorites } from "@/lib/hooks/useFavorites";
 
 interface ContractTableProps {
@@ -36,13 +36,29 @@ export function ContractTable({ contracts, onDelete, onRegister, showFavoritesOn
   };
 
   if (filteredContracts.length === 0) {
-    return <ContractEmptyState onRegister={onRegister} />;
+    return (
+      <EmptyState
+        variant="terminal"
+        icon={
+          <EmptyStateIcon>
+            <FileCode2 className="h-8 w-8 text-terminal-green" />
+          </EmptyStateIcon>
+        }
+        title="No contracts found"
+        description="You are not tracking any contracts yet. Register a contract to begin."
+        action={{
+          label: "Register Contract",
+          onClick: onRegister,
+          terminalVariant: "primary",
+        }}
+      />
+    );
   }
 
   return (
     <>
       {/* ── Mobile card view (< 640px) ── */}
-      <div className="flex flex-col gap-3 sm:hidden">
+      <div className="flex flex-col gap-3 sm:hidden" data-testid="contract-mobile-list">
         {filteredContracts.map((contract) => (
           <div
             key={contract.id}
@@ -62,7 +78,8 @@ export function ContractTable({ contracts, onDelete, onRegister, showFavoritesOn
                     e.stopPropagation();
                     toggleFavorite(contract.id);
                   }}
-                  className="focus:outline-none"
+                  className="focus:outline-none min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  aria-label={isFavorite(contract.id) ? "Remove from favorites" : "Add to favorites"}
                 >
                   <Star
                     size={20}
@@ -105,6 +122,7 @@ export function ContractTable({ contracts, onDelete, onRegister, showFavoritesOn
               <Button
                 variant="danger"
                 size="sm"
+                className="w-full sm:w-auto"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(contract.id);
@@ -136,7 +154,7 @@ export function ContractTable({ contracts, onDelete, onRegister, showFavoritesOn
       </div>
 
       {/* ── Desktop table view (≥ 640px) ── */}
-      <div className="hidden sm:block">
+      <div className="hidden sm:block" data-testid="contract-desktop-table">
         <Table>
           <TableHeader>
             <TableRow>

@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     APIKeyViewSet,
+    AnalyticsViewSet,
     ContractEventViewSet,
     ContractInvocationViewSet,
     TeamViewSet,
@@ -15,6 +16,8 @@ from .views import (
     compliance_export_view,
     contract_event_explorer_view,
     contract_event_types_view,
+    contract_recent_events_view,
+    contract_health_view,
     event_type_statistics_view,
     contract_identity_view,
     organization_cors_view,
@@ -40,9 +43,15 @@ router.register(r"invocations", ContractInvocationViewSet, basename="invocation"
 router.register(r"webhooks", WebhookSubscriptionViewSet, basename="webhook")
 router.register(r"api-keys", APIKeyViewSet, basename="apikey")
 router.register(r"teams", TeamViewSet, basename="team")
+router.register(r"analytics", AnalyticsViewSet, basename="analytics")
 
 urlpatterns = [
     path("contracts/<str:contract_id>/timeline/", contract_timeline_view, name="contract-timeline"),
+    path(
+        "contracts/<str:contract_id>/health/",
+        contract_health_view,
+        name="contract-health",
+    ),
     path(
         "contracts/<str:contract_id>/events/explorer/",
         contract_event_explorer_view,
@@ -52,6 +61,11 @@ urlpatterns = [
     "contracts/<str:contract_id>/event-types/",
     contract_event_types_view,
     name="contract-event-types",
+    ),
+    path(
+        "contracts/<str:contract_id>/recent-events/",
+        contract_recent_events_view,
+        name="contract-recent-events",
     ),
 
     path(

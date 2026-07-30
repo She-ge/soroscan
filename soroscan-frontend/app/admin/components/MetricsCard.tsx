@@ -35,7 +35,10 @@ export function MetricsCard({
   }
 
   return (
-    <div className={`border p-4 h-full flex flex-col justify-between transition-all hover:bg-terminal-green/5 ${colorMap[color]}`}>
+    <div
+      className={`border p-4 h-full flex flex-col justify-between gap-4 rounded-sm transition-all hover:bg-terminal-green/5 shadow-[0_0_20px_rgba(0,255,65,0.1)] ${colorMap[color]} ${bgMap[color]}`}
+      data-testid="metrics-card"
+    >
       <div className="flex justify-between items-start mb-2">
         <div className="text-[10px] tracking-widest uppercase opacity-70">
           [{title}]

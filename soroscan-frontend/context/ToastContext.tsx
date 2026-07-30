@@ -1,238 +1,316 @@
- "use client";
+"use client"
 
- import React, {
-   createContext,
-   useCallback,
-   useContext,
-   useEffect,
-   useMemo,
-   useRef,
-   useState,
-   type ReactNode,
- } from "react";
- import { flushSync } from "react-dom";
-
- import {
-  CheckCircle2,
+import * as React from "react"
+import {
   AlertCircle,
-  Info,
   AlertTriangle,
+  CheckCircle2,
+  Info,
   X,
-} from "lucide-react";
+} from "lucide-react"
 
-export type ToastType = "success" | "error" | "info" | "warning";
+export type ToastType = "success" | "error" | "info" | "warning"
 
- interface Toast {
-  id: string;
-  title?: string;
-  message: string;
-  type: ToastType;
+export interface ToastOptions {
+  message: string
+  type?: ToastType
+  title?: string
+}
+
+interface Toast extends Required<Pick<ToastOptions, "message" | "type">> {
+  id: string
+  title?: string
 }
 
 interface ToastContextValue {
-  showToast: (message: string, type: ToastType, title?: string) => void;
-  dismissToast: (id: string) => void;
+  showToast: (
+    message: string,
+    type?: ToastType,
+    title?: string,
+  ) => string
+  dismissToast: (id: string) => void
+  dismissAllToasts: () => void
 }
 
-interface ToastProviderProps {
-  children: ReactNode;
-  position?: "top-right" | "bottom-right";
-  /** Auto-dismiss duration in milliseconds */
-  duration?: number;
+export interface ToastProviderProps {
+  children: React.ReactNode
+  position?: "top-right" | "bottom-right"
+  /** Auto-dismiss duration in milliseconds. */
+  duration?: number
 }
 
-const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+interface ToastItemProps {
+  toast: Toast
+  onDismiss: () => void
+}
 
-/**
- * Module-level dispatcher used by the global showToast() helper.
- * This gets wired up when a ToastProvider mounts.
- */
-let dispatchToast: ((message: string, type: ToastType, title?: string) => void) | null = null;
+const ToastContext = React.createContext<ToastContextValue | undefined>(
+  undefined,
+)
+
+let dispatchToast:
+  | ((
+      message: string,
+      type?: ToastType,
+      title?: string,
+    ) => string)
+  | null = null
+
+function createToastId(): string {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID()
+  }
+
+  return `toast-${Date.now()}-${Math.random()
+    .toString(16)
+    .slice(2)}`
+}
+
+const toastStyles: Record<
+  ToastType,
+  {
+    border: string
+    icon: string
+    shadow: string
+  }
+> = {
+  success: {
+    border: "border-terminal-green",
+    icon: "text-terminal-green",
+    shadow: "shadow-[var(--shadow-glow-green)]",
+  },
+  error: {
+    border: "border-terminal-danger",
+    icon: "text-terminal-danger",
+    shadow: "shadow-[var(--shadow-glow-danger)]",
+  },
+  info: {
+    border: "border-terminal-cyan",
+    icon: "text-terminal-cyan",
+    shadow: "shadow-[var(--shadow-glow-cyan)]",
+  },
+  warning: {
+    border: "border-terminal-warning",
+    icon: "text-terminal-warning",
+    shadow: "shadow-[0_0_18px_rgba(255,170,0,0.45)]",
+  },
+}
+
+const toastIcons = {
+  success: CheckCircle2,
+  error: AlertCircle,
+  info: Info,
+  warning: AlertTriangle,
+} satisfies Record<
+  ToastType,
+  React.ComponentType<React.SVGProps<SVGSVGElement>>
+>
 
 export function ToastProvider({
   children,
   position = "bottom-right",
   duration = 4000,
 }: ToastProviderProps) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const timersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const [toasts, setToasts] = React.useState<Toast[]>([])
+  const timersRef = React.useRef<
+    Map<string, ReturnType<typeof setTimeout>>
+  >(new Map())
 
-  const dismissToast = useCallback((id: string) => {
-    // Clear the timer if it exists
-    const timer = timersRef.current.get(id);
+  const clearToastTimer = React.useCallback((id: string) => {
+    const timer = timersRef.current.get(id)
+
     if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
+      clearTimeout(timer)
+      timersRef.current.delete(id)
     }
-    setToasts((current) => current.filter((toast) => toast.id !== id));
-  }, []);
+  }, [])
 
-  const showToast = useCallback(
-    (message: string, type: ToastType, title?: string) => {
-      const id =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const dismissToast = React.useCallback(
+    (id: string) => {
+      clearToastTimer(id)
+      setToasts((current) =>
+        current.filter((toast) => toast.id !== id),
+      )
+    },
+    [clearToastTimer],
+  )
+
+  const dismissAllToasts = React.useCallback(() => {
+    timersRef.current.forEach((timer) => clearTimeout(timer))
+    timersRef.current.clear()
+    setToasts([])
+  }, [])
+
+  const showToast = React.useCallback(
+    (
+      message: string,
+      type: ToastType = "info",
+      title?: string,
+    ): string => {
+      const id = createToastId()
 
       setToasts((current) => [
-        // Newest toast on top
-        { id, message, type, title },
+        {
+          id,
+          message,
+          type,
+          title,
+        },
         ...current,
-      ]);
+      ])
 
-      // Schedule auto-dismiss
-      const timer = setTimeout(() => {
-        // In test environments, React's act() expects synchronous state updates
-        // flushSync ensures the state update completes synchronously
-        if (typeof flushSync === 'function') {
-          flushSync(() => {
-            dismissToast(id);
-          });
-        } else {
-          dismissToast(id);
-        }
-      }, duration);
-      
-      timersRef.current.set(id, timer);
+      if (duration > 0) {
+        const timer = setTimeout(() => {
+          dismissToast(id)
+        }, duration)
+
+        timersRef.current.set(id, timer)
+      }
+
+      return id
     },
     [dismissToast, duration],
-  );
+  )
 
-  // Cleanup all timers on unmount
-  useEffect(() => {
-    const timers = timersRef.current;
+  React.useEffect(() => {
+    dispatchToast = showToast
 
     return () => {
-      timers.forEach((timer) => clearTimeout(timer));
-      timers.clear();
-    };
-  }, []);
+      if (dispatchToast === showToast) {
+        dispatchToast = null
+      }
+    }
+  }, [showToast])
 
-   useEffect(() => {
-     dispatchToast = showToast;
-     return () => {
-       if (dispatchToast === showToast) {
-         dispatchToast = null;
-       }
-     };
-   }, [showToast]);
+  React.useEffect(() => {
+    const timers = timersRef.current
 
-   const value = useMemo<ToastContextValue>(
-     () => ({
-       showToast,
-       dismissToast,
-     }),
-     [showToast, dismissToast],
-   );
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer))
+      timers.clear()
+    }
+  }, [])
 
-   const positionClasses =
-     position === "bottom-right"
-       ? "bottom-4 right-4"
-       : "top-4 right-4";
+  const contextValue = React.useMemo<ToastContextValue>(
+    () => ({
+      showToast,
+      dismissToast,
+      dismissAllToasts,
+    }),
+    [dismissAllToasts, dismissToast, showToast],
+  )
 
-   return (
-     <ToastContext.Provider value={value}>
-       {children}
-       <div
-         className={`pointer-events-none fixed z-50 flex max-h-screen w-full max-w-sm flex-col gap-3 ${positionClasses}`}
-         aria-live="polite"
-         aria-atomic="true"
-       >
-         {toasts.map((toast) => (
-           <ToastItem
-             key={toast.id}
-             toast={toast}
-             onDismiss={() => dismissToast(toast.id)}
-           />
-         ))}
-       </div>
-     </ToastContext.Provider>
-   );
- }
+  const positionClasses =
+    position === "bottom-right"
+      ? "bottom-4 right-4"
+      : "right-4 top-4"
 
- export function useToast(): ToastContextValue {
-   const context = useContext(ToastContext);
-   if (!context) {
-     throw new Error("useToast must be used within a ToastProvider");
-   }
-   return context;
- }
+  return (
+    <ToastContext.Provider value={contextValue}>
+      {children}
 
- /**
- * Global helper that delegates to the nearest mounted ToastProvider.
- *
- * Example:
- *   showToast("Event exported!", "success", "Export Successful");
- */
-export function showToast(message: string, type: ToastType, title?: string): void {
+      <div
+        data-testid="toast-container"
+        data-position={position}
+        className={`pointer-events-none fixed z-50 flex max-h-screen w-full max-w-sm flex-col gap-3 px-4 sm:px-0 ${positionClasses}`}
+        aria-label="Notifications"
+        aria-live="polite"
+        aria-relevant="additions removals"
+      >
+        {toasts.map((toast) => (
+          <ToastItem
+            key={toast.id}
+            toast={toast}
+            onDismiss={() => dismissToast(toast.id)}
+          />
+        ))}
+      </div>
+    </ToastContext.Provider>
+  )
+}
+
+export function useToast(): ToastContextValue {
+  const context = React.useContext(ToastContext)
+
+  if (!context) {
+    throw new Error(
+      "useToast must be used within a ToastProvider",
+    )
+  }
+
+  return context
+}
+
+export function showToast(
+  message: string,
+  type: ToastType = "info",
+  title?: string,
+): string | undefined {
   if (!dispatchToast) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
         "ToastProvider is not mounted; cannot show toast:",
         message,
-      );
+      )
     }
-    return;
+
+    return undefined
   }
-  dispatchToast(message, type, title);
+
+  return dispatchToast(message, type, title)
 }
 
- interface ToastItemProps {
-   toast: Toast;
-   onDismiss: () => void;
- }
-
- function ToastItem({ toast, onDismiss }: ToastItemProps) {
-  const { type, message, title } = toast;
-
-  const isError = type === "error";
-  const Icon =
-    type === "success"
-      ? CheckCircle2
-      : type === "error"
-        ? AlertCircle
-        : type === "warning"
-          ? AlertTriangle
-          : Info;
-
-  const role = isError ? "alert" : "status";
-
-  const typeClasses =
-    type === "success"
-      ? "border-terminal-green text-terminal-green shadow-[var(--shadow-glow-green)]"
-      : type === "error"
-        ? "border-terminal-danger text-terminal-danger shadow-[var(--shadow-glow-danger)]"
-        : type === "warning"
-          ? "border-terminal-warning text-terminal-warning shadow-[0_0_18px_rgba(255,170,0,0.45)]"
-          : "border-terminal-cyan text-terminal-cyan shadow-[var(--shadow-glow-cyan)]";
+function ToastItem({
+  toast,
+  onDismiss,
+}: ToastItemProps) {
+  const { message, title, type } = toast
+  const Icon = toastIcons[type]
+  const styles = toastStyles[type]
+  const role = type === "error" ? "alert" : "status"
 
   return (
     <div
       role={role}
-      className={`pointer-events-auto relative flex items-start gap-3 border-l-4 bg-terminal-black/95 px-4 py-3 font-terminal-mono text-sm ${typeClasses}`}
+      data-testid="toast"
+      data-toast-type={type}
+      className={[
+        "pointer-events-auto relative flex items-start gap-3",
+        "border border-l-4 bg-terminal-black/95 px-4 py-3",
+        "font-terminal-mono text-sm",
+        styles.border,
+        styles.shadow,
+      ].join(" ")}
     >
-      {/* Box-drawing style frame */}
-      <div className="absolute inset-0 border border-terminal-green/20" aria-hidden="true" />
+      <Icon
+        data-testid={`toast-icon-${type}`}
+        className={`mt-0.5 h-5 w-5 shrink-0 ${styles.icon}`}
+        aria-hidden="true"
+      />
 
-      <div className="mt-0.5 flex-shrink-0" aria-hidden="true">
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="flex-1 space-y-1">
+      <div className="min-w-0 flex-1 space-y-1">
         {title && (
           <h4 className="font-bold leading-none tracking-tight text-foreground">
             {title}
           </h4>
         )}
-        <p className="leading-snug text-foreground/90">{message}</p>
+
+        <p className="break-words leading-snug text-foreground/90">
+          {message}
+        </p>
       </div>
+
       <button
         type="button"
         onClick={onDismiss}
-        className="ml-2 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-sm border border-terminal-green/40 text-terminal-green/80 transition hover:border-terminal-green hover:text-terminal-green focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terminal-cyan"
-        aria-label="Dismiss notification"
+        className="ml-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-terminal-green/40 text-terminal-green/80 transition hover:border-terminal-green hover:text-terminal-green focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terminal-cyan"
+        aria-label={`Dismiss${title ? ` ${title}` : ""} notification`}
       >
-        <X className="h-3 w-3" />
+        <X className="h-3 w-3" aria-hidden="true" />
       </button>
     </div>
-  );
+  )
 }
