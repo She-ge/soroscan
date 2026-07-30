@@ -182,7 +182,7 @@ export interface FilterExpressionTesterProps {
   onClose?: () => void
 }
 
-export function FilterExpressionTester({ expression, onClose }: FilterExpressionTesterProps) {
+export function FilterExpressionTester({ expression, onClose: _onClose }: FilterExpressionTesterProps) {
   const [sampleJson, setSampleJson] = React.useState(DEFAULT_SAMPLE)
   const [jsonError, setJsonError] = React.useState<string | null>(null)
   const [result, setResult] = React.useState<TestResult | null>(null)

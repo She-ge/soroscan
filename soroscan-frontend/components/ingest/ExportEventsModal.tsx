@@ -400,6 +400,7 @@ export function ExportEventsModal({
                 <input
                   type="radio"
                   name="export-format"
+                  data-testid={`export-format-${option.value}`}
                   value={option.value}
                   checked={format === option.value}
                   onChange={() => handleFormatChange(option.value)}
@@ -536,6 +537,7 @@ export function ExportEventsModal({
           <button
             type="button"
             className={`${styles.btn} ${styles.secondaryBtn}`}
+            data-testid="generate-preview-btn"
             onClick={() => {
               void handlePreview();
             }}
@@ -546,6 +548,7 @@ export function ExportEventsModal({
           <button
             type="button"
             className={styles.btn}
+            data-testid="confirm-export"
             onClick={() => {
               void handleSubmit();
             }}

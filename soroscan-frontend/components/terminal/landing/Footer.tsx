@@ -42,8 +42,8 @@ export function Footer() {
       {/* CTA section */}
       <section className="border border-terminal-cyan/30 p-10 md:p-16 text-center space-y-6 relative overflow-hidden rounded-sm">
         <div className="scanline-overlay" />
-        <div className="absolute top-3 left-4 text-[9px] text-terminal-cyan/40 font-terminal-mono">SYSTEM_OVERRIDE_ACTIVE</div>
-        <div className="absolute bottom-3 right-4 text-[9px] text-terminal-cyan/40 font-terminal-mono">AUTH_MODE: DEV_OPEN</div>
+        <div className="absolute top-3 left-4 text-[9px] text-terminal-cyan font-terminal-mono">SYSTEM_OVERRIDE_ACTIVE</div>
+        <div className="absolute bottom-3 right-4 text-[9px] text-terminal-cyan font-terminal-mono">AUTH_MODE: DEV_OPEN</div>
 
         <h2 className="text-2xl md:text-3xl font-bold text-terminal-cyan tracking-tight font-terminal-mono">
           READY_TO_UPLINK?

@@ -20,7 +20,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -56,7 +56,7 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: test-secret-key-for-ci
           DEBUG: "False"
-          DJANGO_SETTINGS_MODULE: soroscan.settings_test
+          DJANGO_SETTINGS_MODULE: soroscan.settings
           CELERY_TASK_ALWAYS_EAGER: "True"
           SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
           STELLAR_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015"

@@ -1,0 +1,6 @@
+query SaveSearchPlaceholder {
+  me {
+    id
+    email
+  }
+}

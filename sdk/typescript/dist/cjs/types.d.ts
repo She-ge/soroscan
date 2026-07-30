@@ -61,6 +61,34 @@ export interface GetEventsParams {
     last?: number;
 }
 export type GetEventsResponse = PaginatedResponse<ContractEvent>;
+/** Query events across up to ten contracts in one request. */
+export interface GetEventsByContractsParams {
+    contractIds: ContractId[];
+    eventType?: EventType;
+    startLedger?: number;
+    endLedger?: number;
+    page?: number;
+    pageSize?: number;
+}
+export interface GetEventsByContractsResponse {
+    count: number;
+    results: ContractEvent[];
+    contractIds: ContractId[];
+}
+/** SC-38 input for a versioned event. Both hash values are 32-byte hex strings. */
+export interface RecordStructuredEventParams {
+    contractId: ContractId;
+    eventType: EventType;
+    payloadHash: string;
+    schemaVersion: number;
+    correlationId: string;
+}
+export interface RecordStructuredEventResponse {
+    status: "submitted" | "failed";
+    txHash?: string;
+    transactionStatus: string;
+    error?: string;
+}
 export type ContractType = "token" | "nft" | "dex" | "lending" | "custom";
 export interface ContractSpec {
     functions: ContractFunction[];

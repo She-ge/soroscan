@@ -2,24 +2,51 @@
 
 import React from 'react';
 
+import {
+  clampProgressValue,
+  formatProgressPercentage,
+} from './progressBarUtils.mjs';
+
+export type ProgressBarVariant =
+  | 'primary'
+  | 'success'
+  | 'warning'
+  | 'danger';
+
+export type ProgressBarLabelPosition = 'above' | 'inside';
+
 export interface ProgressBarProps {
-  /** Progress value from 0 to 100 */
+  /** Progress value. Values outside 0–100 are clamped. */
   value?: number;
-  /** Color variant */
-  variant?: 'success' | 'warning' | 'danger' | 'primary';
-  /** Label text */
+  /** Visual colour variant. */
+  variant?: ProgressBarVariant;
+  /** Optional descriptive label. */
   label?: string;
-  /** Label position */
-  labelPosition?: 'above' | 'inside';
-  /** Show animated fill */
+  /** Whether the label appears above or inside the bar. */
+  labelPosition?: ProgressBarLabelPosition;
+  /** Adds animation to the determinate fill. */
   animated?: boolean;
-  /** Indeterminate state (ignores value) */
+  /** Displays a continuously moving fill instead of a percentage. */
   indeterminate?: boolean;
-  /** Additional CSS classes */
+  /** Additional classes applied to the outer wrapper. */
   className?: string;
-  /** Show percentage text */
+  /** Controls whether the calculated percentage is displayed. */
   showPercentage?: boolean;
 }
+
+const fillClasses: Record<ProgressBarVariant, string> = {
+  primary: 'bg-blue-500',
+  success: 'bg-green-500',
+  warning: 'bg-yellow-500',
+  danger: 'bg-red-500',
+};
+
+const trackClasses: Record<ProgressBarVariant, string> = {
+  primary: 'bg-blue-100',
+  success: 'bg-green-100',
+  warning: 'bg-yellow-100',
+  danger: 'bg-red-100',
+};
 
 const ProgressBar: React.FC<ProgressBarProps> = ({
   value = 0,
@@ -31,64 +58,77 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   className = '',
   showPercentage = true,
 }) => {
-  // Clamp value between 0 and 100
-  const clampedValue = Math.max(0, Math.min(100, value));
-  
-  const variantClasses = {
-    primary: 'bg-blue-500',
-    success: 'bg-green-500',
-    warning: 'bg-yellow-500',
-    danger: 'bg-red-500',
-  };
+  const clampedValue = clampProgressValue(value);
+  const percentageText = formatProgressPercentage(value);
 
-  const backgroundClasses = {
-    primary: 'bg-blue-100',
-    success: 'bg-green-100',
-    warning: 'bg-yellow-100',
-    danger: 'bg-red-100',
-  };
+  const displayAboveContent =
+    labelPosition === 'above' &&
+    Boolean(label || (showPercentage && !indeterminate));
+
+  const displayInsideContent =
+    labelPosition === 'inside' &&
+    Boolean(label || (showPercentage && !indeterminate));
 
   return (
-    <div className={`w-full ${className}`}>
-      {/* Label above */}
-      {label && labelPosition === 'above' && (
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">{label}</span>
+    <div className={`w-full ${className}`.trim()}>
+      {displayAboveContent && (
+        <div
+          className={`mb-2 flex items-center ${
+            label ? 'justify-between' : 'justify-end'
+          }`}
+        >
+          {label && (
+            <span className="text-sm font-medium text-gray-700">
+              {label}
+            </span>
+          )}
+
           {showPercentage && !indeterminate && (
-            <span className="text-sm text-gray-500">{clampedValue}%</span>
+            <span className="text-sm text-gray-500">
+              {percentageText}
+            </span>
           )}
         </div>
       )}
-      
-      {/* Progress bar container */}
-      <div 
-        className={`relative w-full h-4 rounded-full overflow-hidden ${backgroundClasses[variant]}`}
+
+      <div
+        className={`relative h-4 w-full overflow-hidden rounded-full ${trackClasses[variant]}`}
         role="progressbar"
-        aria-valuenow={indeterminate ? undefined : clampedValue}
+        aria-label={label ?? 'Progress'}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={label || `Progress: ${clampedValue}%`}
+        aria-valuenow={indeterminate ? undefined : clampedValue}
+        aria-valuetext={
+          indeterminate ? 'Loading' : percentageText
+        }
+        aria-busy={indeterminate || undefined}
+        data-variant={variant}
       >
-        {/* Progress fill */}
         <div
-          className={`
-            h-full rounded-full transition-all duration-300 ease-out
-            ${variantClasses[variant]}
-            ${animated ? 'animate-pulse' : ''}
-            ${indeterminate ? 'animate-indeterminate' : ''}
-          `}
+          data-testid="progress-fill"
+          className={[
+            'h-full rounded-full transition-[width] duration-300 ease-out',
+            fillClasses[variant],
+            animated && !indeterminate ? 'animate-pulse' : '',
+            indeterminate ? 'animate-indeterminate' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           style={{
-            width: indeterminate ? '100%' : `${clampedValue}%`,
-            transform: indeterminate ? 'translateX(-100%)' : 'translateX(0)',
+            width: indeterminate ? '40%' : `${clampedValue}%`,
           }}
         />
-        
-        {/* Label inside */}
-        {label && labelPosition === 'inside' && (
+
+        {displayInsideContent && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-xs font-medium text-white mix-blend-difference">
               {label}
-              {showPercentage && !indeterminate && ` ${clampedValue}%`}
+              {label && showPercentage && !indeterminate
+                ? ' '
+                : null}
+              {showPercentage && !indeterminate
+                ? percentageText
+                : null}
             </span>
           </div>
         )}

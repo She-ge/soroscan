@@ -26,7 +26,7 @@ class TestWebhookBatchDeliveryStatus:
     def test_requires_authentication(self, api_client):
         url = reverse("webhook-batch-delivery-status")
         response = api_client.post(url, {"delivery_ids": [1]}, format="json")
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_returns_status_for_multiple_deliveries_in_one_query(self, authenticated_client):
         success_log = WebhookDeliveryLogFactory(success=True, status_code=200)

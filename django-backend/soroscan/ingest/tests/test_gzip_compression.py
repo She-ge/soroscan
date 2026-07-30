@@ -148,3 +148,26 @@ class GZipCompressionTest(TestCase):
         import json as json_mod
 
         self.assertEqual(json_mod.loads(decompressed.decode()), json.loads(large_payload))
+
+    def test_compressed_response_is_smaller_than_uncompressed(self):
+        from django.http import HttpResponse
+
+        from django.middleware.gzip import GZipMiddleware
+
+        content = "a" * 10000
+        def get_response(request):
+            return HttpResponse(content, content_type="text/plain")
+        middleware = GZipMiddleware(get_response)
+
+        request_uncompressed = self.factory.get("/api/test/")
+        response_uncompressed = middleware(request_uncompressed)
+        uncompressed_size = len(response_uncompressed.content)
+
+        request_compressed = self.factory.get(
+            "/api/test/",
+            HTTP_ACCEPT_ENCODING="gzip",
+        )
+        response_compressed = middleware(request_compressed)
+        compressed_size = len(response_compressed.content)
+
+        self.assertLess(compressed_size, uncompressed_size)

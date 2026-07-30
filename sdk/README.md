@@ -1,5 +1,39 @@
 # SoroScan SDKs
 
+## SC-30 recent contract events
+
+Fetch the most recently recorded events for a contract, newest first (max 20
+per request):
+
+```python
+events = client.get_contract_recent_events(contract_id, limit=10)
+```
+
+```ts
+const events = await client.getContractRecentEvents({ contractId, limit: 10 });
+```
+
+CLI:
+
+```bash
+soroscan contracts recent-events <contract_id> --limit 10
+```
+
+## SC-38 structured events
+
+SC-38 adds a versioned, retry-safe event submission path. Provide a SHA-256
+payload hash, a non-zero schema version, and a unique 32-byte hexadecimal
+correlation ID. Reusing the correlation ID is rejected by the contract, so a
+network retry cannot create a second event.
+
+```python
+client.record_structured_event(contract_id, "transfer", payload_hash, 1, correlation_id)
+```
+
+```ts
+await client.recordStructuredEvent({ contractId, eventType: "transfer", payloadHash, schemaVersion: 1, correlationId });
+```
+
 Official SDKs for the SoroScan API - Stellar/Soroban event indexing.
 
 ## Strict type verification

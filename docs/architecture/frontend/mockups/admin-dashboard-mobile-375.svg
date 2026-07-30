@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812" role="img" aria-label="Admin Dashboard mobile 375 mockup">
+  <rect width="375" height="812" fill="#0a0e27"/>
+  <rect width="375" height="60" fill="#1a1f3a"/>
+  <rect x="12" y="18" width="24" height="3" fill="#00ff41"/>
+  <rect x="12" y="26" width="24" height="3" fill="#00ff41"/>
+  <rect x="12" y="34" width="24" height="3" fill="#00ff41"/>
+  <text x="52" y="38" fill="#00ff41" font-family="monospace" font-size="16" font-weight="700">Æ SoroScan</text>
+  <text x="16" y="96" fill="#00ff41" font-family="monospace" font-size="20" font-weight="700">SYSTEM DASHBOARD</text>
+  <rect x="16" y="116" width="166" height="88" fill="#00ff410d" stroke="#00ff414d"/>
+  <text x="28" y="140" fill="#94a3b8" font-family="monospace" font-size="9">EVENTS TODAY</text>
+  <text x="28" y="172" fill="#00ff41" font-family="monospace" font-size="22">1,284</text>
+  <rect x="193" y="116" width="166" height="88" fill="#00d4ff0d" stroke="#00d4ff4d"/>
+  <text x="205" y="140" fill="#94a3b8" font-family="monospace" font-size="9">TOTAL</text>
+  <text x="205" y="172" fill="#00d4ff" font-family="monospace" font-size="22">98k</text>
+  <rect x="16" y="216" width="343" height="160" fill="#0d1522" stroke="#00ff414d"/>
+  <text x="28" y="244" fill="#00ff41" font-family="monospace" font-size="12">INGESTION TIMELINE</text>
+  <polyline points="40,340 80,300 120,310 160,270 200,290 240,250 280,260 320,230" fill="none" stroke="#00ff41" stroke-width="2"/>
+  <rect x="16" y="392" width="343" height="140" fill="#0d1522" stroke="#00ff414d"/>
+  <text x="28" y="420" fill="#00ff41" font-family="monospace" font-size="12">WEBHOOK STATS</text>
+  <text x="28" y="460" fill="#94a3b8" font-family="monospace" font-size="12">Success 97% · Avg 120ms</text>
+  <rect x="16" y="548" width="343" height="200" fill="#0d1522" stroke="#00ff414d"/>
+  <text x="28" y="576" fill="#00ff41" font-family="monospace" font-size="12">ERROR LOG</text>
+  <text x="28" y="610" fill="#ff3366" font-family="monospace" font-size="11">timeout · retry scheduled</text>
+  <text x="28" y="634" fill="#94a3b8" font-family="monospace" font-size="11">rate limit soft · org_acme</text>
+  <text x="16" y="780" fill="#64748b" font-family="monospace" font-size="10">#910 · Admin mobile · stacked bands</text>
+</svg>

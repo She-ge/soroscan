@@ -10,9 +10,13 @@ from celery.signals import (
     task_failure,
     task_postrun,
     task_prerun,
+    task_retry,
     worker_shutdown,
     worker_shutting_down,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "soroscan.settings")
 
@@ -67,6 +71,23 @@ def record_celery_task_failure(sender, exception, **kwargs):
         status="failure",
         error_type=type(exception).__name__,
     ).inc()
+
+
+@task_retry.connect
+def record_celery_task_retry(sender, request, reason, einfo, **kwargs):
+    """Log retry details."""
+    logger.info(
+        "Celery task retrying",
+        extra={
+            "task_name": getattr(sender, "name", "unknown"),
+            "task_id": request.id,
+            "retry_attempt": request.retries,
+            "max_retries": getattr(sender, "max_retries", None),
+            "exception_type": type(reason).__name__,
+            "exception_message": str(reason),
+            "next_retry_timestamp": str(request.eta) if request.eta else None,
+        }
+    )
 
 
 @worker_shutting_down.connect

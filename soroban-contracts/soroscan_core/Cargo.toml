@@ -11,6 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 soroban-sdk = "21.0.0"
+soroscan_macros = { path = "../soroscan_macros" }
 
 [dev-dependencies]
 soroban-sdk = { version = "21.0.0", features = ["testutils"] }

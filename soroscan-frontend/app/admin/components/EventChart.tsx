@@ -24,7 +24,7 @@ export function EventChart({ data, loading = false, title }: EventChartProps) {
         </div>
       </div>
 
-      <div className="flex-1 flex items-end gap-1 min-h-[150px] relative">
+      <div className="flex-1 flex items-end gap-1 min-h-[120px] sm:min-h-[150px] w-full relative">
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center text-xs text-terminal-gray animate-pulse">
             LOADING_DATA...

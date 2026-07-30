@@ -106,25 +106,36 @@ export interface GetEventsParams {
 
 export type GetEventsResponse = PaginatedResponse<ContractEvent>;
 
-/**
- * SC-23: Query events across multiple contracts in a single request.
- */
+/** Query events across up to ten contracts in one request. */
 export interface GetEventsByContractsParams {
-  /** One or more contract addresses to query. */
   contractIds: ContractId[];
-  /** Optional event type filter (e.g. "transfer"). */
   eventType?: EventType;
-  /** Return events at or after this ledger sequence number. */
   startLedger?: number;
-  /** Return events at or before this ledger sequence number. */
   endLedger?: number;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface GetEventsByContractsResponse {
   count: number;
   results: ContractEvent[];
-  /** Echo of the contract IDs that were queried. */
   contractIds: ContractId[];
+}
+
+/** SC-38 input for a versioned event. Both hash values are 32-byte hex strings. */
+export interface RecordStructuredEventParams {
+  contractId: ContractId;
+  eventType: EventType;
+  payloadHash: string;
+  schemaVersion: number;
+  correlationId: string;
+}
+
+export interface RecordStructuredEventResponse {
+  status: "submitted" | "failed";
+  txHash?: string;
+  transactionStatus: string;
+  error?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -369,6 +380,126 @@ export interface UpdateWebhookParams {
 export interface WebhookListResponse {
   items: Webhook[];
   totalCount: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SC-17: Contract event type info
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ContractEventTypeInfo {
+  /** Event type name */
+  eventType: string;
+  /** Number of events of this type */
+  count: number;
+  /** ISO timestamp of first occurrence */
+  firstSeen: string;
+  /** ISO timestamp of last occurrence */
+  lastSeen: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SC-29: Batch event recording
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface EventEntry {
+  /** Target contract address */
+  contractId: ContractId;
+  /** Event type name (e.g. "transfer", "swap") */
+  eventType: EventType;
+  /** SHA-256 hash of the event payload (hex) */
+  payloadHash: string;
+}
+
+export interface RecordEventsBatchParams {
+  /** 1–25 event entries to record in a single transaction */
+  events: EventEntry[];
+}
+
+export interface RecordEventsBatchResponse {
+  status: string;
+  /** New total event count after the batch */
+  totalEvents: number;
+  txHash: string | null;
+  transactionStatus: string | null;
+  error: string | null;
+}
+
+export interface GetAdminResponse {
+  admin_address: string | null;
+}
+
+export interface IsIndexerResponse {
+  is_indexer: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SC-9: Indexer authorization
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AddIndexerParams {
+  /** Stellar address of the indexer to authorize */
+  indexerAddress: StellarAddress;
+}
+
+export interface AddIndexerResponse {
+  status: string;
+  txHash: string | null;
+  transactionStatus: string | null;
+  error: string | null;
+// SC-30: Recent contract events
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Maximum number of events that can be requested via `getContractRecentEvents`. */
+export const MAX_RECENT_EVENTS_LIMIT = 20;
+
+export interface GetContractRecentEventsParams {
+  /** Contract address to fetch recent events for */
+  contractId: ContractId;
+  /** Maximum number of events to return (1-20, default 10) */
+  limit?: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WebSocket
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface WebSocketClientConfig {
+  /** Base URL of the SoroScan WebSocket server (e.g., "wss://api.soroscan.io") */
+  wsUrl: string;
+
+  /** Optional API key for authentication */
+  apiKey?: string;
+
+  /** Initial reconnection delay in milliseconds (default: 1000) */
+  initialReconnectDelay?: number;
+
+  /** Maximum reconnection delay in milliseconds (default: 30000) */
+  maxReconnectDelay?: number;
+
+  /** Backoff multiplier for exponential backoff (default: 2) */
+  backoffMultiplier?: number;
+
+  /** Whether to add jitter to reconnection delays (default: true) */
+  useJitter?: boolean;
+
+  /** Maximum messages to buffer while disconnected (default: 1000) */
+  maxBufferSize?: number;
+}
+
+export type EventCallback = (event: ContractEvent) => void;
+export type ConnectionCallback = () => void;
+export type ErrorCallback = (error: Error) => void;
+export type ReconnectingCallback = (attempt: number, delay: number) => void;
+
+export interface EventFilter {
+  /** Filter by contract ID */
+  contractId?: string;
+
+  /** Filter by event type */
+  eventType?: EventType;
+
+  /** Filter by topics */
+  topics?: Partial<ContractEventTopic>[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

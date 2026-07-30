@@ -12,12 +12,14 @@ from .models import (
     APIKey,
     ContractEvent,
     ContractInvocation,
+    ContractSnapshot,
     ContractSource,
     ContractVerification,
     Organization,
     OrganizationBudget,
     OrganizationCostSnapshot,
     OrganizationMembership,
+    StateChange,
     Team,
     TeamMembership,
     TrackedContract,
@@ -26,6 +28,65 @@ from .models import (
 
 _CONTRACT_ID_RE = re.compile(r"^C[A-Z2-7]{55}$")
 _VALID_NETWORKS = {choice[0] for choice in TrackedContract.Network.choices}
+
+_FILTER_CONDITION_LOGICAL_OPS = {"and", "or"}
+_FILTER_CONDITION_COMPARISON_OPS = {
+    "eq",
+    "neq",
+    "gt",
+    "gte",
+    "lt",
+    "lte",
+    "contains",
+    "startswith",
+    "in",
+    "regex",
+}
+
+
+def _validate_filter_condition_node(condition, path="filter_condition"):
+    """Recursively validate a webhook filter_condition JSON AST node.
+
+    Mirrors the operators handled by ``evaluate_condition`` in tasks.py so a
+    typo'd or unsupported operator is rejected at write time instead of
+    silently evaluating to "no match" at dispatch time.
+    """
+    if not isinstance(condition, dict):
+        raise serializers.ValidationError({path: "Each condition must be an object."})
+
+    op = (condition.get("op") or "").lower()
+
+    if op == "not":
+        sub = condition.get("condition")
+        if not isinstance(sub, dict):
+            raise serializers.ValidationError(
+                {path: "'not' requires a nested 'condition' object."}
+            )
+        _validate_filter_condition_node(sub, f"{path}.condition")
+        return
+
+    if op in _FILTER_CONDITION_LOGICAL_OPS:
+        subs = condition.get("conditions")
+        if not isinstance(subs, list) or not subs:
+            raise serializers.ValidationError(
+                {path: f"'{op}' requires a non-empty 'conditions' list."}
+            )
+        for idx, sub in enumerate(subs):
+            _validate_filter_condition_node(sub, f"{path}.conditions[{idx}]")
+        return
+
+    if op not in _FILTER_CONDITION_COMPARISON_OPS:
+        raise serializers.ValidationError(
+            {path: f"Unknown operator '{condition.get('op')}'."}
+        )
+
+    if not condition.get("field"):
+        raise serializers.ValidationError(
+            {path: f"'{op}' requires a non-empty 'field'."}
+        )
+
+    if "value" not in condition:
+        raise serializers.ValidationError({path: f"'{op}' requires a 'value'."})
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
@@ -203,10 +264,26 @@ class TrackedContractSerializer(serializers.ModelSerializer):
             "event_count",
             "last_event_at",
             "warnings",
+            "is_paused",
+            "paused_at",
+            "pause_reason",
+            "resume_at",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "last_indexed_ledger", "event_count", "last_event_at", "warnings", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "last_indexed_ledger",
+            "event_count",
+            "last_event_at",
+            "warnings",
+            "is_paused",
+            "paused_at",
+            "pause_reason",
+            "resume_at",
+            "created_at",
+            "updated_at",
+        ]
 
     def get_event_count(self, obj) -> int:
         return get_event_count(obj.contract_id)
@@ -371,7 +448,8 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
             return value
         if not isinstance(value, dict):
             raise serializers.ValidationError("filter_condition must be an object.")
-
+        _validate_filter_condition_node(value)
+        return value
 
     def validate(self, attrs):
             contract = attrs.get("contract")
@@ -435,7 +513,41 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
         return value
 
 
+class WebhookDeliveryLogSerializer(serializers.ModelSerializer):
+    """
+    Read-only serializer for WebhookDeliveryLog entries.
+
+    Exposed via ``GET /api/webhooks/{id}/deliveries/`` (Issue #765).
+    """
+
+    subscription_id = serializers.IntegerField(source="subscription.id", read_only=True)
+    event_id = serializers.IntegerField(source="event.id", read_only=True, allow_null=True)
+
+    class Meta:
+        from .models import WebhookDeliveryLog
+        model = WebhookDeliveryLog
+        fields = [
+            "id",
+            "subscription_id",
+            "event_id",
+            "attempt_number",
+            "status",
+            "status_code",
+            "success",
+            "acknowledged",
+            "within_sla",
+            "latency_ms",
+            "duration_ms",
+            "payload_bytes",
+            "error",
+            "response_body",
+            "timestamp",
+        ]
+        read_only_fields = fields
+
+
 class RecordEventRequestSerializer(serializers.Serializer):
+
     """
     Serializer for incoming event recording requests.
     Used to submit a transaction to the SoroScan contract for indexing.
@@ -452,6 +564,23 @@ class RecordEventRequestSerializer(serializers.Serializer):
     payload_hash = serializers.CharField(
         max_length=64,
         help_text="SHA-256 hash of payload (hex)",
+    )
+
+
+class AddIndexerRequestSerializer(serializers.Serializer):
+    """Serializer for SC-9: authorize an indexer on the SoroScan contract."""
+
+    indexer_address = serializers.CharField(
+        max_length=56,
+        help_text="Stellar address of the indexer to authorize",
+class StructuredEventRequestSerializer(RecordEventRequestSerializer):
+    """SC-38 request payload for versioned, idempotent contract events."""
+
+    schema_version = serializers.IntegerField(min_value=1, help_text="Payload schema version")
+    correlation_id = serializers.CharField(
+        max_length=64,
+        min_length=64,
+        help_text="64-character hexadecimal id used to deduplicate retries",
     )
 
 
@@ -551,3 +680,44 @@ class ContractVerificationSerializer(serializers.ModelSerializer):
             "error_message",
         ]
         read_only_fields = ["id", "verified_at"]
+
+
+class StateChangeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StateChange
+        fields = [
+            "id",
+            "field_name",
+            "old_value",
+            "new_value",
+            "change_type",
+            "created_at",
+        ]
+
+
+class ContractSnapshotSerializer(serializers.ModelSerializer):
+    changes = StateChangeSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ContractSnapshot
+        fields = [
+            "id",
+            "ledger_sequence",
+            "state_data",
+            "captured_at",
+            "changes",
+        ]
+
+
+class EventAggregationSerializer(serializers.Serializer):
+    """
+    Read-only serializer for a single pre-computed aggregation bucket.
+    Used by ``AnalyticsViewSet`` to return event-volume time-series data.
+    """
+
+    timestamp = serializers.DateTimeField()
+    contract_id = serializers.CharField()
+    contract_name = serializers.CharField()
+    event_type = serializers.CharField(allow_blank=True)
+    event_count = serializers.IntegerField()
+    is_anomaly = serializers.BooleanField()

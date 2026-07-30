@@ -109,47 +109,71 @@ class RecordEventResponse(BaseModel):
     error: str | None = Field(None, description="Error message if failed")
 
 
-class StructuredEventRequest(RecordEventRequest):
-    """SC-38 versioned event submission payload."""
+# ── SC-9: Indexer authorization ───────────────────────────────────────────────
 
-    schema_version: int = Field(..., ge=1, description="Payload schema version")
-    correlation_id: str = Field(
-        ..., min_length=64, max_length=64, description="32-byte hexadecimal retry ID"
-    )
+class AddIndexerRequest(BaseModel):
+    """Request model for authorizing an indexer (SC-9)."""
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SC-24 – Tagged event
-# ─────────────────────────────────────────────────────────────────────────────
-
-MAX_TAGS: int = 4
-"""Maximum number of producer-defined tags per SC-24 event (mirrors contract constant)."""
+    indexer_address: str = Field(..., max_length=56, description="Indexer Stellar address")
 
 
-class TaggedEventRequest(RecordEventRequest):
-    """SC-24 event submission payload with optional producer-defined tags.
-
-    Tags are short classification strings (e.g. ``["defi", "token"]``) that
-    allow off-chain indexers to bucket events without decoding the full payload.
-    The list may be empty but must not exceed :data:`MAX_TAGS` (4) items.
-    Each tag is at most 32 characters.
-    """
-
-    tags: list[str] = Field(
-        default_factory=list,
-        max_length=MAX_TAGS,
-        description=(
-            f"Up to {MAX_TAGS} producer-defined classification tags. "
-            "Each tag must be at most 32 characters."
-        ),
-    )
-
-
-class TaggedEventResponse(BaseModel):
-    """Response from submitting an SC-24 tagged event."""
+class AddIndexerResponse(BaseModel):
+    """Response from authorizing an indexer (SC-9)."""
 
     status: str = Field(..., description="Submission status")
     tx_hash: str | None = Field(None, description="Transaction hash")
     transaction_status: str | None = Field(None, description="Transaction status")
     error: str | None = Field(None, description="Error message if failed")
-    tags: list[str] = Field(default_factory=list, description="Echo of submitted tags")
+# ── SC-15: Contract authorization queries ─────────────────────────────────────
+
+class IsIndexerResponse(BaseModel):
+    """Response for indexer authorization check (SC-15)."""
+
+    is_indexer: bool = Field(..., description="Whether the address is authorized")
+
+
+class GetAdminResponse(BaseModel):
+    """Response for contract admin query (SC-15)."""
+
+    admin_address: str | None = Field(None, description="Current admin address")
+# ── SC-17: Contract event type info ───────────────────────────────────────────
+
+class ContractEventTypeInfo(BaseModel):
+    """Event type summary for a contract (SC-17)."""
+
+    event_type: str = Field(..., description="Event type name")
+    count: int = Field(..., description="Number of events of this type")
+    first_seen: str = Field(..., description="ISO timestamp of first occurrence")
+    last_seen: str = Field(..., description="ISO timestamp of last occurrence")
+
+
+# ── SC-29: Batch event recording ──────────────────────────────────────────────
+
+class EventEntry(BaseModel):
+    """A single event entry for batch recording (SC-29)."""
+
+    contract_id: str = Field(..., max_length=56, description="Target contract address")
+    event_type: str = Field(..., max_length=100, description="Event type name")
+    payload_hash: str = Field(..., max_length=64, description="SHA-256 hash of payload (hex)")
+
+
+class RecordEventsBatchRequest(BaseModel):
+    """Request model for batch event recording (SC-29). Max 25 entries."""
+
+    events: list[EventEntry] = Field(..., min_length=1, max_length=25)
+
+
+class RecordEventsBatchResponse(BaseModel):
+    """Response from batch event recording (SC-29)."""
+
+    status: str = Field(..., description="Submission status")
+    total_events: int = Field(..., description="New total event count after batch")
+    tx_hash: str | None = Field(None, description="Transaction hash")
+    transaction_status: str | None = Field(None, description="Transaction status")
+    error: str | None = Field(None, description="Error message if failed")
+
+
+# ── SC-30: Recent contract events ──────────────────────────────────────────────
+
+MAX_RECENT_EVENTS_LIMIT = 20
+"""Maximum number of events that can be requested from ``get_contract_recent_events``."""

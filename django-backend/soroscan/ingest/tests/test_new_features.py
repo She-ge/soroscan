@@ -129,6 +129,69 @@ class EvaluateConditionTests(TestCase):
         c = {"op": "eq", "field": "missing_field", "value": "None"}
         self.assertTrue(evaluate_condition(c, {}))
 
+    def test_eq_numeric_type_mismatch(self):
+        """int/float/Decimal representations of the same number must compare equal."""
+        from decimal import Decimal
+
+        c = {"op": "eq", "field": "amount", "value": 1000}
+        self.assertTrue(evaluate_condition(c, {"amount": 1000.0}))
+        self.assertTrue(evaluate_condition(c, {"amount": Decimal("1000.00")}))
+        self.assertFalse(evaluate_condition(c, {"amount": 999}))
+
+    def test_neq_numeric_type_mismatch(self):
+        c = {"op": "neq", "field": "amount", "value": 1000}
+        self.assertFalse(evaluate_condition(c, {"amount": 1000.0}))
+        self.assertTrue(evaluate_condition(c, {"amount": 1001}))
+
+    def test_in_numeric_type_mismatch(self):
+        c = {"op": "in", "field": "amount", "value": [1000, 2000]}
+        self.assertTrue(evaluate_condition(c, {"amount": 1000.0}))
+        self.assertFalse(evaluate_condition(c, {"amount": 3000}))
+
+    def test_eq_boolean_not_coerced_to_number(self):
+        """bool is an int subclass, but True must not equal the string "1"."""
+        c = {"op": "eq", "field": "flag", "value": "1"}
+        self.assertFalse(evaluate_condition(c, {"flag": True}))
+
+    def test_evaluate_condition_performance(self):
+        """Constraint: condition evaluation must be <1ms per event (Issue #834)."""
+        import time
+
+        condition = {
+            "op": "and",
+            "conditions": [
+                {"op": "gte", "field": "decodedPayload.amount", "value": 1000},
+                {"op": "eq", "field": "event_type", "value": "transfer"},
+                {
+                    "op": "or",
+                    "conditions": [
+                        {
+                            "op": "in",
+                            "field": "decodedPayload.asset",
+                            "value": ["XLM", "USDC"],
+                        },
+                        {
+                            "op": "regex",
+                            "field": "decodedPayload.to",
+                            "value": "^G[A-Z0-9]+$",
+                        },
+                    ],
+                },
+            ],
+        }
+        event = {
+            "event_type": "transfer",
+            "decodedPayload": {"amount": 5000, "asset": "XLM", "to": "GABCDEF1234"},
+        }
+
+        iterations = 1000
+        start = time.perf_counter()
+        for _ in range(iterations):
+            evaluate_condition(condition, event)
+        elapsed_per_call = (time.perf_counter() - start) / iterations
+
+        self.assertLess(elapsed_per_call, 0.001)
+
     def test_contains_none_field(self):
         c = {"op": "contains", "field": "missing", "value": "abc"}
         self.assertFalse(evaluate_condition(c, {}))
