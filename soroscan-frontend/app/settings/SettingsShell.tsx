@@ -5,14 +5,18 @@ import AccountSettings from "./components/AccountSettings";
 import APIKeyManager from "./components/APIKeyManager";
 import BillingOverview from "./components/BillingOverview";
 import NotificationPrefs from "./components/NotificationPrefs";
+import ThemeSelector from "./components/ThemeSelector";
 import WebhookManager from "./components/WebhookManager";
+import ComplianceSettings from "./components/ComplianceSettings";
 
 const tabs = [
   { id: "account", label: "Account" },
+  { id: "theme", label: "Theme" },
   { id: "notifications", label: "Notifications" },
   { id: "apiKeys", label: "API Keys" },
   { id: "webhooks", label: "Webhooks" },
   { id: "billing", label: "Billing" },
+  { id: "compliance", label: "Compliance" },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -102,10 +106,12 @@ export default function SettingsShell() {
 
         <section className="space-y-6">
           {activeTab === "account" && <AccountSettings />}
+          {activeTab === "theme" && <ThemeSelector />}
           {activeTab === "notifications" && <NotificationPrefs />}
           {activeTab === "apiKeys" && <APIKeyManager />}
           {activeTab === "webhooks" && <WebhookManager />}
           {activeTab === "billing" && <BillingOverview />}
+          {activeTab === "compliance" && <ComplianceSettings />}
         </section>
       </div>
     </main>

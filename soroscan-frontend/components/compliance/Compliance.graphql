@@ -1,0 +1,16 @@
+mutation RequestDataGDPRExport($organizationId: String!, $format: String!) {
+  requestGDPRDataExport(organizationId: $organizationId, format: $format) {
+    requestId
+    status
+    expiresAt
+    downloadUrl
+  }
+}
+
+mutation RequestRightToBeForgotten($userId: String!, $reason: String) {
+  requestRightToBeForgotten(userId: $userId, reason: $reason) {
+    requestId
+    status
+    approvalDate
+  }
+}

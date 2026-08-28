@@ -3,21 +3,38 @@
     {
       "name": "DS_PROMETHEUS",
       "label": "Prometheus",
+      "description": "Prometheus datasource",
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
     }
   ],
+  "annotations": {
+    "list": [
+      {
+        "name": "Queue backlog",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "enable": true,
+        "expr": "soroscan_celery_queue_depth{job=~\"$job\"} > 100",
+        "iconColor": "rgba(255, 170, 0, 1)",
+        "titleFormat": "Queue backlog",
+        "textFormat": "Celery queue depth above threshold"
+      }
+    ]
+  },
   "editable": true,
+  "graphTooltip": 1,
+  "id": null,
   "panels": [
     {
       "id": 1,
       "title": "Queue Depth",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         {
-          "expr": "soroscan_celery_queue_depth",
+          "expr": "soroscan_celery_queue_depth{job=~\"$job\",instance=~\"$instance\"}",
           "legendFormat": "{{queue}}"
         }
       ]
@@ -26,10 +43,11 @@
       "id": 2,
       "title": "Active Tasks",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "sum(soroscan_celery_tasks_active) by (task_name)",
+          "expr": "sum(soroscan_celery_tasks_active{job=~\"$job\",instance=~\"$instance\"}) by (task_name)",
           "legendFormat": "{{task_name}}"
         }
       ]
@@ -38,10 +56,11 @@
       "id": 3,
       "title": "Completed and Failed Tasks",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
       "targets": [
         {
-          "expr": "sum(rate(soroscan_celery_tasks_total[5m])) by (status,task_name)",
+          "expr": "sum(rate(soroscan_celery_tasks_total{job=~\"$job\",instance=~\"$instance\"}[5m])) by (status,task_name)",
           "legendFormat": "{{status}} {{task_name}}"
         }
       ]
@@ -50,10 +69,11 @@
       "id": 4,
       "title": "Average Task Duration",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 8, "x": 12, "y": 8 },
       "targets": [
         {
-          "expr": "sum(rate(soroscan_celery_task_duration_seconds_sum[5m])) by (task_name) / clamp_min(sum(rate(soroscan_celery_task_duration_seconds_count[5m])) by (task_name), 0.001)",
+          "expr": "sum(rate(soroscan_celery_task_duration_seconds_sum{job=~\"$job\",instance=~\"$instance\"}[5m])) by (task_name) / clamp_min(sum(rate(soroscan_celery_task_duration_seconds_count{job=~\"$job\",instance=~\"$instance\"}[5m])) by (task_name), 0.001)",
           "legendFormat": "{{task_name}}"
         }
       ]
@@ -62,10 +82,11 @@
       "id": 5,
       "title": "Workers Online",
       "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 4, "x": 20, "y": 8 },
       "targets": [
         {
-          "expr": "sum(soroscan_celery_workers_online)",
+          "expr": "sum(soroscan_celery_workers_online{job=~\"$job\",instance=~\"$instance\"})",
           "legendFormat": "workers"
         }
       ]
@@ -74,8 +95,28 @@
   "refresh": "30s",
   "schemaVersion": 39,
   "tags": ["soroscan", "celery", "queue"],
+  "templating": {
+    "list": [
+      {
+        "name": "job",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "query": "label_values(soroscan_celery_queue_depth, job)",
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "query": "label_values(soroscan_celery_queue_depth{job=~\"$job\"}, instance)",
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
   "time": { "from": "now-6h", "to": "now" },
   "title": "SoroScan - Celery Task Queue",
   "uid": "soroscan-celery-queue",
-  "version": 1
+  "version": 2
 }

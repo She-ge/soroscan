@@ -1,5 +1,4 @@
 import * as React from "react"
-
 import { cn } from "@/lib/utils"
 
 export interface TabItem {
@@ -48,26 +47,23 @@ export function Tabs({ items, defaultIndex = 0, className }: TabsProps) {
         event.preventDefault()
         focusTab(items.length - 1)
         break
-      default:
-        break
     }
   }
 
   return (
     <div className={cn("w-full", className)}>
+      {/* Updated: Added overflow-x-auto, scrollbar-hide, whitespace-nowrap for mobile scrolling */}
       <div
         role="tablist"
         aria-label="Tab navigation"
-        className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-700"
+        className="flex overflow-x-auto whitespace-nowrap gap-2 border-b border-slate-200 dark:border-slate-700 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((item, index) => {
           const selected = index === activeIndex
           return (
             <button
               key={item.id}
-              ref={(element) => {
-                tabRefs.current[index] = element
-              }}
+              ref={(element) => { tabRefs.current[index] = element }}
               id={`${id}-tab-${item.id}`}
               role="tab"
               type="button"

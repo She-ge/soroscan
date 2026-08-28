@@ -1,3 +1,11 @@
 {
-    "kiroAgent.configureMCP": "Disabled"
+    "kiroAgent.configureMCP": "Disabled",
+    "python.defaultInterpreterPath": "${workspaceFolder}/django-backend/venv/bin/python",
+    "python.venvPath": "${workspaceFolder}/django-backend",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/django-backend"
+    ],
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/django-backend"
+    ]
 }

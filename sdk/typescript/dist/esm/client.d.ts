@@ -1,4 +1,4 @@
-import type { SoroScanClientConfig, SoroScanApiError, GetEventsParams, GetEventsResponse, GetContractsParams, GetContractsResponse, GetContractParams, Contract, GetTransactionsParams, GetTransactionsResponse, GetLedgersParams, GetLedgersResponse, GetAccountParams, Account, SubscribeWebhookParams, UpdateWebhookParams, Webhook, WebhookListResponse } from "./types.js";
+import type { SoroScanClientConfig, SoroScanApiError, ContractHealth, GetEventsParams, GetEventsResponse, GetContractsParams, GetContractsResponse, GetContractParams, Contract, GetTransactionsParams, GetTransactionsResponse, GetLedgersParams, GetLedgersResponse, GetAccountParams, Account, SubscribeWebhookParams, UpdateWebhookParams, Webhook, WebhookListResponse, PaginatedResponse, RecordEventsBatchParams, RecordEventsBatchResponse } from "./types.js";
 export declare class SoroScanError extends Error {
     readonly statusCode: number;
     readonly code: string;
@@ -16,6 +16,13 @@ export declare class SoroScanClient {
      * for (const event of result.items) { console.log(event.type, event.txHash); }
      */
     getEvents(params?: GetEventsParams): Promise<GetEventsResponse>;
+    /** Fetch events for several contracts with one indexed query. */
+    getEventsByContracts(params: GetEventsByContractsParams): Promise<GetEventsByContractsResponse>;
+    /**
+     * Submit an SC-38 structured event. The correlation ID makes retry handling
+     * explicit: the contract rejects a repeated ID without publishing twice.
+     */
+    recordStructuredEvent(params: RecordStructuredEventParams): Promise<RecordStructuredEventResponse>;
     /**
      * Retrieve a paginated list of deployed contracts.
      *
@@ -30,6 +37,25 @@ export declare class SoroScanClient {
      * const contract = await client.getContract({ contractId: 'CCAAA...' });
      */
     getContract(params: GetContractParams): Promise<Contract>;
+    /**
+     * Get recent events for a specific contract (SC-16).
+     *
+     * @example
+     * const events = await client.getContractEvents('CCAAA...', 20);
+     * for (const event of events) {
+     *   console.log(event.event_type, event.timestamp);
+     * }
+     */
+    getContractEvents(contractId: string, limit?: number): Promise<import("./types.js").ContractEvent[]>;
+    /**
+     * Get health status for a tracked contract (SC-16).
+     *
+     * @example
+     * const health = await client.getContractHealth('CCAAA...');
+     * console.log('Status:', health.status);
+     * console.log('Consecutive failures:', health.consecutiveFailures);
+     */
+    getContractHealth(contractId: string): Promise<ContractHealth>;
     /**
      * Retrieve a paginated list of transactions, optionally filtered by contract
      * or account.
@@ -51,6 +77,20 @@ export declare class SoroScanClient {
      * Retrieve account details including balances and contract interaction count.
      */
     getAccount(params: GetAccountParams): Promise<Account>;
+    /**
+     * Record multiple events in a single transaction (SC-29).
+     * Maximum 25 events per batch.
+     *
+     * @example
+     * const result = await client.recordEventsBatch({
+     *   events: [
+     *     { contractId: 'CCAAA...', eventType: 'transfer', payloadHash: 'abc...' },
+     *     { contractId: 'CCAAA...', eventType: 'swap', payloadHash: 'def...' },
+     *   ],
+     * });
+     * console.log('Total events:', result.totalEvents);
+     */
+    recordEventsBatch(params: RecordEventsBatchParams): Promise<RecordEventsBatchResponse>;
     /**
      * Create a new webhook subscription.
      *
@@ -79,5 +119,81 @@ export declare class SoroScanClient {
      * Delete (unsubscribe) a webhook.
      */
     deleteWebhook(webhookId: string): Promise<void>;
+}
+/**
+ * A stateful cursor-based paginator that wraps any SoroScan list method.
+ *
+ * Provides `hasNextPage()`, `nextPage()`, `previousPage()`, and `goToPage(n)`
+ * so callers never have to manage cursors manually.
+ *
+ * @example
+ * const paginator = new Paginator(
+ *   (params) => client.getEvents(params),
+ *   { contractId: 'CCAAA...', first: 20 }
+ * );
+ *
+ * // Load first page
+ * const page1 = await paginator.nextPage();
+ *
+ * if (paginator.hasNextPage()) {
+ *   const page2 = await paginator.nextPage();
+ * }
+ *
+ * // Jump to a specific page (1-indexed)
+ * const page5 = await paginator.goToPage(5);
+ *
+ * // Go back
+ * const page4 = await paginator.previousPage();
+ */
+export declare class Paginator<T, P extends {
+    first?: number;
+    after?: string;
+    before?: string;
+}> {
+    #private;
+    constructor(fetcher: (params: P) => Promise<PaginatedResponse<T>>, baseParams?: P, pageSize?: number);
+    /**
+     * Returns `true` if there is a next page available.
+     * Always `true` before the first fetch (no data loaded yet).
+     */
+    hasNextPage(): boolean;
+    /**
+     * Returns `true` if there is a previous page available.
+     */
+    hasPreviousPage(): boolean;
+    /**
+     * The 1-indexed number of the page currently loaded, or `0` if no page has
+     * been fetched yet.
+     */
+    get currentPageNumber(): number;
+    /**
+     * The most recently fetched page, or `null` before the first fetch.
+     */
+    get currentPage(): PaginatedResponse<T> | null;
+    /**
+     * Fetch the next page and return it.
+     * Throws if there is no next page.
+     */
+    nextPage(): Promise<PaginatedResponse<T>>;
+    /**
+     * Fetch the previous page and return it.
+     * Throws if already on the first page.
+     */
+    previousPage(): Promise<PaginatedResponse<T>>;
+    /**
+     * Jump to a specific 1-indexed page number.
+     *
+     * Pages already visited are reached via the cached cursor history.
+     * Pages beyond the current furthest-fetched page are fetched sequentially
+     * until the target is reached.
+     *
+     * @param pageNumber - 1-indexed target page (must be ≥ 1)
+     */
+    goToPage(pageNumber: number): Promise<PaginatedResponse<T>>;
+    /**
+     * Reset the paginator back to its initial state.
+     * The next call to `nextPage()` will fetch page 1 again.
+     */
+    reset(): void;
 }
 //# sourceMappingURL=client.d.ts.map

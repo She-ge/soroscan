@@ -2,6 +2,7 @@ import time
 import pytest
 from unittest.mock import patch, MagicMock
 from django.conf import settings
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -22,6 +23,14 @@ def mock_soroban_rpc_healthy():
     mock_response.json.return_value = {"result": {"status": "healthy"}}
     with patch("soroscan.health.requests.post", return_value=mock_response) as mock_post:
         yield mock_post
+
+@pytest.fixture
+def mock_redis_healthy():
+    """Stub out the Redis PING so tests don't need a live Redis."""
+    mock_redis = MagicMock()
+    mock_redis.ping.return_value = True
+    with patch("soroscan.health.redis_lib.Redis.from_url", return_value=mock_redis):
+        yield mock_redis
 
 @pytest.mark.django_db
 class TestHealthView:
@@ -59,9 +68,10 @@ class TestHealthView:
 
 @pytest.mark.django_db
 class TestReadinessView:
-    def test_ready_when_db_and_cache_connected(self, api_client, mock_soroban_rpc_healthy):
-        url = reverse("readiness")
-        response = api_client.get(url)
+    def test_ready_when_db_and_cache_connected(self, api_client, mock_soroban_rpc_healthy, mock_redis_healthy):
+        with override_settings(REDIS_URL="redis://localhost:6379/0"):
+            url = reverse("readiness")
+            response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "healthy"
@@ -80,17 +90,52 @@ class TestReadinessView:
         assert "database" in response.data["components"]
         assert response["X-SoroScan-Version"] == settings.SOFTWARE_VERSION
 
-    def test_not_ready_when_cache_fails(self, api_client, monkeypatch, mock_soroban_rpc_healthy):
-        from django.core.cache import cache
-        monkeypatch.setattr(cache, "get", lambda *args, **kwargs: (_ for _ in ()).throw(Exception("Redis fail")))
+    def test_not_ready_when_redis_connection_fails(self, api_client, monkeypatch, mock_soroban_rpc_healthy):
+        import redis as redis_lib
 
-        url = reverse("readiness")
-        response = api_client.get(url)
+        def failing_from_url(*args, **kwargs):
+            mock_redis = MagicMock()
+            mock_redis.ping.side_effect = redis_lib.ConnectionError("Redis connection refused")
+            return mock_redis
+
+        monkeypatch.setattr(redis_lib.Redis, "from_url", failing_from_url)
+
+        with override_settings(REDIS_URL="redis://localhost:6379/0"):
+            url = reverse("readiness")
+            response = api_client.get(url)
 
         assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
         assert response.data["status"] == "degraded"
         assert "redis" in response.data["components"]
+        assert "connection refused" in response.data["components"]["redis"]
         assert response["X-SoroScan-Version"] == settings.SOFTWARE_VERSION
+
+    def test_not_ready_when_redis_timeout(self, api_client, monkeypatch, mock_soroban_rpc_healthy):
+        import redis as redis_lib
+
+        def timeout_from_url(*args, **kwargs):
+            mock_redis = MagicMock()
+            mock_redis.ping.side_effect = redis_lib.TimeoutError("Redis timeout")
+            return mock_redis
+
+        monkeypatch.setattr(redis_lib.Redis, "from_url", timeout_from_url)
+
+        with override_settings(REDIS_URL="redis://localhost:6379/0"):
+            url = reverse("readiness")
+            response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        assert response.data["status"] == "degraded"
+        assert "redis" in response.data["components"]
+        assert "timeout" in response.data["components"]["redis"]
+
+    def test_ready_when_redis_ping_succeeds(self, api_client, mock_soroban_rpc_healthy, mock_redis_healthy):
+        with override_settings(REDIS_URL="redis://localhost:6379/0"):
+            url = reverse("readiness")
+            response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["components"]["redis"] == "healthy"
 
 
 @pytest.mark.django_db

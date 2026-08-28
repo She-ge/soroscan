@@ -2,12 +2,12 @@ name: Django Backend CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - 'django-backend/**'
       - '.github/workflows/django.yml'
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - 'django-backend/**'
       - '.github/workflows/django.yml'

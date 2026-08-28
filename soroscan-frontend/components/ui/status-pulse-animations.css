@@ -1,0 +1,348 @@
+/**
+ * Status Pulse Dot Animation Specifications
+ * ──────────────────────────────────────────────────────────────────────────────
+ * Comprehensive animation definitions for contract health status indicators.
+ * 
+ * Animation Types:
+ * - Healthy: Gentle breathing pulse (active/operational)
+ * - Degraded: Warning pulse with intensity variations (attention needed)
+ * - Paused: Static state (no animation)
+ * - Error: Static state (no animation to avoid distraction from critical issue)
+ * 
+ * Features:
+ * - Respects prefers-reduced-motion accessibility setting
+ * - GPU-accelerated transforms for smooth performance
+ * - Consistent timing with SoroScan terminal theme
+ * - Multiple intensity levels for different contexts
+ */
+
+/* ── Base Animation Keyframes ──────────────────────────────────────────── */
+
+/**
+ * Healthy Status: Gentle Breathing Pulse
+ * Smooth, calming animation indicating normal operations
+ */
+@keyframes status-pulse-healthy {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+}
+
+/**
+ * Degraded Status: Warning Pulse 
+ * More pronounced pulsing with slight scaling to draw attention
+ */
+@keyframes status-pulse-degraded {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 170, 0, 0.7);
+  }
+  25% {
+    opacity: 0.8;
+    transform: scale(1.05);
+    box-shadow: 0 0 0 2px rgba(255, 170, 0, 0.4);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.9);
+    box-shadow: 0 0 0 4px rgba(255, 170, 0, 0.1);
+  }
+  75% {
+    opacity: 0.8;
+    transform: scale(1.05);
+    box-shadow: 0 0 0 2px rgba(255, 170, 0, 0.4);
+  }
+}
+
+/**
+ * Processing/Loading: Continuous smooth pulse
+ * For temporary states like indexing or syncing
+ */
+@keyframes status-pulse-processing {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/**
+ * Heartbeat Animation: Double-pulse pattern
+ * For high-priority or critical attention states
+ */
+@keyframes status-pulse-heartbeat {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  14% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+  28% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  42% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/**
+ * Glow Ring Animation: Expanding ring effect
+ * For status changes or notifications
+ */
+@keyframes status-glow-ring {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 1;
+  }
+  70% {
+    box-shadow: 0 0 0 6px transparent;
+    opacity: 0;
+  }
+  100% {
+    box-shadow: 0 0 0 6px transparent;
+    opacity: 0;
+  }
+}
+
+/* ── Animation Class Definitions ───────────────────────────────────────── */
+
+/**
+ * Healthy Status Animation Classes
+ */
+.status-pulse-healthy {
+  animation: status-pulse-healthy 2s ease-in-out infinite;
+}
+
+.status-pulse-healthy-subtle {
+  animation: status-pulse-healthy 3s ease-in-out infinite;
+}
+
+.status-pulse-healthy-fast {
+  animation: status-pulse-healthy 1.5s ease-in-out infinite;
+}
+
+/**
+ * Degraded Status Animation Classes  
+ */
+.status-pulse-degraded {
+  animation: status-pulse-degraded 1.8s ease-in-out infinite;
+}
+
+.status-pulse-degraded-urgent {
+  animation: status-pulse-degraded 1.2s ease-in-out infinite;
+}
+
+.status-pulse-degraded-subtle {
+  animation: status-pulse-degraded 2.5s ease-in-out infinite;
+}
+
+/**
+ * Processing State Animation Classes
+ */
+.status-pulse-processing {
+  animation: status-pulse-processing 1.5s ease-in-out infinite;
+}
+
+.status-pulse-processing-slow {
+  animation: status-pulse-processing 2.2s ease-in-out infinite;
+}
+
+/**
+ * Special Effect Animation Classes
+ */
+.status-pulse-heartbeat {
+  animation: status-pulse-heartbeat 2.5s ease-in-out infinite;
+}
+
+.status-glow-ring {
+  position: relative;
+}
+
+.status-glow-ring::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transform: translate(-50%, -50%);
+  animation: status-glow-ring 2s ease-out infinite;
+  border: 1px solid currentColor;
+  pointer-events: none;
+}
+
+/* ── Size-Specific Scaling Adjustments ──────────────────────────────────── */
+
+/**
+ * Small dots (w-1.5 h-1.5) - Reduced animation intensity
+ */
+.status-dot-sm .status-pulse-healthy,
+.status-dot-sm .status-pulse-degraded {
+  animation-duration: 2.5s;
+}
+
+.status-dot-sm .status-pulse-degraded {
+  transform-origin: center;
+}
+
+/**
+ * Large dots (w-2.5 h-2.5) - Enhanced animation visibility
+ */
+.status-dot-lg .status-pulse-healthy {
+  animation-duration: 1.8s;
+}
+
+.status-dot-lg .status-pulse-degraded {
+  animation-duration: 1.5s;
+}
+
+/* ── Context-Specific Animation Variants ─────────────────────────────────── */
+
+/**
+ * Contract List Context - Subtle animations to avoid overwhelming UI
+ */
+.contract-list-item .status-pulse-healthy {
+  animation: status-pulse-healthy 3s ease-in-out infinite;
+}
+
+.contract-list-item .status-pulse-degraded {
+  animation: status-pulse-degraded 2.2s ease-in-out infinite;
+}
+
+/**
+ * Dashboard Context - More prominent animations for monitoring
+ */
+.dashboard-widget .status-pulse-healthy {
+  animation: status-pulse-healthy 1.8s ease-in-out infinite;
+}
+
+.dashboard-widget .status-pulse-degraded {
+  animation: status-pulse-degraded 1.5s ease-in-out infinite;
+}
+
+/**
+ * Detail View Context - Enhanced animations for focused attention
+ */
+.contract-detail .status-pulse-healthy {
+  animation: status-pulse-healthy 2s ease-in-out infinite;
+}
+
+.contract-detail .status-pulse-degraded {
+  animation: status-pulse-degraded 1.6s ease-in-out infinite;
+}
+
+.contract-detail .status-glow-ring::before {
+  animation-duration: 1.8s;
+}
+
+/* ── Performance Optimizations ───────────────────────────────────────────── */
+
+/**
+ * GPU Acceleration for smooth animations
+ */
+.status-pulse-healthy,
+.status-pulse-degraded,
+.status-pulse-processing,
+.status-pulse-heartbeat {
+  will-change: transform, opacity;
+  transform: translateZ(0); /* Force GPU layer */
+}
+
+/**
+ * Pause animations when element is not visible (intersection observer can be used)
+ */
+.status-dot[data-visible="false"] {
+  animation-play-state: paused;
+}
+
+/* ── Accessibility: Reduced Motion Support ──────────────────────────────── */
+
+/**
+ * Respect user preference for reduced motion
+ * Replace animations with subtle static indicators
+ */
+@media (prefers-reduced-motion: reduce) {
+  .status-pulse-healthy,
+  .status-pulse-degraded,
+  .status-pulse-processing,
+  .status-pulse-heartbeat {
+    animation: none;
+  }
+  
+  .status-glow-ring::before {
+    animation: none;
+    opacity: 0;
+  }
+  
+  /* Provide alternative visual cues for reduced motion */
+  .status-pulse-healthy {
+    opacity: 1;
+    transform: scale(1);
+  }
+  
+  .status-pulse-degraded {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 1px rgba(255, 170, 0, 0.5);
+  }
+  
+  .status-pulse-processing {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+
+/* ── High Contrast Mode Support ──────────────────────────────────────────── */
+
+@media (prefers-contrast: high) {
+  .status-pulse-degraded {
+    box-shadow: 0 0 0 2px currentColor;
+  }
+  
+  .status-glow-ring::before {
+    border-width: 2px;
+  }
+}
+
+/* ── Animation State Classes for Dynamic Control ─────────────────────────── */
+
+/**
+ * Programmatically controllable animation states
+ */
+.status-animation-paused {
+  animation-play-state: paused;
+}
+
+.status-animation-running {
+  animation-play-state: running;
+}
+
+.status-animation-delayed {
+  animation-delay: 0.5s;
+}
+
+.status-animation-fast {
+  animation-duration: 1s;
+}
+
+.status-animation-slow {
+  animation-duration: 4s;
+}

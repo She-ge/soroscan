@@ -93,6 +93,23 @@ const result = await client.getEvents({
 | `first` / `last` | `number` | Page size (max 200) |
 | `after` / `before` | `string` | Cursor for pagination |
 
+#### `client.getEventsByContracts(params)` (SC-23)
+
+Fetch a single, ledger-ordered page of events across up to ten Soroban contracts.
+
+```ts
+const events = await client.getEventsByContracts({
+  contractIds: ["CCAAA...", "CCBBB..."],
+  eventType: "transfer",
+  startLedger: 1_000_000,
+  pageSize: 100,
+});
+
+for (const event of events.results) {
+  console.log(event.contractId, event.type, event.ledger);
+}
+```
+
 ---
 
 ### Contracts

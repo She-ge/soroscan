@@ -57,3 +57,55 @@ spec:
           annotations:
             summary: "Celery task failure rate exceeds 5%"
             root_cause_query: 'topk(5, sum(rate(soroscan_celery_tasks_total{status="failure"}[10m])) by (task_name,error_type))'
+    - name: soroscan.incident-playbooks
+      rules:
+        - alert: SoroScanEventIngestionLag
+          expr: |
+            (time() - soroscan_contract_last_event_timestamp_seconds) > 900
+          for: 5m
+          labels:
+            severity: critical
+            service: soroscan-ingest
+            playbook: event_ingestion_lag
+          annotations:
+            summary: "Event ingestion lag exceeds 15 minutes"
+            description: "Contract {{ $labels.contract_id }} has not received events within the lag threshold."
+            runbook_url: "https://github.com/SoroScan/soroscan/blob/main/docs/deployment/playbooks/event-ingestion-lag.md"
+        - alert: SoroScanWebhookFailureBurst
+          expr: |
+            sum(rate(soroscan_webhook_deliveries_total{status=~"failed|dead_letter"}[10m])) by (subscription_id)
+              > 0.5
+          for: 5m
+          labels:
+            severity: critical
+            service: soroscan-webhooks
+            playbook: webhook_delivery_failure_burst
+          annotations:
+            summary: "Webhook delivery failure burst detected"
+            description: "Subscription {{ $labels.subscription_id }} is failing deliveries rapidly."
+            runbook_url: "https://github.com/SoroScan/soroscan/blob/main/docs/deployment/playbooks/webhook-delivery-failure-burst.md"
+        - alert: SoroScanDbPoolExhausted
+          expr: |
+            100 * soroscan_db_pool_connections{state="total"}
+              / clamp_min(soroscan_db_pool_configured_limit, 1) > 90
+          for: 2m
+          labels:
+            severity: critical
+            service: soroscan-backend
+            playbook: database_connection_pool_exhausted
+          annotations:
+            summary: "Database connection pool utilization exceeds 90%"
+            description: "Pool usage is critically high; check /api/meta/db-pool/."
+            runbook_url: "https://github.com/SoroScan/soroscan/blob/main/docs/deployment/playbooks/database-connection-pool-exhausted.md"
+        - alert: SoroScanRpcEndpointUnavailable
+          expr: |
+            sum(rate(soroscan_ingest_errors_total{error_type="rpc_error"}[10m])) > 0.1
+          for: 5m
+          labels:
+            severity: critical
+            service: soroscan-ingest
+            playbook: rpc_endpoint_unavailable
+          annotations:
+            summary: "Soroban RPC endpoint unavailable or erroring"
+            description: "RPC errors are elevated; failover or pause ingest may be required."
+            runbook_url: "https://github.com/SoroScan/soroscan/blob/main/docs/deployment/playbooks/rpc-endpoint-unavailable.md"

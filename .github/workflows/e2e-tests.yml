@@ -2,13 +2,13 @@ name: E2E Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "e2e-tests/**"
       - "django-backend/soroscan/ingest/tests/test_e2e_workflows.py"
       - ".github/workflows/e2e-tests.yml"
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "e2e-tests/**"
       - "django-backend/soroscan/ingest/tests/test_e2e_workflows.py"

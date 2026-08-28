@@ -1,0 +1,128 @@
+query MyOrganizations {
+  myOrganizations {
+    id
+    name
+    billingContact
+    dataRegion
+    createdAt
+    contractCount
+    webhookLimit
+  }
+}
+
+query OrganizationDetails($id: String!) {
+  organization(id: $id) {
+    id
+    name
+    billingContact
+    dataRegion
+    createdAt
+    contractCount
+    webhookLimit
+  }
+}
+
+query TeamMembers($organizationId: String!) {
+  teamMembers(organizationId: $organizationId) {
+    id
+    email
+    role
+    joinedAt
+    lastActiveAt
+  }
+}
+
+query TeamInvitations($organizationId: String!) {
+  teamInvitations(organizationId: $organizationId) {
+    id
+    email
+    role
+    invitedAt
+    expiresAt
+    status
+  }
+}
+
+query OrganizationActivity($organizationId: String!) {
+  organizationActivity(organizationId: $organizationId) {
+    id
+    action
+    actorEmail
+    targetEmail
+    detail
+    timestamp
+  }
+}
+
+mutation CreateOrganization($input: CreateOrganizationInput!) {
+  createOrganization(input: $input) {
+    id
+    name
+    billingContact
+    dataRegion
+    createdAt
+    contractCount
+    webhookLimit
+  }
+}
+
+mutation UpdateOrganization($id: String!, $input: UpdateOrganizationInput!) {
+  updateOrganization(id: $id, input: $input) {
+    id
+    name
+    billingContact
+    dataRegion
+    createdAt
+    contractCount
+    webhookLimit
+  }
+}
+
+mutation InviteTeamMember($organizationId: String!, $email: String!, $role: OrgRole!) {
+  inviteTeamMember(organizationId: $organizationId, email: $email, role: $role) {
+    success
+    invitationId
+    message
+  }
+}
+
+mutation UpdateTeamMemberRole($organizationId: String!, $memberId: String!, $role: OrgRole!) {
+  updateTeamMemberRole(organizationId: $organizationId, memberId: $memberId, role: $role) {
+    id
+    email
+    role
+    joinedAt
+    lastActiveAt
+  }
+}
+
+mutation RemoveTeamMember($organizationId: String!, $memberId: String!) {
+  removeTeamMember(organizationId: $organizationId, memberId: $memberId)
+}
+
+mutation ResendInvitation($organizationId: String!, $invitationId: String!) {
+  resendInvitation(organizationId: $organizationId, invitationId: $invitationId) {
+    id
+    email
+    role
+    invitedAt
+    expiresAt
+    status
+  }
+}
+
+mutation CancelInvitation($organizationId: String!, $invitationId: String!) {
+  cancelInvitation(organizationId: $organizationId, invitationId: $invitationId)
+}
+
+mutation SwitchOrganization($organizationId: String!) {
+  switchOrganization(organizationId: $organizationId) {
+    id
+    name
+    billingContact
+    dataRegion
+    createdAt
+    contractCount
+    webhookLimit
+  }
+}

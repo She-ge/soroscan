@@ -13,6 +13,7 @@ __all__ = [
     "events_ingested_total",
     "task_duration_seconds",
     "active_contracts_gauge",
+    "current_ingestion_rate_gauge",
     # detailed pipeline metrics
     "ingest_errors_total",
     "events_skipped_total",
@@ -112,6 +113,13 @@ ingest_errors_total = _get_or_create(
     "soroscan_ingest_errors_total",
     "Total number of unhandled exceptions inside ingest tasks",
     ["task_name", "error_type"],
+)
+
+current_ingestion_rate_gauge = _get_or_create(
+    Gauge,
+    "soroscan_current_event_ingestion_rate_events_per_sec",
+    "Current event ingestion rate in events per second",
+    ["network"],
 )
 
 events_skipped_total = _get_or_create(

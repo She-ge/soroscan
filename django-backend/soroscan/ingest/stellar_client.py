@@ -3,12 +3,13 @@ Stellar/Soroban client for interacting with the SoroScan contract.
 """
 import logging
 import time
+import requests  # noqa: F401
 from dataclasses import dataclass
 from threading import Lock
 from typing import Any, Optional
 
 from django.conf import settings
-from stellar_sdk import Keypair, TransactionBuilder
+from stellar_sdk import Keypair, TransactionBuilder, scval
 from stellar_sdk.soroban_server import SorobanServer
 
 from soroscan.circuit_breaker import execute_with_circuit_breaker
@@ -21,6 +22,7 @@ from stellar_sdk.xdr import (
     SCAddressType,
     Hash,
 )
+import stellar_sdk.xdr as stellar_xdr
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +144,146 @@ class SorobanClient:
             bytes=SCBytes(data),
         )
 
+    def _get_admin_keypair(self) -> Optional[Keypair]:
+        admin_secret = getattr(settings, "ADMIN_SECRET_KEY", "") or self.secret_key
+        if not admin_secret:
+            return None
+        return Keypair.from_secret(admin_secret)
+
+    def _submit_contract_transaction(
+        self,
+        function_name: str,
+        parameters: list[SCVal],
+        signer: Keypair,
+    ) -> TransactionResult:
+        """Simulate, prepare, and submit a Soroban contract write transaction."""
+        try:
+            account = self.server.load_account(signer.public_key)
+            tx_builder = TransactionBuilder(
+                source_account=account,
+                network_passphrase=self.network_passphrase,
+                base_fee=100000,
+            )
+            tx_builder.append_invoke_contract_function_op(
+                contract_id=self.contract_id,
+                function_name=function_name,
+                parameters=parameters,
+            )
+            tx = tx_builder.set_timeout(30).build()
+            simulate_response = self.server.simulate_transaction(tx)
+
+            if simulate_response.error:
+                return TransactionResult(
+                    success=False,
+                    tx_hash="",
+                    status="simulation_failed",
+                    error=simulate_response.error,
+                )
+
+            prepared_tx = self.server.prepare_transaction(tx, simulate_response)
+            prepared_tx.sign(signer)
+            send_response = self.server.send_transaction(prepared_tx)
+
+            logger.info(
+                "Contract transaction submitted: %s (%s)",
+                send_response.hash,
+                function_name,
+            )
+
+            return TransactionResult(
+                success=send_response.status == "PENDING",
+                tx_hash=send_response.hash,
+                status=send_response.status,
+                result_xdr=getattr(send_response, "result_xdr", None),
+            )
+        except Exception as exc:
+            logger.exception("Failed to submit contract transaction: %s", function_name)
+            return TransactionResult(
+                success=False,
+                tx_hash="",
+                status="error",
+                error=str(exc),
+            )
+
+    def _simulate_contract_read(
+        self,
+        function_name: str,
+        parameters: list[SCVal],
+    ) -> tuple[bool, Any]:
+        """Simulate a read-only contract call and decode the return value."""
+        if not self.keypair:
+            return False, "No keypair configured for simulation"
+
+        try:
+            account = self.server.load_account(self.keypair.public_key)
+            tx_builder = TransactionBuilder(
+                source_account=account,
+                network_passphrase=self.network_passphrase,
+                base_fee=100,
+            )
+            tx_builder.append_invoke_contract_function_op(
+                contract_id=self.contract_id,
+                function_name=function_name,
+                parameters=parameters,
+            )
+            tx = tx_builder.set_timeout(30).build()
+            simulate_response = self.server.simulate_transaction(tx)
+
+            if simulate_response.error:
+                return False, simulate_response.error
+
+            results = getattr(simulate_response, "results", None) or []
+            if not results:
+                return False, "No simulation result returned"
+
+            result_xdr = getattr(results[0], "xdr", None)
+            if not result_xdr:
+                return False, "Missing result XDR"
+
+            sc_val_obj = stellar_xdr.SCVal.from_xdr(result_xdr)
+            return True, scval.to_native(sc_val_obj)
+        except Exception as exc:
+            logger.exception("Failed to simulate contract read: %s", function_name)
+            return False, str(exc)
+
+    def add_indexer(self, indexer_address: str) -> TransactionResult:
+        """
+        Submit an add_indexer transaction to the SoroScan contract (SC-9).
+
+        The configured admin keypair must sign the transaction.
+        """
+        admin_keypair = self._get_admin_keypair()
+        if not admin_keypair:
+            return TransactionResult(
+                success=False,
+                tx_hash="",
+                status="error",
+                error="No admin keypair configured",
+            )
+
+        return self._submit_contract_transaction(
+            function_name="add_indexer",
+            parameters=[
+                self._address_to_sc_val(admin_keypair.public_key),
+                self._address_to_sc_val(indexer_address),
+            ],
+            signer=admin_keypair,
+        )
+
+    def is_indexer(self, indexer_address: str) -> tuple[bool, Any]:
+        """Query whether an address is an authorized indexer (SC-15)."""
+        return self._simulate_contract_read(
+            function_name="is_indexer",
+            parameters=[self._address_to_sc_val(indexer_address)],
+        )
+
+    def get_admin(self) -> tuple[bool, Any]:
+        """Query the current contract admin address (SC-15)."""
+        return self._simulate_contract_read(
+            function_name="get_admin",
+            parameters=[],
+        )
+
     def record_event(
         self,
         target_contract_id: str,
@@ -238,6 +380,61 @@ class SorobanClient:
                 status="error",
                 error=str(e),
             )
+
+    def record_structured_event(
+        self,
+        target_contract_id: str,
+        event_type: str,
+        payload_hash_hex: str,
+        schema_version: int,
+        correlation_id_hex: str,
+    ) -> TransactionResult:
+        """Submit the SC-38 versioned and correlation-safe event invocation."""
+        if not self.keypair:
+            return TransactionResult(False, "", "error", error="No keypair configured")
+
+        try:
+            payload_hash = bytes.fromhex(payload_hash_hex)
+            correlation_id = bytes.fromhex(correlation_id_hex)
+            if len(payload_hash) != 32 or len(correlation_id) != 32:
+                raise ValueError("Payload hash and correlation ID must be 32 bytes")
+            account = self.server.load_account(self.keypair.public_key)
+            tx = (
+                TransactionBuilder(
+                    source_account=account,
+                    network_passphrase=self.network_passphrase,
+                    base_fee=100000,
+                )
+                .append_invoke_contract_function_op(
+                    contract_id=self.contract_id,
+                    function_name="record_structured_event",
+                    parameters=[
+                        self._address_to_sc_val(self.keypair.public_key),
+                        self._address_to_sc_val(target_contract_id),
+                        self._symbol_to_sc_val(event_type),
+                        self._bytes_to_sc_val(payload_hash),
+                        SCVal(type=SCValType.SCV_U32, u32=schema_version),
+                        self._bytes_to_sc_val(correlation_id),
+                    ],
+                )
+                .set_timeout(30)
+                .build()
+            )
+            simulation = self.server.simulate_transaction(tx)
+            if simulation.error:
+                return TransactionResult(False, "", "simulation_failed", error=simulation.error)
+            prepared = self.server.prepare_transaction(tx, simulation)
+            prepared.sign(self.keypair)
+            response = self.server.send_transaction(prepared)
+            return TransactionResult(
+                success=response.status == "PENDING",
+                tx_hash=response.hash,
+                status=response.status,
+                result_xdr=getattr(response, "result_xdr", None),
+            )
+        except Exception as e:
+            logger.exception("Failed to record SC-38 structured event")
+            return TransactionResult(False, "", "error", error=str(e))
 
     def get_total_events(self) -> Optional[int]:
         """
@@ -484,3 +681,182 @@ class SorobanClient:
                 error=str(e),
             )
 
+    def get_contract_state(
+        self,
+        contract_id: str,
+        ledger: Optional[int] = None,
+    ) -> dict[str, Any]:
+        """
+        Fetch contract persistent storage entries from Soroban RPC.
+
+        Returns a JSON-serializable dict keyed by entry identifiers. When the
+        RPC method is unavailable or fails, returns a minimal payload so callers
+        can still persist a snapshot marker.
+        """
+        payload: dict[str, Any] = {
+            "contract_id": contract_id,
+            "ledger": ledger,
+            "entries": {},
+        }
+
+        get_entries = getattr(self.server, "get_ledger_entries", None)
+        if get_entries is None:
+            logger.warning("SorobanServer.get_ledger_entries is unavailable")
+            return payload
+
+        try:
+            self._rate_limiter.acquire()
+            response = execute_with_circuit_breaker(
+                "soroban_rpc",
+                get_entries,
+                keys=[{"contractData": {"contract": contract_id, "key": "AAAA"}}],
+            )
+        except Exception:
+            logger.exception("Failed to fetch contract state for %s", contract_id)
+            return payload
+
+        entries = getattr(response, "entries", None) or getattr(response, "result", None) or []
+        serialized: dict[str, Any] = {}
+        for index, entry in enumerate(entries):
+            key = getattr(entry, "key", None) or getattr(entry, "contractData", None)
+            val = getattr(entry, "val", None) or getattr(entry, "value", None)
+            serialized[str(key or index)] = self._serialize_ledger_entry_value(val)
+
+        payload["entries"] = serialized
+        latest_ledger = getattr(response, "latestLedger", None)
+        if latest_ledger is not None:
+            payload["ledger"] = latest_ledger
+        return payload
+
+    @staticmethod
+    def _serialize_ledger_entry_value(value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, (str, int, float, bool, list, dict)):
+            return value
+        if hasattr(value, "to_dict"):
+            return value.to_dict()
+        if hasattr(value, "xdr"):
+            return {"xdr": value.xdr}
+        return str(value)
+
+    # ------------------------------------------------------------------
+    # Fee / resource extraction
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def extract_fee_data(tx_response: Any) -> dict[str, int]:
+        """
+        Extract Soroban fee and resource usage from a ``get_transaction`` response.
+
+        The Stellar RPC returns ``fee_charged`` (total fee in stroops) on the
+        top-level response object.  Detailed resource breakdown (CPU instructions,
+        memory, read/write bytes) lives inside the ``result_meta_xdr`` (or
+        ``resultMetaXdr``) SorobanTransactionMeta v3 structure.
+
+        This helper is intentionally defensive: it tries several attribute and
+        dict key variants produced by different stellar-sdk versions and falls
+        back gracefully to zeros.  The values it returns are always non-negative
+        integers measured in stroops (fees) or raw units (resources).
+
+        Returns a dict with keys:
+          total_fee_stroops, inclusion_fee_stroops, resource_fee_stroops,
+          cpu_instructions_used, memory_bytes_used,
+          read_bytes_used, write_bytes_used
+        """
+        result: dict[str, int] = {
+            "total_fee_stroops": 0,
+            "inclusion_fee_stroops": 0,
+            "resource_fee_stroops": 0,
+            "cpu_instructions_used": 0,
+            "memory_bytes_used": 0,
+            "read_bytes_used": 0,
+            "write_bytes_used": 0,
+        }
+
+        if tx_response is None:
+            return result
+
+        # ── Total fee ──────────────────────────────────────────────────
+        for attr in ("fee_charged", "feeCharged", "fee"):
+            val = _get_attr_or_key(tx_response, attr)
+            if val is not None:
+                try:
+                    result["total_fee_stroops"] = int(val)
+                except (TypeError, ValueError):
+                    pass
+                break
+
+        # ── Try to parse Soroban resource stats from result_meta_xdr ──
+        # stellar_sdk >= 8 exposes a typed `result_meta` with `.soroban_meta`
+        # Older versions expose raw XDR strings.
+        # We attempt the typed path first, then fall back.
+        try:
+            result_meta = (
+                _get_attr_or_key(tx_response, "result_meta")
+                or _get_attr_or_key(tx_response, "resultMeta")
+            )
+            if result_meta is not None:
+                soroban_meta = (
+                    _get_attr_or_key(result_meta, "soroban_meta")
+                    or _get_attr_or_key(result_meta, "sorobanMeta")
+                )
+                if soroban_meta is not None:
+                    resources = (
+                        _get_attr_or_key(soroban_meta, "resources")
+                        or _get_attr_or_key(soroban_meta, "v3")
+                    )
+                    if resources is not None:
+                        _set_int(result, "cpu_instructions_used", resources,
+                                 ("cpu_insns", "cpuInsns", "instructions", "cpuInstructions"))
+                        _set_int(result, "memory_bytes_used", resources,
+                                 ("mem_bytes", "memBytes", "memory", "memoryBytes"))
+                        _set_int(result, "read_bytes_used", resources,
+                                 ("read_bytes", "readBytes", "netReadBytes", "net_read_bytes"))
+                        _set_int(result, "write_bytes_used", resources,
+                                 ("write_bytes", "writeBytes", "netWriteBytes", "net_write_bytes"))
+
+                    # Resource fee is sometimes a sibling field on soroban_meta
+                    _set_int(result, "resource_fee_stroops", soroban_meta,
+                             ("resource_fee_refund", "resourceFeeRefund",
+                              "resource_fee", "resourceFee"))
+
+        except Exception:
+            # Any parse error → keep zeros; don't crash the ingest loop
+            pass
+
+        # Derive inclusion fee as the difference
+        result["inclusion_fee_stroops"] = max(
+            0, result["total_fee_stroops"] - result["resource_fee_stroops"]
+        )
+
+        return result
+
+
+# ---------------------------------------------------------------------------
+# Module-level helpers used by SorobanClient.extract_fee_data
+# ---------------------------------------------------------------------------
+
+def _get_attr_or_key(obj: Any, name: str) -> Any:
+    """Try attribute access then dict-key access; return None if neither works."""
+    val = getattr(obj, name, None)
+    if val is None and isinstance(obj, dict):
+        val = obj.get(name)
+    return val
+
+
+def _set_int(
+    result: dict[str, int],
+    key: str,
+    source: Any,
+    attr_names: tuple[str, ...],
+) -> None:
+    """Write the first non-None int found in *source* under any of *attr_names* to *result[key]*."""
+    for name in attr_names:
+        val = _get_attr_or_key(source, name)
+        if val is not None:
+            try:
+                result[key] = int(val)
+                return
+            except (TypeError, ValueError):
+                pass

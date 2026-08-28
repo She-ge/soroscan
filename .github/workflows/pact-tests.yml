@@ -2,14 +2,14 @@ name: Pact Contract Tests
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev]
     paths:
       - "pacts/**"
       - "sdk/**"
       - "django-backend/**"
       - ".github/workflows/pact-tests.yml"
   pull_request:
-    branches: [main, develop]
+    branches: [main, dev]
     paths:
       - "pacts/**"
       - "sdk/**"
@@ -31,7 +31,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: sdk/typescript
-        run: npm ci
+        run: npm ci --workspaces=false
 
       - name: Run Pact consumer tests
         working-directory: sdk/typescript

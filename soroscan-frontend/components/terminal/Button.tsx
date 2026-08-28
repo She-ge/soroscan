@@ -15,10 +15,10 @@ const buttonVariants = cva(
           "bg-transparent border-terminal border-terminal-danger text-terminal-danger hover:shadow-glow-danger hover:bg-terminal-danger/10",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 px-3",
-        lg: "h-11 px-8",
-        icon: "h-10 w-10",
+        default: "min-h-[44px] h-11 px-4 py-2 sm:min-h-0 sm:h-10",
+        sm: "min-h-[44px] h-11 px-3 sm:min-h-0 sm:h-9",
+        lg: "min-h-[44px] h-12 px-8 sm:min-h-0 sm:h-11",
+        icon: "min-h-[44px] min-w-[44px] h-11 w-11 sm:min-h-0 sm:min-w-0 sm:h-10 sm:w-10",
       },
     },
     defaultVariants: {

@@ -62,6 +62,12 @@ soroscan/
 
 ---
 
+## Environment Configuration
+
+See [ENVIRONMENT.md](docs/ENVIRONMENT.md) for the complete list of required and optional environment variables, their types and defaults, and development, testing, and production examples.
+
+---
+
 ## 🚀 Quick Start
 
 Get SoroScan running locally in under 5 minutes with Docker Compose.
@@ -93,6 +99,25 @@ docker-compose up --build
 That's it! The stack auto-runs migrations on startup and supports live code reloading.
 
 **Port Conflicts?** Edit `django-backend/.env` and uncomment the port override variables.
+
+### Local Webhook Simulator
+
+Test a webhook receiver without the Django backend, Celery, Redis, or PostgreSQL. The simulator in `tools/webhook-simulator/` sends the same JSON envelope and HMAC headers as production deliveries.
+
+```bash
+cd tools/webhook-simulator
+pip install -e .
+webhook-simulator --url http://127.0.0.1:8080/webhook --sample --secret test-secret
+```
+
+Docker:
+
+```bash
+docker compose -f tools/webhook-simulator/docker-compose.yml run --rm webhook-simulator \
+  --url http://host.docker.internal:8080/webhook --sample --secret test-secret
+```
+
+See [tools/webhook-simulator/README.md](tools/webhook-simulator/README.md) and the [webhooks cookbook](docs/cookbook/webhooks.md).
 
 ### Manual Setup (Advanced)
 
@@ -344,7 +369,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## 📚 Additional Documentation
 
-- [CELERY.md](CELERY.md) — Celery worker queues, concurrency settings, and deployment examples
+- [CELERY.md](docs/cookbook/CELERY.md) — Celery worker queues, concurrency settings, and deployment examples
 - [Architecture Overview](docs/architecture/README.md) — end-to-end system design, data flows, component interaction, and deployment architecture
 - [Architecture Decision Records](docs/architecture/adr.md) — rationale for core technology and design choices
-- [DATABASE_TUNING.md](DATABASE_TUNING.md) — Recommended configuration settings for high-volume write workloads and indexing optimizations.
+- [DATABASE_TUNING.md](docs/database/DATABASE_TUNING.md) — Recommended configuration settings for high-volume write workloads and indexing optimizations.

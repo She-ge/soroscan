@@ -200,7 +200,7 @@ class ApiDeprecationMiddleware:
             if path.strip("/") == norm_request_path:
                 response["Deprecation"] = "true"
                 response["Sunset"] = config.get("sunset", "")
-                response["Link"] = f'<{config.get("replacement", "")}>; rel="replacement"'
+                response["Link"] = f'<{config.get("replacement", "")}>; rel="alternate"'
                 break
         return response
 
@@ -270,6 +270,8 @@ class CacheBustingMiddleware:
                 response["Cache-Control"] = "no-cache, no-store, must-revalidate"
                 response["Pragma"] = "no-cache"
             else:
-                response["Cache-Control"] = "private, max-age=0"
+                existing = response.get("Cache-Control", "")
+                if "max-age" not in existing:
+                    response["Cache-Control"] = "private, max-age=0"
 
         return response

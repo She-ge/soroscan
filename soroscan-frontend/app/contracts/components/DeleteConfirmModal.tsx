@@ -32,6 +32,7 @@ export function DeleteConfirmModal({
         <div className="flex gap-3 pt-4">
           <Button
             variant="danger"
+            data-testid="confirm-delete-btn"
             onClick={onConfirm}
             disabled={isDeleting}
             className="flex-1"

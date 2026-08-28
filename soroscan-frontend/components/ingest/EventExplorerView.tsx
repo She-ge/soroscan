@@ -209,6 +209,7 @@ export function EventExplorerView({ contractId }: { contractId: string }) {
             <button
               type="button"
               className={styles.btn}
+              data-testid="export-btn"
               onClick={() => setIsExportOpen(true)}
               disabled={isContractMissing}
             >
@@ -225,6 +226,7 @@ export function EventExplorerView({ contractId }: { contractId: string }) {
                 <span>Event Type</span>
                 <select
                   id="event-type-select"
+                  data-testid="event-type-filter"
                   className={styles.fieldInput}
                   value={pendingType}
                   onChange={(event) => setPendingType(event.target.value)}
@@ -262,12 +264,18 @@ export function EventExplorerView({ contractId }: { contractId: string }) {
             </div>
 
             <div className={styles.row}>
-              <button type="button" className={styles.btn} onClick={applyFilters}>
+              <button
+                type="button"
+                className={styles.btn}
+                data-testid="apply-filters"
+                onClick={applyFilters}
+              >
                 Apply Filters
               </button>
               <button
                 type="button"
                 className={`${styles.btn} ${styles.secondaryBtn}`}
+                data-testid="clear-filters"
                 onClick={clearFilters}
               >
                 Clear Filters
@@ -290,7 +298,7 @@ export function EventExplorerView({ contractId }: { contractId: string }) {
           </div>
 
           <div className={styles.tableWrap}>
-            <table className={styles.eventTable}>
+            <table className={styles.eventTable} data-testid="events-table">
               <caption className={styles.srOnly}>
                 Contract events for {contractName}
               </caption>

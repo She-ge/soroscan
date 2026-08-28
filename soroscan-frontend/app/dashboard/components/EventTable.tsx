@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { InputHTMLAttributes, KeyboardEvent } from "react";
+import { Search, Inbox } from "lucide-react";
+import { EmptyState, EmptyStateIcon } from "@/components/ui/empty-state";
+import { EventTableSkeleton } from "@/components/ui/skeletons";
 import { formatDateTime, shortHash } from "@/components/ingest/formatters";
 import type { EventRecord } from "@/components/ingest/types";
 import styles from "@/components/ingest/ingest-terminal.module.css";
@@ -44,7 +47,6 @@ export function EventTable({
   const allSelected =
     events.length > 0 && events.every((event) => selectedIds.has(event.id));
   const someSelected = events.some((event) => selectedIds.has(event.id));
-  const colCount = (showTags ? 7 : 6) + 1;
 
   const copyToClipboard = async (text: string, id: string) => {
     try {
@@ -167,97 +169,7 @@ export function EventTable({
   );
 
   if (loading) {
-    return (
-      <div className={styles.tableWrap}>
-        <table className={styles.eventTable}>
-          <thead>
-            <tr>
-              <th
-                className={toolbarStyles.checkboxCell}
-                aria-label="Select rows"
-              >
-                <input
-                  type="checkbox"
-                  disabled
-                  aria-label="Select all loading events"
-                />
-              </th>
-              <th>Contract</th>
-              <th>Type</th>
-              <th>Ledger</th>
-              <th>Time</th>
-              <th>Transaction</th>
-              {showTags && <th>Tags</th>}
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...Array(5)].map((_, index) => (
-              <tr key={`skeleton-${index}`}>
-                <td className={toolbarStyles.checkboxCell}>
-                  <div
-                    className={styles.skeleton}
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      borderRadius: "3px",
-                    }}
-                  />
-                </td>
-                <td data-label="Contract">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "120px", height: "20px" }}
-                  />
-                </td>
-                <td data-label="Type">
-                  <div
-                    className={styles.skeleton}
-                    style={{
-                      width: "80px",
-                      height: "24px",
-                      borderRadius: "12px",
-                    }}
-                  />
-                </td>
-                <td data-label="Ledger">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "60px", height: "24px" }}
-                  />
-                </td>
-                <td data-label="Time">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "140px", height: "20px" }}
-                  />
-                </td>
-                <td data-label="Tx">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "100px", height: "20px" }}
-                  />
-                </td>
-                {showTags && (
-                  <td data-label="Tags">
-                    <div
-                      className={styles.skeleton}
-                      style={{ width: "120px", height: "24px" }}
-                    />
-                  </td>
-                )}
-                <td data-label="Actions">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "50px", height: "28px" }}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
+    return <EventTableSkeleton showTags={showTags} />;
   }
 
   if (!events.length) {
@@ -265,50 +177,36 @@ export function EventTable({
       <div className={styles.tableWrap}>
         <div className={styles.emptyTable}>
           {hasActiveFilters ? (
-            <div
-              style={{
-                padding: "3rem 1rem",
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "1rem",
-              }}
-            >
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: "1.25rem",
-                  color: "var(--text-primary)",
-                }}
-              >
-                No events match your criteria
-              </h3>
-              <p
-                style={{
-                  margin: 0,
-                  color: "var(--text-secondary)",
-                  maxWidth: "400px",
-                  lineHeight: 1.5,
-                }}
-              >
-                We couldn&apos;t find any events matching your current search
-                and filter settings. Try adjusting them or clear all filters to
-                see more results.
-              </p>
-              {onClearFilters && (
-                <button
-                  type="button"
-                  className={styles.btn}
-                  style={{ marginTop: "1rem" }}
-                  onClick={onClearFilters}
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
+            <EmptyState
+              variant="terminal"
+              icon={
+                <EmptyStateIcon>
+                  <Search className="h-8 w-8 text-terminal-gray" />
+                </EmptyStateIcon>
+              }
+              title="No events match your criteria"
+              description="We couldn't find any events matching your current search and filter settings. Try adjusting them or clear all filters to see more results."
+              action={
+                onClearFilters
+                  ? {
+                      label: "Clear Filters",
+                      onClick: onClearFilters,
+                      terminalVariant: "secondary",
+                    }
+                  : undefined
+              }
+            />
           ) : (
-            "No events found. Select a contract and adjust filters to view events."
+            <EmptyState
+              variant="terminal"
+              icon={
+                <EmptyStateIcon>
+                  <Inbox className="h-8 w-8 text-terminal-gray" />
+                </EmptyStateIcon>
+              }
+              title="No events found"
+              description="Select a contract and adjust filters to view events."
+            />
           )}
         </div>
       </div>
@@ -393,7 +291,7 @@ export function EventTable({
             text-align: right;
           }
 
-          @media (max-width: 768px) {
+          @media (max-width: 639px) {
             .soroscan-events-table {
               display: none;
             }
@@ -402,6 +300,28 @@ export function EventTable({
               display: grid;
               grid-template-columns: 1fr;
               gap: 0.9rem;
+            }
+          }
+
+          @media (min-width: 640px) and (max-width: 1023px) {
+            .soroscan-events-table {
+              display: none;
+            }
+
+            .soroscan-events-card-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 0.9rem;
+            }
+          }
+
+          @media (min-width: 1024px) {
+            .soroscan-events-table {
+              display: table;
+            }
+
+            .soroscan-events-card-grid {
+              display: none;
             }
           }
         `}

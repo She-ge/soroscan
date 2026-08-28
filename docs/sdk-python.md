@@ -8,6 +8,22 @@ The **SoroScan Python SDK** is the official library for integrating SoroScan int
 pip install soroscan-sdk
 ```
 
+This also installs the `soroscan` CLI for querying events, webhooks, and contracts locally.
+
+## CLI
+
+```bash
+export SOROSCAN_API_KEY="your-api-key"
+export SOROSCAN_BASE_URL="https://api.soroscan.io"
+
+soroscan events --contract ABC123 --event-type transfer --limit 10
+soroscan webhooks list
+soroscan webhooks test 1
+soroscan contracts list --output json
+```
+
+Use `--output table` (default) or `--output json`. Point `--base-url` at a local SoroScan instance when developing against a self-hosted stack.
+
 ## Basic Usage
 
 ### Synchronous Client
@@ -44,8 +60,23 @@ async def main():
 
 asyncio.run(main())
 ```
+### Tagged Events (SC-24)
+
+SoroScan supports recording and indexing events with up to 4 producer-defined tags. This allows off-chain indexers to categorize and filter events efficiently:
+
+```python
+# Submit a tagged event
+response = client.record_tagged_event(
+    contract_id="CCAAA...",
+    event_type="transfer",
+    payload_hash="a" * 64,
+    tags=["defi", "token"]
+)
+print(f"Status: {response.status} | Echoed Tags: {response.tags}")
+```
 
 ## Features
+
 
 - **Type Safety**: Built with Pydantic v2 for robust data validation.
 - **Full Coverage**: 100% endpoint coverage for Contracts, Events, and Webhooks.

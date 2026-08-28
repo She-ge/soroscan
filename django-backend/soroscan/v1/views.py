@@ -60,7 +60,16 @@ def _contract_to_sdk(contract: TrackedContract) -> dict:
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def list_events(request):
-    """GET /v1/events — cursor-style list for the TypeScript SDK."""
+    """
+    List contract events in the cursor-based shape expected by the TypeScript SDK.
+
+    Query params:
+    - first (int) - Maximum items to return, capped at 200 (default 20)
+    - contractId (string) - Filter by Soroban contract ID
+    - eventType (string) - Filter by event type label
+
+    - 200: Paginated event list with pageInfo cursors
+    """
     try:
         first = min(int(request.query_params.get("first", 20)), 200)
     except (TypeError, ValueError):
@@ -97,7 +106,12 @@ def list_events(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def get_contract(request, contract_id: str):
-    """GET /v1/contracts/{contract_id} — single contract for the TypeScript SDK."""
+    """
+    Retrieve a single tracked contract for the TypeScript SDK.
+
+    - 200: Contract metadata and activity summary
+    - 404: Contract not found
+    """
     try:
         contract = TrackedContract.objects.get(contract_id=contract_id)
     except TrackedContract.DoesNotExist:

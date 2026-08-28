@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom"
 import { ContractForm } from "../app/contracts/[id]/components/ContractForm"
@@ -32,7 +32,7 @@ describe("Description character count", () => {
   })
 
   it("applies warning styling when the count is near limit", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <ContractForm
         contract={mockContract}
@@ -44,7 +44,8 @@ describe("Description character count", () => {
     const textarea = screen.getByPlaceholderText("Optional description...")
     const longText = "x".repeat(230)
 
-    await user.type(textarea, longText)
+    await user.click(textarea)
+    await user.paste(longText)
 
     const counter = screen.getByText("230/256")
     expect(counter).toHaveClass("text-terminal-danger")

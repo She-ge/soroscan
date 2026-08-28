@@ -55,4 +55,8 @@ ignore:
   - "soroscan-frontend/app/layout.tsx"
   - "soroban-contracts/**"
   - "chaos-tests/**"
+  - "tests/chaos/**"
+  - "tests/failover/**"
+  - "testing/**"
+  - "load-tests/**"
   - "docs/**"
