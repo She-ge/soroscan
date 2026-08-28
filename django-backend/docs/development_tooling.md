@@ -35,6 +35,23 @@ Clear all seeded data before re-seeding:
 python manage.py seed_database --clear
 ```
 
+Reset (clear + re-seed) in one step:
+```bash
+python manage.py seed_database --clear
+python manage.py seed_database
+# or via Makefile:
+make reset-db
+```
+
+### Makefile shortcuts
+
+```bash
+make seed           # Seed with default fixture
+make seed-minimal   # Seed with minimal scenario
+make seed-webhook   # Seed with webhook-focused scenario
+make reset-db       # Clear seeded data and re-seed
+```
+
 ### Fixture Format (`fixtures/development.json`)
 
 ```json

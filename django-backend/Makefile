@@ -12,6 +12,7 @@ API_DOCS_JSON   := $(DOCS_DIR)/api_reference.json
 .PHONY: help install migrate run test lint format \
         docs docs-json docs-watch \
         celery celery-beat \
+        seed reset-db \
         clean
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -34,6 +35,11 @@ help:
 	@echo ""
 	@echo "  celery         Start Celery worker"
 	@echo "  celery-beat    Start Celery beat scheduler"
+	@echo ""
+	@echo "  seed           Seed the database with development fixture data"
+	@echo "  seed-minimal   Seed with minimal scenario (single org, 3 contracts)"
+	@echo "  seed-webhook   Seed with webhook-focused scenario"
+	@echo "  reset-db       Clear seeded data and re-seed from fixture"
 	@echo ""
 	@echo "  clean          Remove __pycache__ and .pyc files"
 	@echo ""
@@ -108,6 +114,22 @@ celery:
 
 celery-beat:
 	celery -A soroscan beat --loglevel=info
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Database seeding
+# ──────────────────────────────────────────────────────────────────────────────
+seed:
+	$(MANAGE) seed_database
+
+seed-minimal:
+	$(MANAGE) seed_database --scenario=minimal
+
+seed-webhook:
+	$(MANAGE) seed_database --scenario=webhook
+
+reset-db:
+	$(MANAGE) seed_database --clear
+	$(MANAGE) seed_database
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Cleanup

@@ -138,7 +138,7 @@ class Command(BaseCommand):
                 "team_memberships": [],
                 "contracts": [
                     {
-                        "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2KZ",
+                        "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
                         "name": "Token Contract",
                         "alias": "Simple Token",
                         "description": "Basic token contract",
@@ -150,7 +150,7 @@ class Command(BaseCommand):
                         "event_filter_list": [],
                     },
                     {
-                        "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBZ2KZ",
+                        "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
                         "name": "Exchange",
                         "alias": "Mini DEX",
                         "description": "Simple exchange",
@@ -162,7 +162,7 @@ class Command(BaseCommand):
                         "event_filter_list": [],
                     },
                     {
-                        "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCZ2KZ",
+                        "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
                         "name": "Governor",
                         "alias": "Voting",
                         "description": "Governance contract",
@@ -181,10 +181,10 @@ class Command(BaseCommand):
                 "api_keys": [],
             }
         if scenario == "webhook":
-            base = self._get_scenario("default")
+            base = self._get_scenario("minimal")
             base["webhooks"] = [
                 {
-                    "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2KZ",
+                    "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
                     "event_type": "swap",
                     "target_url": "https://httpbin.org/post",
                     "timeout_seconds": 5,
@@ -193,9 +193,18 @@ class Command(BaseCommand):
                     "signature_algorithm": "sha256",
                 },
                 {
-                    "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBZ2KZ",
+                    "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
                     "event_type": "",
-                    "target_url": "https://httpbin.org/post",
+                    "target_url": "https://httpbin.org/post2",
+                    "timeout_seconds": 10,
+                    "retry_backoff_strategy": "fixed",
+                    "retry_backoff_seconds": 60,
+                    "signature_algorithm": "sha256",
+                },
+                {
+                    "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+                    "event_type": "",
+                    "target_url": "https://httpbin.org/post3",
                     "timeout_seconds": 10,
                     "retry_backoff_strategy": "fixed",
                     "retry_backoff_seconds": 60,
@@ -204,7 +213,8 @@ class Command(BaseCommand):
             ]
             base["webhook_delivery_logs"] = {"per_webhook": 8, "status_codes": [200, 200, 201, 500, 408, 200, 500, 200]}
             return base
-        return self._get_scenario("default")
+        # Unknown scenario falls back to minimal
+        return self._get_scenario("minimal")
 
     def _clear_seeded_data(self):
         self.stdout.write("Clearing seeded data...")
@@ -394,9 +404,11 @@ class Command(BaseCommand):
             if not contract:
                 continue
             base_time = _now() - timedelta(days=days_back)
+            # Use a unique ledger per event to avoid the (contract, ledger, event_index) unique constraint
+            base_ledger = 100000 + random.randint(0, 10000)
             for i in range(per_contract):
                 event_type = random.choice(event_types)
-                ledger = 100000 + i + random.randint(0, 5000)
+                ledger = base_ledger + i
                 timestamp = base_time + timedelta(
                     minutes=random.randint(0, days_back * 24 * 60)
                 )
@@ -413,7 +425,7 @@ class Command(BaseCommand):
                         validation_status="passed",
                         payload=payload,
                         ledger=ledger,
-                        event_index=i % 5,
+                        event_index=0,
                         timestamp=timestamp,
                         tx_hash=_random_hex(64),
                         raw_xdr="",
@@ -430,14 +442,16 @@ class Command(BaseCommand):
             if not contract:
                 continue
             try:
-                WebhookSubscription.objects.create(
+                WebhookSubscription.objects.get_or_create(
                     contract=contract,
-                    event_type=wd.get("event_type", ""),
                     target_url=wd["target_url"],
-                    timeout_seconds=wd.get("timeout_seconds", 10),
-                    retry_backoff_strategy=wd.get("retry_backoff_strategy", "exponential"),
-                    retry_backoff_seconds=wd.get("retry_backoff_seconds", 60),
-                    signature_algorithm=wd.get("signature_algorithm", "sha256"),
+                    defaults={
+                        "event_type": wd.get("event_type", ""),
+                        "timeout_seconds": wd.get("timeout_seconds", 10),
+                        "retry_backoff_strategy": wd.get("retry_backoff_strategy", "exponential"),
+                        "retry_backoff_seconds": wd.get("retry_backoff_seconds", 60),
+                        "signature_algorithm": wd.get("signature_algorithm", "sha256"),
+                    },
                 )
             except Exception:
                 pass

@@ -81,7 +81,7 @@
     ],
     "contracts": [
         {
-            "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2KZ",
+            "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
             "name": "Stablecoin Swap",
             "alias": "",
             "description": "Automated market maker for stablecoin pairs",
@@ -99,7 +99,7 @@
             "event_filter_list": []
         },
         {
-            "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBZ2KZ",
+            "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
             "name": "Lending Protocol",
             "alias": "Acme Lending",
             "description": "Overcollateralized lending and borrowing",
@@ -119,7 +119,7 @@
             "event_filter_list": ["deposit", "withdraw", "borrow", "repay", "liquidate"]
         },
         {
-            "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCZ2KZ",
+            "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
             "name": "NFT Collection",
             "alias": "Beta NFTs",
             "description": "NFT minting and marketplace contract",
@@ -137,7 +137,7 @@
             "event_filter_list": []
         },
         {
-            "contract_id": "CDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDZ2KZ",
+            "contract_id": "CDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
             "name": "Bridge Contract",
             "alias": "",
             "description": "Cross-chain asset bridge",
@@ -149,7 +149,7 @@
             "event_filter_list": ["dust_event"]
         },
         {
-            "contract_id": "CEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEZ2KZ",
+            "contract_id": "CEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
             "name": "Governance Token",
             "alias": "GOV Token",
             "description": "Protocol governance token with voting",
@@ -169,13 +169,13 @@
     ],
     "events": {
         "per_contract": 20,
-        "contracts": ["CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2KZ", "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBZ2KZ"],
+        "contracts": ["CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"],
         "event_types": ["swap", "deposit", "withdraw", "borrow", "liquidity_added"],
         "days_back": 14
     },
     "webhooks": [
         {
-            "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2KZ",
+            "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
             "event_type": "swap",
             "target_url": "https://example.com/webhook/swaps",
             "timeout_seconds": 10,
@@ -184,7 +184,7 @@
             "signature_algorithm": "sha256"
         },
         {
-            "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBZ2KZ",
+            "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
             "event_type": "liquidation",
             "target_url": "https://example.com/webhook/liquidations",
             "timeout_seconds": 15,
@@ -193,7 +193,7 @@
             "signature_algorithm": "sha256"
         },
         {
-            "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCZ2KZ",
+            "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
             "event_type": "",
             "target_url": "https://example.com/webhook/nft-events",
             "timeout_seconds": 10,
@@ -208,7 +208,7 @@
     },
     "alert_rules": [
         {
-            "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBZ2KZ",
+            "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
             "name": "High Liquidation Alert",
             "condition": {"op": "gt", "field": "amount", "value": 100000},
             "channels": [{"type": "slack", "target": "https://hooks.slack.com/services/TEST"}],
@@ -216,7 +216,7 @@
             "action_target": "https://example.com/alerts/liquidations"
         },
         {
-            "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2KZ",
+            "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
             "name": "Large Swap Alert",
             "condition": {"op": "gt", "field": "amount_in", "value": 50000},
             "channels": [],
