@@ -92,6 +92,9 @@ DATABASES = {
     }
 }
 
+# PostgreSQL statement timeout in milliseconds (issue #1007).
+DATABASE_STATEMENT_TIMEOUT = 5000
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = []
 
@@ -139,11 +142,7 @@ REST_FRAMEWORK = {
         "user": "10000/hour",
         "ingest": "100/hour",
         "graphql": "500/hour",
-        "webhook_replay": "1000/hour",
-        "contract_bulk_import": "1000/hour",
-        "dedup_test": "1000/hour",
-        "events_search": "1000/hour",
-        "contract_stats": "1000/hour",
+        "unauthenticated_ip": "30/minute",
     },
 }
 
@@ -261,4 +260,4 @@ ALERT_DEDUP_WINDOW_SECONDS = 300
 WEBHOOK_MAX_RETRIES = 5
 INDEXER_SECRET_KEY = ""
 SENTRY_DSN = ""
-LOG_FORMAT = ""
+LOG_FORMAT = ""

@@ -187,3 +187,27 @@ class ContractsListCachingTest(TestCase):
         self.assertEqual(response2.status_code, 200)
         # Contract should still appear in cached response
         self.assertGreater(len(response2.data.get("results", [])), 0)
+
+    def test_contracts_list_cache_control_header(self):
+        """Verify @cache_page sets max-age Cache-Control header (issue #1011)."""
+        TrackedContractFactory(owner=self.user)
+
+        response = self.client.get("/api/ingest/contracts/")
+        self.assertEqual(response.status_code, 200)
+        cache_control = response.get("Cache-Control", "")
+        self.assertIn("max-age=", cache_control)
+
+    def test_contracts_list_invalidation_refreshes_cache(self):
+        """Creating a contract via API should invalidate the cached list."""
+        response1 = self.client.get("/api/ingest/contracts/")
+        self.assertEqual(response1.data["count"], 0)
+
+        # Create a contract via the API (triggers cache invalidation)
+        self.client.post(
+            "/api/ingest/contracts/",
+            {"contract_id": TrackedContractFactory.build().contract_id, "name": "Test"},
+            format="json",
+        )
+
+        response2 = self.client.get("/api/ingest/contracts/")
+        self.assertEqual(response2.data["count"], 1)

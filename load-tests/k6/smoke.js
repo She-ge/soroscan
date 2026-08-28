@@ -2,10 +2,14 @@
  * SoroScan k6 smoke load test.
  *
  * Lightweight CI-friendly probe of core unauthenticated endpoints.
+ * Refuses production targets unless ALLOW_PRODUCTION_LOAD=true.
  */
 import http from "k6/http";
 import { check, sleep } from "k6";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.0.2/index.js";
+import { assertSafeTarget } from "./lib/safety.js";
+
+const BASE_URL = __ENV.BASE_URL || "http://127.0.0.1:8000";
 
 export const options = {
   vus: Number(__ENV.K6_VUS || 5),
@@ -16,7 +20,10 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || "http://127.0.0.1:8000";
+export function setup() {
+  assertSafeTarget(BASE_URL);
+  return { baseUrl: BASE_URL };
+}
 
 export default function () {
   const health = http.get(`${BASE_URL}/api/ingest/health/`, {

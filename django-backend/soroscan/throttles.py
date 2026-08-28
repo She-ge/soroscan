@@ -4,9 +4,10 @@ Custom throttle classes for SoroScan API rate limiting.
 import logging
 import time
 
+from django.conf import settings
 from django.core.cache import cache
 from rest_framework.settings import api_settings
-from rest_framework.throttling import BaseThrottle, SimpleRateThrottle, ScopedRateThrottle
+from rest_framework.throttling import AnonRateThrottle, BaseThrottle, SimpleRateThrottle, ScopedRateThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -217,3 +218,36 @@ class DynamicEndpointThrottle(ScopedRateThrottle):
         # Call SimpleRateThrottle.allow_request directly to skip
         # ScopedRateThrottle.allow_request, which would overwrite self.scope.
         return SimpleRateThrottle.allow_request(self, request, view)
+
+
+class UnauthenticatedIPRateThrottle(SimpleRateThrottle):
+    """
+    IP-based rate limiter for unauthenticated REST endpoints.
+
+    Only applies to requests that have NOT been authenticated (anonymous users).
+    Authenticated requests bypass this throttle entirely, allowing the
+    per-user or per-API-key throttles to govern their rate.
+
+    The throttle scope defaults to ``unauthenticated_ip`` and can be
+    overridden per-view via ``throttle_scope``.
+
+    Configuration (in settings.py ``REST_FRAMEWORK.DEFAULT_THROTTLE_RATES``)::
+
+        "unauthenticated_ip": "30/minute",   # default for unauthenticated endpoints
+
+    Or per-endpoint via ``ENDPOINT_RATE_LIMIT_UNAUTHENTICATED_IP`` env var.
+    """
+
+    scope = "unauthenticated_ip"
+
+    def get_cache_key(self, request, view):
+        if request.user and request.user.is_authenticated:
+            return None  # skip — let per-user / per-key throttles govern
+        ident = self.get_ident(request)
+        return self.cache_format % {"scope": self.scope, "ident": ident}
+
+    def allow_request(self, request, view):
+        # Authenticated users are never throttled by this class
+        if request.user and request.user.is_authenticated:
+            return True
+        return super().allow_request(request, view)

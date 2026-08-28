@@ -27,6 +27,7 @@ from soroscan.ingest.views import (
     all_contracts_health_view,
     webhook_batch_delivery_status_view,
     webhook_delivery_metrics_view,
+    schema_versions_view,
 )
 from soroscan.ingest.schema import schema
 from soroscan.dev_summary_view import dev_summary_view
@@ -57,6 +58,7 @@ urlpatterns = [
     path("api/analytics/rate-limits/", rate_limit_analytics_view, name="rate-limit-analytics"),
     path("api/analytics/contracts/health/", all_contracts_health_view, name="all-contracts-health"),
     path("api/meta/db-pool/", db_pool_stats_view, name="db-pool-stats"),
+    path("api/schema/versions/", schema_versions_view, name="schema-versions"),
     path("api/dev/summary/", dev_summary_view, name="dev-summary"),
     path("api/admin/db/explain/", db_explain_view, name="admin-db-explain"),
     path("api/cache/stats/", cache_stats_view, name="cache-stats"),

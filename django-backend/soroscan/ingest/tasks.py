@@ -4633,9 +4633,66 @@ def send_health_alert(self, contract_id: str, status: str, error_message: str) -
     return "sent"
 
 
-@shared_task(bind=True, max_retries=0)
-def run_webhook_replay_job(self, job_id: int) -> dict[str, Any]:
-    """Celery entrypoint for webhook replay jobs (issue #1329)."""
-    from soroscan.ingest.services.webhook_replay import run_replay_job
+# ---------------------------------------------------------------------------
+# Dead Letter Queue replay (issue #1311)
+# ---------------------------------------------------------------------------
 
-    return run_replay_job(job_id)
+
+@shared_task(
+    name="ingest.tasks.replay_dead_letter",
+    bind=True,
+    max_retries=2,
+    soft_time_limit=30,
+)
+def replay_dead_letter(self, dead_letter_id: int) -> dict[str, Any]:
+    """
+    Re-dispatch a webhook delivery from a dead-letter entry.
+
+    Loads the WebhookDeadLetter record, verifies the subscription is active,
+    and dispatches the original event. On success the DLQ entry is marked resolved.
+    """
+    try:
+        dlq = WebhookDeadLetter.objects.select_related("subscription", "event").get(
+            id=dead_letter_id
+        )
+    except WebhookDeadLetter.DoesNotExist:
+        logger.warning("DLQ entry %s not found — skipping replay", dead_letter_id)
+        return {"status": "skipped", "reason": "not_found"}
+
+    if dlq.resolved:
+        return {"status": "skipped", "reason": "already_resolved"}
+
+    if dlq.event is None:
+        dlq.resolved = True
+        dlq.resolution_note = "Auto-resolved: original event no longer exists"
+        dlq.save(update_fields=["resolved", "resolution_note"])
+        return {"status": "skipped", "reason": "event_missing"}
+
+    subscription = dlq.subscription
+    if not subscription.is_active:
+        # Re-activate the subscription so dispatch_webhook can proceed
+        WebhookSubscription.objects.filter(pk=subscription.pk).update(
+            is_active=True,
+            status=WebhookSubscription.STATUS_ACTIVE,
+            failure_count=0,
+        )
+        subscription.refresh_from_db()
+
+    dispatch_webhook.delay(subscription.id, dlq.event.id, replay=True)
+
+    dlq.resolved = True
+    dlq.resolution_note = f"Replayed by task at {timezone.now().isoformat()}"
+    dlq.save(update_fields=["resolved", "resolution_note"])
+
+    _get_metrics().webhook_dead_letter_depth.set(
+        WebhookDeadLetter.objects.filter(resolved=False).count()
+    )
+
+    logger.info(
+        "DLQ entry %s replayed for subscription=%s event=%s",
+        dead_letter_id,
+        subscription.id,
+        dlq.event.id,
+        extra={"dlq_id": dead_letter_id, "webhook_id": subscription.id, "event_id": dlq.event.id},
+    )
+    return {"status": "replayed", "dlq_id": dead_letter_id}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { InputHTMLAttributes, KeyboardEvent } from "react";
 import { Search, Inbox } from "lucide-react";
 import { EmptyState, EmptyStateIcon } from "@/components/ui/empty-state";
+import { EventTableSkeleton } from "@/components/ui/skeletons";
 import { formatDateTime, shortHash } from "@/components/ingest/formatters";
 import type { EventRecord } from "@/components/ingest/types";
 import styles from "@/components/ingest/ingest-terminal.module.css";
@@ -168,97 +169,7 @@ export function EventTable({
   );
 
   if (loading) {
-    return (
-      <div className={styles.tableWrap}>
-        <table className={styles.eventTable}>
-          <thead>
-            <tr>
-              <th
-                className={toolbarStyles.checkboxCell}
-                aria-label="Select rows"
-              >
-                <input
-                  type="checkbox"
-                  disabled
-                  aria-label="Select all loading events"
-                />
-              </th>
-              <th>Contract</th>
-              <th>Type</th>
-              <th>Ledger</th>
-              <th>Time</th>
-              <th>Transaction</th>
-              {showTags && <th>Tags</th>}
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...Array(5)].map((_, index) => (
-              <tr key={`skeleton-${index}`}>
-                <td className={toolbarStyles.checkboxCell}>
-                  <div
-                    className={styles.skeleton}
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      borderRadius: "3px",
-                    }}
-                  />
-                </td>
-                <td data-label="Contract">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "120px", height: "20px" }}
-                  />
-                </td>
-                <td data-label="Type">
-                  <div
-                    className={styles.skeleton}
-                    style={{
-                      width: "80px",
-                      height: "24px",
-                      borderRadius: "12px",
-                    }}
-                  />
-                </td>
-                <td data-label="Ledger">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "60px", height: "24px" }}
-                  />
-                </td>
-                <td data-label="Time">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "140px", height: "20px" }}
-                  />
-                </td>
-                <td data-label="Tx">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "100px", height: "20px" }}
-                  />
-                </td>
-                {showTags && (
-                  <td data-label="Tags">
-                    <div
-                      className={styles.skeleton}
-                      style={{ width: "120px", height: "24px" }}
-                    />
-                  </td>
-                )}
-                <td data-label="Actions">
-                  <div
-                    className={styles.skeleton}
-                    style={{ width: "50px", height: "28px" }}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
+    return <EventTableSkeleton showTags={showTags} />;
   }
 
   if (!events.length) {

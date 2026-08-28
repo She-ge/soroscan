@@ -1,7 +1,9 @@
-"""Opt-in failover validation harness for SoroScan dependency health probes.
+"""Automated failover validation and live recovery harness.
 
-The runner validates scenarios by default. It executes live recovery probes only
-when SOROSCAN_FAILOVER_RUN=1 is set, making it safe for CI validation.
+Dry-run (default) only validates scenario definitions. Live execution requires
+both ``--execute`` and ``SOROSCAN_FAILOVER_RUN=1``. When a scenario declares an
+injector, the runner actually takes the dependency down, waits for the
+readiness probe to degrade, restores the dependency, then waits for recovery.
 """
 
 from __future__ import annotations
@@ -10,15 +12,29 @@ import argparse
 import json
 import os
 import sys
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import urlopen
+from urllib.error import URLError
 
 import yaml
 
+
+def _repo_root() -> Path:
+    here = Path(__file__).resolve().parent
+    for candidate in [here, *here.parents]:
+        if (candidate / "django-backend" / "manage.py").is_file():
+            return candidate
+    raise RuntimeError("Could not locate the SoroScan repository root")
+
+
+REPO_ROOT = _repo_root()
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from testing.reliability.health import probe_url, wait_for_http_status
+from testing.reliability.inject import FailureInjector, InjectionError
+from testing.reliability.safety import SafetyError, assert_safe_failover_environment
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_SCENARIOS = ROOT / "scenarios.yaml"
@@ -37,6 +53,7 @@ class Scenario:
     failure: dict[str, Any]
     probes: dict[str, Any]
     recovery: dict[str, Any]
+    injector: dict[str, Any] | None = None
 
 
 class FailoverError(RuntimeError):
@@ -53,6 +70,7 @@ def load_scenarios(path: Path = DEFAULT_SCENARIOS) -> list[Scenario]:
             failure=raw["failure"],
             probes=raw["probes"],
             recovery=raw["recovery"],
+            injector=raw.get("injector"),
         )
         validate_scenario(scenario)
         scenarios.append(scenario)
@@ -69,56 +87,34 @@ def validate_scenario(scenario: Scenario) -> None:
         )
     if not scenario.failure.get("component"):
         raise FailoverError(f"Scenario {scenario.name} requires failure.component")
-    if not scenario.probes.get("readiness_url"):
-        raise FailoverError(f"Scenario {scenario.name} requires probes.readiness_url")
-    if not scenario.probes.get("worker_health_url"):
-        raise FailoverError(
-            f"Scenario {scenario.name} requires probes.worker_health_url"
-        )
-    if not scenario.probes.get("liveness_url"):
-        raise FailoverError(f"Scenario {scenario.name} requires probes.liveness_url")
+    for key in ("readiness_url", "worker_health_url", "liveness_url"):
+        if not scenario.probes.get(key):
+            raise FailoverError(f"Scenario {scenario.name} requires probes.{key}")
     if int(scenario.recovery.get("timeout_seconds", 0)) <= 0:
         raise FailoverError(
             f"Scenario {scenario.name} requires positive recovery.timeout_seconds"
         )
     if not scenario.recovery.get("url"):
         raise FailoverError(f"Scenario {scenario.name} requires recovery.url")
+    injector = FailureInjector.from_mapping(scenario.injector)
+    if scenario.injector and injector is None:
+        raise FailoverError(f"Scenario {scenario.name} has an incomplete injector block")
 
 
-def probe_url(url: str, timeout_seconds: float = 5.0) -> int:
-    try:
-        with urlopen(url, timeout=timeout_seconds) as response:
-            return response.status
-    except HTTPError as exc:
-        return exc.code
-
-
-def wait_for_recovery(url: str, timeout_seconds: int, interval_seconds: float = 2.0) -> None:
-    deadline = time.time() + timeout_seconds
-    last_error = None
-    while time.time() < deadline:
-        try:
-            status = probe_url(url)
-            if 200 <= status < 300:
-                return
-            last_error = f"unexpected status {status}"
-        except URLError as exc:
-            last_error = exc
-        time.sleep(interval_seconds)
-    raise FailoverError(f"Recovery check failed for {url}: {last_error}")
+def _rewrite(url: str, base_url: str) -> str:
+    return url.replace("http://127.0.0.1:8000", base_url.rstrip("/"))
 
 
 def run_scenario(scenario: Scenario, execute: bool, base_url: str) -> dict[str, Any]:
-    probes = dict(scenario.probes)
-    for key in ("readiness_url", "worker_health_url", "liveness_url", "recovery_url"):
-        if key in probes and isinstance(probes[key], str):
-            probes[key] = probes[key].replace("http://127.0.0.1:8000", base_url.rstrip("/"))
+    probes = {
+        key: _rewrite(value, base_url) if isinstance(value, str) else value
+        for key, value in scenario.probes.items()
+    }
+    recovery_url = _rewrite(scenario.recovery["url"], base_url)
+    degraded_status = int(scenario.probes.get("degraded_status", 503))
+    healthy_status = int(scenario.probes.get("healthy_status", 200))
 
-    recovery_url = scenario.recovery["url"].replace(
-        "http://127.0.0.1:8000", base_url.rstrip("/")
-    )
-
-    result = {
+    result: dict[str, Any] = {
         "scenario": scenario.name,
         "failure_type": scenario.failure["type"],
         "component": scenario.failure["component"],
@@ -126,7 +122,7 @@ def run_scenario(scenario: Scenario, execute: bool, base_url: str) -> dict[str, 
     }
 
     if not execute:
-        print(f"[dry-run] {scenario.name}: probes and recovery validated")
+        print(f"[dry-run] {scenario.name}: probes, injector, and recovery validated")
         return result
 
     try:
@@ -134,11 +130,8 @@ def run_scenario(scenario: Scenario, execute: bool, base_url: str) -> dict[str, 
         readiness_status = probe_url(probes["readiness_url"])
         worker_status = probe_url(probes["worker_health_url"])
     except URLError as exc:
-        raise FailoverError(
-            f"Baseline probe failed for {scenario.name}: {exc}"
-        ) from exc
+        raise FailoverError(f"Baseline probe failed for {scenario.name}: {exc}") from exc
 
-    healthy_status = int(scenario.probes.get("healthy_status", 200))
     if liveness_status != healthy_status:
         raise FailoverError(
             f"Liveness probe failed for {scenario.name}: status {liveness_status}"
@@ -147,28 +140,51 @@ def run_scenario(scenario: Scenario, execute: bool, base_url: str) -> dict[str, 
         raise FailoverError(
             f"Readiness probe failed for {scenario.name}: status {readiness_status}"
         )
-    if (
-        scenario.failure["type"] == "worker"
-        and worker_status != healthy_status
-    ):
+    if scenario.failure["type"] == "worker" and worker_status != healthy_status:
         raise FailoverError(
             f"Worker probe failed for {scenario.name}: status {worker_status}"
         )
 
-    result.update(
-        {
-            "baseline": {
-                "liveness_status": liveness_status,
-                "readiness_status": readiness_status,
-                "worker_health_status": worker_status,
-            }
-        }
-    )
+    result["baseline"] = {
+        "liveness_status": liveness_status,
+        "readiness_status": readiness_status,
+        "worker_health_status": worker_status,
+    }
 
-    wait_for_recovery(recovery_url, int(scenario.recovery["timeout_seconds"]))
-    result["recovered"] = True
-    print(f"[ok] {scenario.name} recovered")
-    return result
+    injector = FailureInjector.from_mapping(scenario.injector)
+    injected = False
+    try:
+        if injector is not None:
+            injector.inject()
+            injected = True
+            degrade_url = probes["readiness_url"]
+            if scenario.failure["type"] == "worker":
+                degrade_url = probes["worker_health_url"]
+            degraded = wait_for_http_status(
+                degrade_url,
+                degraded_status,
+                timeout_seconds=int(scenario.recovery["timeout_seconds"]),
+            )
+            result["degraded_status"] = degraded
+            injector.restore()
+            injected = False
+            result["restored"] = True
+        wait_for_http_status(
+            recovery_url,
+            healthy_status,
+            timeout_seconds=int(scenario.recovery["timeout_seconds"]),
+        )
+        result["recovered"] = True
+        print(f"[ok] {scenario.name} recovered")
+        return result
+    except (InjectionError, TimeoutError) as exc:
+        raise FailoverError(f"{scenario.name} failed: {exc}") from exc
+    finally:
+        if injector is not None and injected:
+            try:
+                injector.restore()
+            except InjectionError as exc:
+                print(f"[warn] restore failed for {scenario.name}: {exc}", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -200,6 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        assert_safe_failover_environment(args.base_url, execute=args.execute)
         scenarios = load_scenarios(args.scenarios_file)
         if args.scenario:
             scenarios = [item for item in scenarios if item.name == args.scenario]
@@ -212,22 +229,16 @@ def main(argv: list[str] | None = None) -> int:
                 raise FailoverError("All scenarios were excluded.")
 
         execute = args.execute and os.getenv("SOROSCAN_FAILOVER_RUN") == "1"
-        if args.execute and not execute:
-            raise FailoverError(
-                "Set SOROSCAN_FAILOVER_RUN=1 before executing live failover probes."
-            )
-
         results = []
         for scenario in scenarios:
             results.append(run_scenario(scenario, execute=execute, base_url=args.base_url))
 
-        if execute:
-            args.report_path.parent.mkdir(parents=True, exist_ok=True)
-            args.report_path.write_text(
-                json.dumps({"scenarios": results}, indent=2),
-                encoding="utf-8",
-            )
-    except FailoverError as exc:
+        args.report_path.parent.mkdir(parents=True, exist_ok=True)
+        args.report_path.write_text(
+            json.dumps({"scenarios": results, "execute": execute}, indent=2),
+            encoding="utf-8",
+        )
+    except (FailoverError, SafetyError) as exc:
         print(f"failover error: {exc}", file=sys.stderr)
         return 1
     return 0

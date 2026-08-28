@@ -270,6 +270,8 @@ class CacheBustingMiddleware:
                 response["Cache-Control"] = "no-cache, no-store, must-revalidate"
                 response["Pragma"] = "no-cache"
             else:
-                response["Cache-Control"] = "private, max-age=0"
+                existing = response.get("Cache-Control", "")
+                if "max-age" not in existing:
+                    response["Cache-Control"] = "private, max-age=0"
 
         return response

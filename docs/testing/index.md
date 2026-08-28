@@ -97,17 +97,24 @@ pnpm exec playwright test
 
 ## Performance Testing
 
-- Load testing with `k6` or similar tools.
-- Baseline performance metrics for API throughput, latency, and ingestion.
-- Regression testing on key endpoints to detect performance drift.
+- Load testing uses **k6** under `load-tests/k6/`.
+- Smoke runs in CI; the full scenario suite is scheduled / manual.
+- Production hosts are blocked unless `ALLOW_PRODUCTION_LOAD=true`.
+- See `load-tests/README.md` and [reliability](reliability.md).
 
 ## Chaos Engineering
 
-- Scenario definitions live in `chaos-tests/scenarios.yaml`.
-- CI validates chaos scenarios in dry-run mode.
-- Destructive Kubernetes failure injection requires `SOROSCAN_CHAOS_RUN=1`.
-- See `docs/testing/chaos-engineering.md` for pod termination, latency,
-  memory pressure, and CPU throttling workflows.
+- Scenario definitions live in `tests/chaos/scenarios.yaml`.
+- CI validates chaos scenarios in dry-run mode only.
+- Destructive Kubernetes/Compose injection requires `SOROSCAN_CHAOS_RUN=1`.
+- See [chaos-engineering.md](chaos-engineering.md).
+
+## Failover and migrations
+
+- Failover: [failover.md](failover.md)
+- Migration rollback: [migrations.md](migrations.md)
+- Shared helpers: `testing/reliability/`
+
 
 ## Cross-Team Notes
 

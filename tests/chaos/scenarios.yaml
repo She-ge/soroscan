@@ -1,48 +1,79 @@
+# Destructive experiments. Never point these at production.
+# Default namespace is the dedicated chaos-testing namespace, not the
+# production Helm/Kustomize `soroscan` namespace in k8s/namespace.yaml.
+
 scenarios:
   - name: pod_termination
     description: Delete one backend pod and verify readiness recovers.
-    namespace: soroscan
+    namespace: chaos-testing
     selector: app=soroscan-backend
     action:
       type: pod_termination
+      compose_service: web
+    expected:
+      behavior: Kubernetes recreates the pod; liveness stays up; readiness returns 200.
+      cleanup: Deleted pods are replaced by the Deployment; no leftover chaos objects.
     recovery:
       url: http://127.0.0.1:8000/ready/
+      healthy_status: 200
       timeout_seconds: 120
 
   - name: network_latency
     description: Inject traffic-control latency into backend pods.
-    namespace: soroscan
+    namespace: chaos-testing
     selector: app=soroscan-backend
     action:
       type: network_latency
       latency_ms: 250
       duration_seconds: 30
+      deployment: soroscan-backend
+      compose_service: web
+    expected:
+      behavior: Requests succeed with higher latency; the process does not crash.
+      cleanup: tc qdisc is deleted after the duration elapses.
     recovery:
       url: http://127.0.0.1:8000/api/ingest/health/
+      healthy_status: 200
       timeout_seconds: 120
 
   - name: memory_exhaustion
     description: Apply a temporary low memory limit and verify graceful recovery.
-    namespace: soroscan
+    namespace: chaos-testing
     selector: app=soroscan-backend
     action:
       type: memory_exhaustion
       deployment: soroscan-backend
       memory_limit: 128Mi
       duration_seconds: 30
+      compose_service: web
+      restore_limits:
+        memory: 512Mi
+        cpu: "1"
+    expected:
+      behavior: The backend may restart under pressure; readiness recovers afterwards.
+      cleanup: Original resource limits are restored via kubectl set resources / rollout undo.
     recovery:
       url: http://127.0.0.1:8000/ready/
+      healthy_status: 200
       timeout_seconds: 120
 
   - name: cpu_throttling
     description: Apply a temporary low CPU limit and verify graceful recovery.
-    namespace: soroscan
+    namespace: chaos-testing
     selector: app=soroscan-backend
     action:
       type: cpu_throttling
       deployment: soroscan-backend
       cpu_limit: 100m
       duration_seconds: 30
+      compose_service: web
+      restore_limits:
+        memory: 512Mi
+        cpu: "1"
+    expected:
+      behavior: Reconciliation/request handling slows but the process stays alive.
+      cleanup: Original CPU limits are restored after the experiment duration.
     recovery:
       url: http://127.0.0.1:8000/api/ingest/health/
+      healthy_status: 200
       timeout_seconds: 120

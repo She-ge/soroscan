@@ -4,6 +4,9 @@ scenarios:
     failure:
       type: database
       component: database
+    injector:
+      kind: docker
+      target: postgres
     probes:
       readiness_url: http://127.0.0.1:8000/ready/
       worker_health_url: http://127.0.0.1:8000/api/health/workers/
@@ -12,13 +15,16 @@ scenarios:
       healthy_status: 200
     recovery:
       url: http://127.0.0.1:8000/ready/
-      timeout_seconds: 30
+      timeout_seconds: 60
 
   - name: redis_connection_failure
     description: Readiness probe reports degraded when Redis cache is unreachable.
     failure:
       type: redis
       component: redis
+    injector:
+      kind: docker
+      target: redis
     probes:
       readiness_url: http://127.0.0.1:8000/ready/
       worker_health_url: http://127.0.0.1:8000/api/health/workers/
@@ -27,7 +33,7 @@ scenarios:
       healthy_status: 200
     recovery:
       url: http://127.0.0.1:8000/ready/
-      timeout_seconds: 30
+      timeout_seconds: 60
 
   - name: rpc_timeout
     description: Readiness probe reports degraded when Soroban RPC times out.
@@ -49,6 +55,9 @@ scenarios:
     failure:
       type: worker
       component: workers
+    injector:
+      kind: compose
+      target: worker-default
     probes:
       readiness_url: http://127.0.0.1:8000/ready/
       worker_health_url: http://127.0.0.1:8000/api/health/workers/
@@ -57,4 +66,4 @@ scenarios:
       healthy_status: 200
     recovery:
       url: http://127.0.0.1:8000/api/health/workers/
-      timeout_seconds: 30
+      timeout_seconds: 60

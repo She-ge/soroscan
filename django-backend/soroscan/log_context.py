@@ -52,6 +52,11 @@ def set_ledger_sequence(ledger_sequence: int | str) -> None:
     log_context_var.set(ctx)
 
 
+def get_request_id() -> str:
+    """Return the current request_id from log context (empty string if unset)."""
+    return log_context_var.get().get("request_id", "")
+
+
 def get_log_extra() -> dict:
     """Return current context for logger extra= (no PII)."""
     ctx = log_context_var.get()

@@ -117,6 +117,12 @@ const Accordion = React.forwardRef<HTMLDivElement, AccordionProps>(
                 data-slot="accordion-trigger"
                 className={cn(accordionTriggerVariants({ size }), "rounded-none border-0 bg-transparent")}
                 onClick={() => toggleItem(item.id, item.disabled)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    toggleItem(item.id, item.disabled)
+                  }
+                }}
               >
                 <span className="flex-1">{item.title}</span>
                 <span
@@ -134,11 +140,18 @@ const Accordion = React.forwardRef<HTMLDivElement, AccordionProps>(
                 id={panelId}
                 role="region"
                 aria-labelledby={triggerId}
-                hidden={!isOpen}
+                aria-hidden={!isOpen}
                 data-slot="accordion-panel"
-                className="px-4 pb-4 pt-0 text-sm text-muted-foreground sm:px-5"
+                className={cn(
+                  "grid transition-all duration-300 ease-in-out",
+                  isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                )}
               >
-                <div className="border-t border-border/60 pt-4">{item.content}</div>
+                <div className="overflow-hidden">
+                  <div className="px-4 pb-4 pt-0 text-sm text-muted-foreground sm:px-5">
+                    <div className="border-t border-border/60 pt-4">{item.content}</div>
+                  </div>
+                </div>
               </div>
             </div>
           )

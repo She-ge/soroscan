@@ -63,12 +63,17 @@ export const Overlay = React.forwardRef(({ children, onClick, ...props }: any, r
   if (!context?.open) {
     return null;
   }
+
+  const handleClick = (e: any) => {
+    onClick?.(e);
+    context?.onOpenChange?.(false);
+  };
   
   return React.createElement('div', { 
     ref, 
     'data-radix-overlay': true,
     'data-state': context?.open ? 'open' : 'closed',
-    onClick,
+    onClick: handleClick,
     ...props 
   }, children);
 });

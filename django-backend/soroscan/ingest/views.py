@@ -15,6 +15,8 @@ from django.db.models.functions import Cast
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_control, cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiParameter
 from rest_framework import renderers, serializers, status, viewsets
@@ -27,7 +29,7 @@ from rest_framework.pagination import PageNumberPagination
 
 import requests as http_requests
 
-from soroscan.throttles import IngestRateThrottle
+from soroscan.throttles import IngestRateThrottle, UnauthenticatedIPRateThrottle
 from soroscan.webhook_signing import build_x_signature_header, public_key_base64
 
 from .cache_utils import cache_result, get_or_set_json, query_cache_ttl, stable_cache_key
@@ -149,24 +151,14 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
                     warnings.append(warning)
         return warnings
 
+    @method_decorator(cache_page(query_cache_ttl(), key_prefix="contract_list"))
+    @method_decorator(cache_control(max_age=query_cache_ttl()))
     def list(self, request, *args, **kwargs):
-        """Cache the contracts list for 30 seconds (issue #488)."""
-        cache_key = stable_cache_key(
-            "rest_contracts_list",
-            {
-                "query": sorted(request.query_params.items()),
-                "user_id": getattr(request.user, "id", None),
-            },
-        )
-
-        def _build():
-            response = super(TrackedContractViewSet, self).list(request, *args, **kwargs)
-            if isinstance(response.data, dict) and "results" in response.data:
-                response.data["warnings"] = self._collect_warnings(response.data["results"])
-            return response.data
-
-        cached_data = get_or_set_json(cache_key, 30, _build)
-        return Response(cached_data)
+        """Cache the contracts list via @cache_page (issue #1011)."""
+        response = super().list(request, *args, **kwargs)
+        if isinstance(response.data, dict) and "results" in response.data:
+            response.data["warnings"] = self._collect_warnings(response.data["results"])
+        return response
 
     def retrieve(self, request, *args, **kwargs):
         response = super().retrieve(request, *args, **kwargs)
@@ -199,7 +191,7 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
         from django.core.cache import cache as _cache
 
         if hasattr(_cache, "delete_pattern"):
-            _cache.delete_pattern("soroscan:rest_contracts_list:*")
+            _cache.delete_pattern("*contract_list*")
         else:
             _cache.clear()
 
@@ -1489,6 +1481,7 @@ def get_admin_view(request):
 )
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([UnauthenticatedIPRateThrottle])
 def webhook_signing_public_key_view(request):
     """Return the platform Ed25519 public key used for webhook X-Signature headers."""
     return Response(
@@ -1512,7 +1505,7 @@ def webhook_signing_public_key_view(request):
 )
 @api_view(["GET"])
 @permission_classes([AllowAny])
-@throttle_classes([])
+@throttle_classes([UnauthenticatedIPRateThrottle])
 def health_check(request):
     """Health check endpoint."""
     return Response({"status": "healthy", "service": "soroscan"})
@@ -1538,6 +1531,7 @@ def health_check(request):
 )
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([UnauthenticatedIPRateThrottle])
 def networks_view(request):
     """Return the list of Soroban networks supported by this indexer."""
     networks = getattr(settings, "SOROBAN_NETWORKS", [])
@@ -2671,6 +2665,112 @@ def contract_identity_view(request):
 
 
 # ---------------------------------------------------------------------------
+# Issue: Supported event schema (ABI) versions
+# ---------------------------------------------------------------------------
+
+# Canonical list of Soroban contract event schema (ABI) versions that the
+# indexer is able to decode and validate.  New versions are appended as the
+# event format evolves; ``latest`` advertises the recommended version for new
+# events.  Each entry documents the supported ``schema_version`` value used by
+# SC-38 structured events.
+SUPPORTED_EVENT_SCHEMA_VERSIONS: list[dict[str, object]] = [
+    {
+        "version": 1,
+        "name": "SoroScan Event Schema v1",
+        "description": (
+            "Initial event schema version covering the SC-20, SC-21, SC-31, "
+            "SC-36 and SC-38 contract standards."
+        ),
+        "status": "supported",
+    },
+]
+
+
+@extend_schema(
+    responses=inline_serializer(
+        name="SchemaVersionsResponse",
+        fields={
+            "versions": serializers.ListField(
+                child=inline_serializer(
+                    name="SchemaVersionEntry",
+                    fields={
+                        "version": serializers.IntegerField(),
+                        "name": serializers.CharField(),
+                        "description": serializers.CharField(),
+                        "status": serializers.CharField(),
+                    },
+                )
+            ),
+            "latest": serializers.IntegerField(),
+            "count": serializers.IntegerField(),
+        },
+    ),
+    description=(
+        "Return the list of Soroban contract event schema (ABI) versions that "
+        "this indexer supports for decoding and validation."
+    ),
+)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+@throttle_classes([UnauthenticatedIPRateThrottle])
+def schema_versions_view(request):
+    """
+    GET /api/schema/versions/
+
+    Returns the supported Soroban contract event schema (ABI) versions.
+    """
+    latest = max(
+        (entry["version"] for entry in SUPPORTED_EVENT_SCHEMA_VERSIONS),
+        default=None,
+    )
+    return Response(
+        {
+            "versions": SUPPORTED_EVENT_SCHEMA_VERSIONS,
+            "latest": latest,
+            "count": len(SUPPORTED_EVENT_SCHEMA_VERSIONS),
+        }
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+def bulk_contract_metadata_view(request):
+    """
+    POST /api/ingest/contracts/metadata/bulk/
+
+    Accepts a list of contract IDs and returns metadata for each.
+    Maximum 50 contract IDs per request.
+    """
+    from .models import ContractMetadata
+    from .serializers import BulkContractMetadataRequestSerializer, ContractMetadataSerializer
+
+    req_serializer = BulkContractMetadataRequestSerializer(data=request.data)
+    req_serializer.is_valid(raise_exception=True)
+    contract_ids = req_serializer.validated_data["contract_ids"]
+
+    metadata_qs = ContractMetadata.objects.select_related("contract").filter(
+        contract__contract_id__in=contract_ids
+    )
+    metadata_map = {m.contract.contract_id: m for m in metadata_qs}
+
+    results = []
+    missing = []
+    for cid in contract_ids:
+        if cid in metadata_map:
+            results.append(ContractMetadataSerializer(metadata_map[cid]).data)
+        else:
+            missing.append(cid)
+
+    return Response({
+        "results": results,
+        "missing": missing,
+        "total_found": len(results),
+        "total_missing": len(missing),
+    })
+
+
+# ---------------------------------------------------------------------------
 # Issue #491: EXPLAIN ANALYZE endpoint for query debugging
 # ---------------------------------------------------------------------------
 
@@ -3390,3 +3490,107 @@ class AnalyticsViewSet(viewsets.ViewSet):
             for row in qs.iterator(chunk_size=2000)
         ]
         return Response({"range_days": range_days, "data": data})
+
+
+# ---------------------------------------------------------------------------
+# Dead Letter Queue — query + replay (issue #1311)
+# ---------------------------------------------------------------------------
+
+
+@extend_schema(
+    responses=inline_serializer(
+        name="DLQEntrySerializer",
+        fields={
+            "id": serializers.IntegerField(),
+            "subscription_id": serializers.IntegerField(),
+            "event_id": serializers.IntegerField(allow_null=True),
+            "status_code": serializers.IntegerField(allow_null=True),
+            "error": serializers.CharField(),
+            "retries_exhausted": serializers.IntegerField(),
+            "resolved": serializers.BooleanField(),
+            "created_at": serializers.DateTimeField(),
+        },
+        many=True,
+    ),
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def dlq_list_view(request):
+    """List dead-letter queue entries (admin only)."""
+    if not request.user.is_staff:
+        return Response({"error": "Admin access required"}, status=status.HTTP_403_FORBIDDEN)
+
+    from soroscan.ingest.models import WebhookDeadLetter
+
+    qs = WebhookDeadLetter.objects.select_related("subscription", "event").all()
+
+    resolved = request.query_params.get("resolved")
+    if resolved is not None:
+        qs = qs.filter(resolved=resolved.lower() in ("true", "1"))
+
+    subscription_id = request.query_params.get("subscription_id")
+    if subscription_id:
+        qs = qs.filter(subscription_id=subscription_id)
+
+    try:
+        limit = max(1, min(int(request.query_params.get("limit", 50)), 500))
+    except (TypeError, ValueError):
+        limit = 50
+
+    data = [
+        {
+            "id": entry.id,
+            "subscription_id": entry.subscription_id,
+            "event_id": entry.event_id,
+            "status_code": entry.status_code,
+            "error": entry.error,
+            "retries_exhausted": entry.retries_exhausted,
+            "resolved": entry.resolved,
+            "created_at": entry.created_at.isoformat(),
+        }
+        for entry in qs[:limit]
+    ]
+    return Response(data)
+
+
+@extend_schema(
+    request=inline_serializer(
+        name="DLQReplayRequest",
+        fields={"entry_ids": serializers.ListField(child=serializers.IntegerField())},
+    ),
+    responses=inline_serializer(
+        name="DLQReplayResponse",
+        fields={
+            "queued": serializers.IntegerField(),
+            "skipped": serializers.IntegerField(),
+        },
+    ),
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def dlq_replay_view(request):
+    """Replay selected dead-letter entries (admin only)."""
+    if not request.user.is_staff:
+        return Response({"error": "Admin access required"}, status=status.HTTP_403_FORBIDDEN)
+
+    from soroscan.ingest.models import WebhookDeadLetter
+    from soroscan.ingest.tasks import replay_dead_letter
+
+    entry_ids = request.data.get("entry_ids", [])
+    if not entry_ids:
+        return Response({"error": "entry_ids required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    entries = WebhookDeadLetter.objects.filter(
+        id__in=entry_ids, resolved=False
+    ).select_related("event")
+
+    queued = 0
+    skipped = 0
+    for entry in entries:
+        if entry.event is None:
+            skipped += 1
+            continue
+        replay_dead_letter.delay(entry.id)
+        queued += 1
+
+    return Response({"queued": queued, "skipped": skipped})

@@ -1962,6 +1962,24 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/schema/versions/:
+    get:
+      operationId: api_schema_versions_retrieve
+      description: |-
+        Return the list of Soroban contract event schema (ABI) versions that this
+        indexer supports for decoding and validation.
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaVersionsResponse'
+          description: ''
   /api/token/:
     post:
       operationId: api_token_create
@@ -2470,6 +2488,36 @@ components:
       required:
       - service
       - status
+    SchemaVersionsResponse:
+      type: object
+      properties:
+        versions:
+          type: array
+          items:
+            type: object
+            properties:
+              version:
+                type: integer
+              name:
+                type: string
+              description:
+                type: string
+              status:
+                type: string
+            required:
+            - version
+            - name
+            - description
+            - status
+        latest:
+          type: integer
+          nullable: true
+        count:
+          type: integer
+      required:
+      - versions
+      - latest
+      - count
     OrganizationCostBreakdownResponse:
       type: object
       properties:

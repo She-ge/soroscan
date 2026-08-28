@@ -1,0 +1,17 @@
+# Isolated chaos-test Compose project.
+# Never use this file against production. Bring it up with:
+#   docker compose -f docker-compose.yml -f docker-compose.chaos.yml --project-name soroscan-chaos up -d db redis web
+#
+# The project name keeps networks/volumes separate from a developer stack.
+
+name: soroscan-chaos
+
+services:
+  web:
+    labels:
+      chaos.soroscan.io/environment: chaos-testing
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M

@@ -38,20 +38,20 @@ Alert when active connections exceed 80% of the configured maximum or when
 
 ---
 
-## Recommended Base Parameters (Target: 8GB RAM System)
+## Recommended Base Parameters (Target: 8GB vs 16GB RAM Systems)
 
-For self-managed setups or dedicated database instances (e.g., standard containers with 8GB RAM and 4 vCPUs), update your `postgresql.conf` or parameter group with these targets:
+For self-managed setups or dedicated database instances (e.g., standard containers/VMs), update your `postgresql.conf` or cloud parameter group with these settings based on server memory:
 
-| Parameter | Recommended Value | Scope / Type | Description |
-| :--- | :--- | :--- | :--- |
-| `shared_buffers` | `2GB` (25% of RAM) | Memory (Requires Restart) | Cache for data pages. Avoids unnecessary disk read/write cycles during rapid ingestion loops. |
-| `effective_cache_size` | `6GB` (75% of RAM) | Memory (Reload) | Informative setting telling the query planner how much total memory is available for caching pages (DB + OS combined). |
-| `work_mem` | `64MB` | Memory (Reload) | Maximum memory per sort/hash join operation per connection. Prevents internal query sorting operations from spilling to disk. |
-| `maintenance_work_mem` | `512MB` | Memory (Reload) | Dedicated allocation for management tasks. Speeds up `CREATE INDEX` and `VACUUM` processing. |
-| `max_wal_size` | `16GB` | WAL (Reload) | Maximum size to let the Write-Ahead Log grow before forcing a checkpoint. Reduces frequent I/O spikes. |
-| `checkpoint_timeout` | `15min` | WAL (Reload) | Extends time between checkpoints to minimize redundant full-page disk writes. |
-| `checkpoint_completion_target`| `0.9` | WAL (Reload) | Smooths disk write operations by spreading the checkpoint workload over 90% of the timeout window. |
-| `wal_buffers` | `64MB` | WAL (Requires Restart) | Buffers transaction log data before forcing disk writes. Alleviates bottlenecks on parallel worker batches. |
+| Parameter | 8GB RAM Recommended | 16GB RAM Recommended | Scope / Type | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `shared_buffers` | `2GB` (25%) | `4GB` (25%) | Memory (Requires Restart) | Cache for database data pages. Smooths out write peaks. |
+| `effective_cache_size` | `6GB` (75%) | `12GB` (75%) | Memory (Reload) | Tells the query planner how much total memory is available for caching. |
+| `work_mem` | `64MB` | `128MB` | Memory (Reload) | Max memory per sort/hash join operation. Prevents disk spilling during complex queries. |
+| `maintenance_work_mem` | `512MB` | `1GB` | Memory (Reload) | Speeds up `CREATE INDEX` and `VACUUM` processes. |
+| `max_wal_size` | `16GB` | `32GB` | WAL (Reload) | Max size WAL can grow before forcing checkpoint. |
+| `checkpoint_timeout` | `15min` | `30min` | WAL (Reload) | Extends time between checkpoints. |
+| `checkpoint_completion_target`| `0.9` | `0.9` | WAL (Reload) | Spreads checkpoint writes over 90% of the timeout window. |
+| `wal_buffers` | `64MB` | `128MB` | WAL (Requires Restart) | Buffers transaction log data before writing to disk. |
 
 ---
 
@@ -59,15 +59,59 @@ For self-managed setups or dedicated database instances (e.g., standard containe
 
 ### 1. Smoothing Out Checkpoint I/O Spikes
 In default configurations, PostgreSQL triggers a checkpoint every 5 minutes or after 1GB of Write-Ahead Logs (`max_wal_size`) are generated. SoroScan creates massive amounts of WAL records during peak event synchronization loops, causing rapid back-to-back checkpoints that choke disk I/O.
-* Raising `max_wal_size` to `16GB` and extending `checkpoint_timeout` to `15min` makes checkpoints predictable and strictly timed.
+* Raising `max_wal_size` to `16GB` (8GB RAM) or `32GB` (16GB RAM) and extending `checkpoint_timeout` to `15min` or `30min` makes checkpoints predictable and strictly timed.
 * Setting `checkpoint_completion_target = 0.9` guarantees that instead of flushing data to disk all at once, PostgreSQL trickles the data down smoothly over the length of the timeout.
 
 ### 2. High-Performance Maintenance and Indexing
 As tables like `ContractEvent` approach millions of rows, background data maintenance and index updates require ample working overhead.
-* A healthy `maintenance_work_mem` setting (`512MB`) allows index optimization processes to run entirely inside RAM instead of exhausting disk read/write loops, maximizing the performance of concurrent worker threads.
+* A healthy `maintenance_work_mem` setting (`512MB` / `1GB`) allows index optimization processes to run entirely inside RAM instead of exhausting disk read/write loops, maximizing the performance of concurrent worker threads.
 
 ### 3. Solid-State Drive (SSD) Optimization
 If your underlying instance uses solid-state storage (such as AWS EBS gp3/io2 or NVMe volumes), ensure you update:
 * `random_page_cost = 1.1`
 
 This informs the PostgreSQL engine that random index lookups are virtually as cheap as sequential disk scans, favoring smarter index-driven plans.
+
+---
+
+## Index Optimization Tips for GIN and B-Tree
+
+Smart contract events emit unstructured payloads that contain dynamic dictionary shapes. SoroScan optimizes search performance on these datasets through a hybrid indexing strategy:
+
+### B-Tree Indexes
+Use standard **B-Tree indexes** for columns with high-cardinality values, exact match searches, and range filtering:
+* **Composite Index**: `(contract_id, timestamp)` allows fast querying of a single contract's chronological event history.
+* **Ingest Index**: `(contract_id, ledger, event_index)` is marked unique to enforce fast membership checks and upsert validation.
+* **Avoid over-indexing**: Avoid adding B-Tree indexes on low-cardinality boolean columns (e.g. `is_active`) unless they are part of a composite index.
+
+### GIN Indexes
+SoroScan uses **GIN (Generalized Inverted Index)** to perform lightning-fast lookup operations on key-value pairs stored within event payloads:
+* **JSONB Inverted Index**: An index on the `payload` JSONB column (`jsonb_path_ops` or default class) enables querying nested sub-attributes without full-table scans.
+* **Usage**: Ideal for search queries mapping dot-notation field paths (e.g. `payload__transfer__amount`).
+* **Warning**: GIN indexes have higher write overhead. For extremely high write workloads, verify that your disk write IOPS can handle the volume, or optimize the set of indexed fields.
+
+---
+
+## Vacuuming Strategy for Heavy Ingest
+
+SoroScan is write-heavy and continually inserts event records. Under this ingestion rate, table bloat accumulates rapidly as deleted or updated rows (such as those replaced during re-orgs or status updates) leave dead tuples.
+
+To prevent performance degradation, tune the PostgreSQL **Autovacuum** daemon specifically for SoroScan's heavy workload:
+
+1. **Increase Autovacuum Concurrency**:
+   * `autovacuum_max_workers = 4` (Allows up to 4 parallel worker threads to run vacuum and analyze tasks simultaneously).
+2. **Smooth Autovacuum Costs**:
+   * `autovacuum_vacuum_cost_limit = 1000` (Increase from default 200 to allow autovacuum to complete faster on large tables before hitting resource throttling boundaries).
+   * `autovacuum_vacuum_cost_delay = 2ms` (Reduce sleep cost to allow workers to clear dead tuples more aggressively).
+3. **Aggressive Ingest Tables Autovacuum Tuning**:
+   For the `ContractEvent` and `WebhookDeliveryLog` tables, configure table-level overrides to trigger vacuums more frequently:
+   ```sql
+   ALTER TABLE ingest_contractevent SET (
+       autovacuum_vacuum_scale_factor = 0.05,
+       autovacuum_vacuum_threshold = 1000,
+       autovacuum_analyze_scale_factor = 0.02,
+       autovacuum_analyze_threshold = 500
+   );
+   ```
+   *This triggers vacuuming when 5% of rows have changed, keeping tables clean and preventing database query plans from becoming stale.*
+

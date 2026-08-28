@@ -1038,6 +1038,24 @@ class WebhookDeadLetterAdmin(AdminAuditMixin, admin.ModelAdmin):
         "created_at",
     ]
     ordering = ["-created_at"]
+    actions = ["replay_dead_letters", "mark_resolved"]
+
+    @admin.action(description="Replay selected dead-lettered deliveries")
+    def replay_dead_letters(self, request, queryset):
+        from soroscan.ingest.tasks import replay_dead_letter
+
+        queued = 0
+        for dlq_entry in queryset.filter(resolved=False).select_related("subscription", "event"):
+            if dlq_entry.event is None:
+                continue
+            replay_dead_letter.delay(dlq_entry.id)
+            queued += 1
+        self.message_user(request, f"Queued {queued} dead-letter replays.")
+
+    @admin.action(description="Mark selected entries as resolved")
+    def mark_resolved(self, request, queryset):
+        updated = queryset.update(resolved=True)
+        self.message_user(request, f"Marked {updated} entries as resolved.")
 
 
 # ---------------------------------------------------------------------------

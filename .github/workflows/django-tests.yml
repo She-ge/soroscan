@@ -92,3 +92,59 @@ jobs:
           flags: backend
           name: backend-coverage
           fail_ci_if_error: false
+
+  migration-rollbacks:
+    name: Migration rollback tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_soroscan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "django-backend/requirements.txt"
+
+      - name: Install dependencies
+        working-directory: django-backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run migration forward/rollback harness
+        working-directory: django-backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_soroscan
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          DEBUG: "False"
+          DJANGO_SETTINGS_MODULE: soroscan.settings_test
+          CELERY_TASK_ALWAYS_EAGER: "True"
+        run: python -m pytest -m migration -v

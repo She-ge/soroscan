@@ -1,6 +1,11 @@
 from pathlib import Path
+import sys
 
 import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from run_failover import FailoverError, load_scenarios, main
 
@@ -38,10 +43,26 @@ def test_each_scenario_declares_recovery_probe(scenario_name):
     assert scenario.failure["component"]
 
 
+def test_database_and_redis_scenarios_declare_injectors():
+    scenarios = {
+        item.name: item
+        for item in load_scenarios(Path(__file__).resolve().parents[1] / "scenarios.yaml")
+    }
+    assert scenarios["database_connection_failure"].injector["kind"] == "docker"
+    assert scenarios["redis_connection_failure"].injector["kind"] == "docker"
+    assert scenarios["multiple_worker_failures"].injector["kind"] == "compose"
+
+
 def test_execute_requires_explicit_environment_flag(monkeypatch):
     monkeypatch.delenv("SOROSCAN_FAILOVER_RUN", raising=False)
 
     assert main(["--execute"]) == 1
+
+
+def test_execute_rejects_production_url(monkeypatch):
+    monkeypatch.setenv("SOROSCAN_FAILOVER_RUN", "1")
+    monkeypatch.delenv("ALLOW_PRODUCTION_FAILOVER", raising=False)
+    assert main(["--execute", "--base-url", "https://api.soroscan.io"]) == 1
 
 
 def test_unknown_scenario_fails_cleanly():
