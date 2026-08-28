@@ -7,13 +7,11 @@ import zlib
 from typing import Any
 
 from opentelemetry import propagate, trace
-from opentelemetry.sdk.trace import TracerProvider
 
 from .metrics import event_payload_compression_ratio
 
-if trace.get_tracer_provider().__class__.__name__ == "ProxyTracerProvider":
-    trace.set_tracer_provider(TracerProvider())
-
+# Use the globally configured provider (set up by soroscan.tracing.configure_tracing).
+# Falls back to the no-op proxy provider when tracing is disabled.
 tracer = trace.get_tracer("soroscan.ingest")
 
 

@@ -7,6 +7,7 @@ import time
 
 from celery import Celery
 from celery.signals import (
+    before_task_publish,
     task_failure,
     task_postrun,
     task_prerun,
@@ -24,11 +25,22 @@ app = Celery("soroscan")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 _task_started_at: dict[str, float] = {}
+_task_spans: dict[str, object] = {}
+
+
+@before_task_publish.connect
+def _inject_trace_context(headers: dict, **kwargs) -> None:
+    """Inject W3C trace context into Celery task headers before publishing."""
+    try:
+        from soroscan.tracing import inject_celery_headers
+        inject_celery_headers(headers)
+    except Exception:
+        pass
 
 
 @task_prerun.connect
 def set_celery_task_context(sender, task_id, **kwargs):
-    """Set task_id in log context so Celery logs include it (no PII)."""
+    """Set task_id in log context and start an OTel span for the task."""
     from soroscan.log_context import set_task_id
 
     set_task_id(task_id or "")
@@ -38,10 +50,20 @@ def set_celery_task_context(sender, task_id, **kwargs):
     _task_started_at[task_id] = time.monotonic()
     celery_tasks_active.labels(task_name=task_name).inc()
 
+    # Start OTel span, extracting propagated context from task request headers
+    try:
+        request = getattr(sender, "request", None)
+        headers = dict(getattr(request, "headers", None) or {})
+        from soroscan.tracing import instrument_celery_task
+        span = instrument_celery_task(task_name, task_id, headers)
+        _task_spans[task_id] = span
+    except Exception:
+        pass
+
 
 @task_postrun.connect
 def record_celery_task_completion(sender, task_id, state, **kwargs):
-    """Record task throughput, active count, and duration."""
+    """Record task throughput, active count, duration, and end OTel span."""
     from soroscan.ingest.metrics import (
         celery_task_duration_seconds,
         celery_tasks_active,
@@ -59,6 +81,14 @@ def record_celery_task_completion(sender, task_id, state, **kwargs):
         celery_task_duration_seconds.labels(task_name=task_name).observe(
             time.monotonic() - started
         )
+
+    # End OTel span
+    span = _task_spans.pop(task_id, None)
+    if span is not None:
+        try:
+            span.end()
+        except Exception:
+            pass
 
 
 @task_failure.connect

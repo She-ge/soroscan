@@ -29,3 +29,10 @@ data:
   # Sentry (optional)
   SENTRY_ENVIRONMENT: "production"
   SENTRY_TRACES_SAMPLE_RATE: "0.1"
+
+  # OpenTelemetry / Jaeger distributed tracing (Issue #1295)
+  # Set OTEL_ENABLED to "true" and configure the collector endpoint.
+  OTEL_ENABLED: "false"
+  OTEL_SERVICE_NAME: "soroscan-backend"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger-collector:4317"
+  OTEL_TRACES_SAMPLER_ARG: "0.1"

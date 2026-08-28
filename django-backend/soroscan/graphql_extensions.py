@@ -5,6 +5,7 @@ import time
 import traceback
 from typing import Any, Callable, Dict, Optional
 
+from opentelemetry import trace as otel_trace
 from strawberry.extensions import SchemaExtension
 from strawberry.types import Info
 from strawberry.exceptions import StrawberryException
@@ -207,6 +208,39 @@ class GraphQLResolverLoggingExtension(SchemaExtension):
 
         # Use the shared logging wrapper
         return log_graphql_resolver(_next)(root, info, *args, **kwargs)
+
+
+class GraphQLTracingExtension(SchemaExtension):
+    """
+    Strawberry extension that wraps each top-level GraphQL resolver in an
+    OpenTelemetry span, tagging it with the operation name and field name.
+    """
+
+    def resolve(
+        self,
+        _next: Callable,
+        root: Any,
+        info: Info,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        if info.parent_type.name not in ("Query", "Mutation", "Subscription"):
+            return _next(root, info, *args, **kwargs)
+
+        tracer = otel_trace.get_tracer("soroscan.graphql")
+        operation = getattr(info.operation, "name", None)
+        op_name = operation.value if operation else info.field_name
+        span_name = f"graphql.{info.parent_type.name.lower()}.{info.field_name}"
+
+        with tracer.start_as_current_span(
+            span_name,
+            attributes={
+                "graphql.field": info.field_name,
+                "graphql.operation": op_name or "",
+                "graphql.parent_type": info.parent_type.name,
+            },
+        ):
+            return _next(root, info, *args, **kwargs)
 
 
 class GraphQLRateLimitExtension(SchemaExtension):

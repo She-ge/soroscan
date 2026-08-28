@@ -674,6 +674,28 @@ AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
 # Set AWS_S3_ENDPOINT_URL for S3-compatible stores (MinIO, Localstack, etc.)
 AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default="")
 
+# ---------------------------------------------------------------------------
+# OpenTelemetry / Jaeger distributed tracing (Issue #1295)
+# ---------------------------------------------------------------------------
+# OTEL_ENABLED=true activates tracing. All other OTEL_* vars are optional.
+OTEL_ENABLED = env.bool("OTEL_ENABLED", default=False)
+OTEL_SERVICE_NAME = env("OTEL_SERVICE_NAME", default="soroscan-backend")
+OTEL_EXPORTER_OTLP_ENDPOINT = env(
+    "OTEL_EXPORTER_OTLP_ENDPOINT", default="http://jaeger:4317"
+)
+# Head-based sampling rate: 1.0 = 100 %, 0.1 = 10 %
+OTEL_TRACES_SAMPLER_ARG = env.float("OTEL_TRACES_SAMPLER_ARG", default=1.0)
+
+if OTEL_ENABLED:
+    # Propagate settings to env so the SDK picks them up via configure_tracing()
+    import os as _os
+    _os.environ.setdefault("OTEL_ENABLED", "true")
+    _os.environ.setdefault("OTEL_SERVICE_NAME", OTEL_SERVICE_NAME)
+    _os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", OTEL_EXPORTER_OTLP_ENDPOINT)
+    _os.environ.setdefault("OTEL_TRACES_SAMPLER_ARG", str(OTEL_TRACES_SAMPLER_ARG))
+    from soroscan.tracing import configure_tracing
+    configure_tracing()
+
 # Sentry (optional): init only when SENTRY_DSN is set. Celery task failures reported via CeleryIntegration.
 SENTRY_DSN = env("SENTRY_DSN", default="")
 if SENTRY_DSN:
