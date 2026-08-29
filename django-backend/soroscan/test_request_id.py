@@ -5,10 +5,15 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import exceptions
 from rest_framework.test import APIClient
+import logging
+from soroscan.log_context import LogContextFilter
+
+logger = logging.getLogger(__name__)
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def dummy_success_view(request):
+    logger.info("Handling dummy success view")
     return Response({"status": "ok"})
 
 @api_view(["GET"])
@@ -56,3 +61,17 @@ class TestRequestIdTracking:
         data = response.json()
         assert data.get("request_id") == custom_id
         assert response.headers.get("X-Request-ID") == custom_id
+
+    def test_request_id_in_logs(self, caplog):
+        caplog.handler.addFilter(LogContextFilter())
+        with caplog.at_level(logging.INFO):
+            custom_id = "log-req-id-123"
+            response = self.client.get("/test-success/", HTTP_X_REQUEST_ID=custom_id)
+            assert response.status_code == 200
+            
+            # Find the log record
+            log_record = next((r for r in caplog.records if r.message == "Handling dummy success view"), None)
+            assert log_record is not None
+            assert hasattr(log_record, "request_id")
+            assert log_record.request_id == custom_id
+

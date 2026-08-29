@@ -2,6 +2,7 @@
 Tests for export_events / import_events management commands and the
 underlying export_import service.
 """
+
 import csv
 import io
 import json
@@ -30,6 +31,7 @@ class TestExportJSON:
 
         buf = io.StringIO()
         from soroscan.ingest.services.export_import import export_json
+
         count = export_json(contract.contract_id, buf)
 
         assert count == 3
@@ -150,22 +152,26 @@ class TestImportJSON:
         assert ContractEvent.objects.count() == 3
 
     def test_import_missing_contract_records_error(self):
-        bad_row = json.dumps([{
-            "contract_id": "CNON_EXISTENT",
-            "event_type": "test",
-            "payload": "{}",
-            "payload_hash": "abc",
-            "ledger": 1,
-            "event_index": 0,
-            "timestamp": "2024-01-01T00:00:00+00:00",
-            "tx_hash": "deadbeef",
-            "raw_xdr": "",
-            "schema_version": None,
-            "validation_status": "passed",
-            "decoded_payload": None,
-            "decoding_status": "no_abi",
-            "signature_status": "missing",
-        }])
+        bad_row = json.dumps(
+            [
+                {
+                    "contract_id": "CNON_EXISTENT",
+                    "event_type": "test",
+                    "payload": "{}",
+                    "payload_hash": "abc",
+                    "ledger": 1,
+                    "event_index": 0,
+                    "timestamp": "2024-01-01T00:00:00+00:00",
+                    "tx_hash": "deadbeef",
+                    "raw_xdr": "",
+                    "schema_version": None,
+                    "validation_status": "passed",
+                    "decoded_payload": None,
+                    "decoding_status": "no_abi",
+                    "signature_status": "missing",
+                }
+            ]
+        )
         result = import_json(io.StringIO(bad_row), ImportResult())
         assert result.errors == 1
         assert result.imported == 0
@@ -335,3 +341,81 @@ class TestImportCommand:
         # No --format flag; should auto-detect from .csv extension
         call_command("import_events", file=out_file)
         assert ContractEvent.objects.count() == 2
+
+
+@pytest.mark.django_db
+class TestExportParquetAvro:
+    def test_parquet_roundtrip(self, tmp_path):
+        pytest.importorskip("pyarrow")
+        contract = TrackedContractFactory()
+        ContractEventFactory.create_batch(3, contract=contract)
+        out_file = str(tmp_path / "events.parquet")
+
+        call_command(
+            "export_events",
+            contract_id=contract.contract_id,
+            format="parquet",
+            output=out_file,
+        )
+        ContractEvent.objects.all().delete()
+
+        call_command("import_events", file=out_file, format="parquet")
+        assert ContractEvent.objects.count() == 3
+
+    def test_avro_roundtrip(self, tmp_path):
+        pytest.importorskip("fastavro")
+        contract = TrackedContractFactory()
+        ContractEventFactory.create_batch(3, contract=contract)
+        out_file = str(tmp_path / "events.avro")
+
+        call_command(
+            "export_events",
+            contract_id=contract.contract_id,
+            format="avro",
+            output=out_file,
+        )
+        ContractEvent.objects.all().delete()
+
+        call_command("import_events", file=out_file, format="avro")
+        assert ContractEvent.objects.count() == 3
+
+
+@pytest.mark.django_db
+class TestStreamingExport:
+    def test_export_uses_batching_without_loading_all_rows(self, monkeypatch):
+        contract = TrackedContractFactory()
+        ContractEventFactory.create_batch(5, contract=contract)
+
+        chunk_calls = {"count": 0}
+        original_iter = __import__(
+            "soroscan.ingest.services.export_import",
+            fromlist=["_iter_events"],
+        )._iter_events
+
+        def counting_iter(*args, **kwargs):
+            for event in original_iter(*args, **kwargs):
+                chunk_calls["count"] += 1
+                yield event
+
+        monkeypatch.setattr(
+            "soroscan.ingest.services.export_import._iter_events",
+            counting_iter,
+        )
+
+        buf = io.StringIO()
+        export_json(contract.contract_id, buf)
+        assert chunk_calls["count"] == 5
+        assert len(json.loads(buf.getvalue())) == 5
+
+
+@pytest.mark.django_db
+class TestImportValidation:
+    def test_fail_fast_aborts_on_validation_error(self, tmp_path):
+        contract = TrackedContractFactory()
+        bad_file = str(tmp_path / "bad.json")
+        with open(bad_file, "w", encoding="utf-8") as f:
+            f.write('[{"contract_id": "CNONEXISTENT", "event_type": "x"}]')
+
+        with pytest.raises(CommandError, match="validation error"):
+            call_command("import_events", file=bad_file, format="json", fail_fast=True)
+        assert ContractEvent.objects.filter(contract=contract).count() == 0

@@ -111,6 +111,159 @@ class Command(BaseCommand):
         except json.JSONDecodeError as exc:
             raise CommandError(f"Invalid JSON in fixture file {path}: {exc}")
 
+    def _get_default_scenario(self) -> dict:
+        return {
+            "organizations": [
+                {
+                    "name": "DeFi Labs Org",
+                    "slug": "defi-labs-org",
+                    "owner_email": "alice@example.com",
+                    "settings": {"plan": "pro"},
+                    "quota": 100000,
+                },
+                {
+                    "name": "Stellar Ecosystem Foundation",
+                    "slug": "stellar-foundation",
+                    "owner_email": "bob@example.com",
+                    "settings": {"plan": "enterprise"},
+                    "quota": 1000000,
+                },
+            ],
+            "teams": [
+                {
+                    "name": "Core Devs",
+                    "organization_slug": "defi-labs-org",
+                    "created_by_email": "alice@example.com",
+                },
+                {
+                    "name": "Security & Audit",
+                    "organization_slug": "stellar-foundation",
+                    "created_by_email": "bob@example.com",
+                },
+            ],
+            "users": [
+                {
+                    "email": "alice@example.com",
+                    "password": "testpass123",
+                    "first_name": "Alice",
+                    "last_name": "Vance",
+                },
+                {
+                    "email": "bob@example.com",
+                    "password": "testpass123",
+                    "first_name": "Bob",
+                    "last_name": "Smith",
+                },
+                {
+                    "email": "charlie@example.com",
+                    "password": "testpass123",
+                    "first_name": "Charlie",
+                    "last_name": "Brown",
+                },
+            ],
+            "memberships": [
+                {"user_email": "alice@example.com", "organization_slug": "defi-labs-org", "role": "owner"},
+                {"user_email": "bob@example.com", "organization_slug": "stellar-foundation", "role": "owner"},
+                {"user_email": "charlie@example.com", "organization_slug": "defi-labs-org", "role": "developer"},
+            ],
+            "team_memberships": [
+                {"user_email": "alice@example.com", "team_name": "Core Devs", "role": "admin"},
+                {"user_email": "charlie@example.com", "team_name": "Core Devs", "role": "member"},
+            ],
+            "contracts": [
+                {
+                    "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                    "name": "Soroban Liquidity Pool",
+                    "alias": "USDC/XLMPool",
+                    "description": "Primary automated market maker pool for XLM/USDC trading pair",
+                    "owner_email": "alice@example.com",
+                    "organization_slug": "defi-labs-org",
+                    "team_name": "Core Devs",
+                    "abi_schema": {
+                        "events": [
+                            {"name": "swap", "params": ["user", "amount_in", "amount_out"]},
+                            {"name": "deposit", "params": ["user", "amount_a", "amount_b"]},
+                            {"name": "withdraw", "params": ["user", "shares"]},
+                        ]
+                    },
+                    "event_filter_type": "allowlist",
+                    "event_filter_list": ["swap", "deposit", "withdraw"],
+                },
+                {
+                    "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+                    "name": "Stellar SAC Token",
+                    "alias": "Wrapped SAC",
+                    "description": "Stellar Asset Contract wrapper for cross-chain token bridge",
+                    "owner_email": "bob@example.com",
+                    "organization_slug": "stellar-foundation",
+                    "team_name": "Security & Audit",
+                    "abi_schema": {
+                        "events": [
+                            {"name": "transfer", "params": ["from", "to", "amount"]},
+                            {"name": "mint", "params": ["to", "amount"]},
+                            {"name": "burn", "params": ["from", "amount"]},
+                        ]
+                    },
+                    "event_filter_type": "none",
+                    "event_filter_list": [],
+                },
+                {
+                    "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+                    "name": "Governance DAO",
+                    "alias": "Soroban DAO",
+                    "description": "Decentralized autonomous organization proposal & voting contract",
+                    "owner_email": "alice@example.com",
+                    "organization_slug": "defi-labs-org",
+                    "team_name": None,
+                    "abi_schema": {
+                        "events": [
+                            {"name": "proposal_created", "params": ["id", "proposer"]},
+                            {"name": "vote_cast", "params": ["id", "voter", "support"]},
+                        ]
+                    },
+                    "event_filter_type": "none",
+                    "event_filter_list": [],
+                },
+            ],
+            "events": {
+                "per_contract": 25,
+                "event_types": ["swap", "transfer", "deposit", "proposal_created"],
+            },
+            "webhooks": [
+                {
+                    "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                    "event_type": "swap",
+                    "target_url": "https://httpbin.org/post",
+                    "timeout_seconds": 5,
+                    "retry_backoff_strategy": "exponential",
+                    "retry_backoff_seconds": 30,
+                    "signature_algorithm": "sha256",
+                },
+                {
+                    "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+                    "event_type": "transfer",
+                    "target_url": "https://httpbin.org/post",
+                    "timeout_seconds": 10,
+                    "retry_backoff_strategy": "fixed",
+                    "retry_backoff_seconds": 60,
+                    "signature_algorithm": "sha256",
+                },
+            ],
+            "webhook_delivery_logs": {
+                "per_webhook": 6,
+                "status_codes": [200, 200, 201, 500, 200, 200],
+            },
+            "alert_rules": [
+                {
+                    "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                    "name": "High-Value Swap Alert",
+                    "condition_expression": "amount_in > 10000",
+                    "user_email": "alice@example.com",
+                }
+            ],
+            "api_keys": [],
+        }
+
     def _get_scenario(self, scenario: str) -> dict:
         if scenario == "minimal":
             return {
@@ -138,7 +291,7 @@ class Command(BaseCommand):
                 "team_memberships": [],
                 "contracts": [
                     {
-                        "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2KZ",
+                        "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
                         "name": "Token Contract",
                         "alias": "Simple Token",
                         "description": "Basic token contract",
@@ -150,7 +303,7 @@ class Command(BaseCommand):
                         "event_filter_list": [],
                     },
                     {
-                        "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBZ2KZ",
+                        "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
                         "name": "Exchange",
                         "alias": "Mini DEX",
                         "description": "Simple exchange",
@@ -162,7 +315,7 @@ class Command(BaseCommand):
                         "event_filter_list": [],
                     },
                     {
-                        "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCZ2KZ",
+                        "contract_id": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
                         "name": "Governor",
                         "alias": "Voting",
                         "description": "Governance contract",
@@ -181,10 +334,10 @@ class Command(BaseCommand):
                 "api_keys": [],
             }
         if scenario == "webhook":
-            base = self._get_scenario("default")
+            base = self._get_default_scenario()
             base["webhooks"] = [
                 {
-                    "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2KZ",
+                    "contract_id": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
                     "event_type": "swap",
                     "target_url": "https://httpbin.org/post",
                     "timeout_seconds": 5,
@@ -193,7 +346,7 @@ class Command(BaseCommand):
                     "signature_algorithm": "sha256",
                 },
                 {
-                    "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBZ2KZ",
+                    "contract_id": "CBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
                     "event_type": "",
                     "target_url": "https://httpbin.org/post",
                     "timeout_seconds": 10,
@@ -204,7 +357,7 @@ class Command(BaseCommand):
             ]
             base["webhook_delivery_logs"] = {"per_webhook": 8, "status_codes": [200, 200, 201, 500, 408, 200, 500, 200]}
             return base
-        return self._get_scenario("default")
+        return self._get_default_scenario()
 
     def _clear_seeded_data(self):
         self.stdout.write("Clearing seeded data...")

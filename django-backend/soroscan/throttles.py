@@ -4,16 +4,17 @@ Custom throttle classes for SoroScan API rate limiting.
 import logging
 import time
 
+from django.conf import settings
 from django.core.cache import cache
 from rest_framework.settings import api_settings
-from rest_framework.throttling import BaseThrottle, SimpleRateThrottle, ScopedRateThrottle
+from rest_framework.throttling import AnonRateThrottle, BaseThrottle, SimpleRateThrottle, ScopedRateThrottle
 
 logger = logging.getLogger(__name__)
 
 # Header names returned on every response
-HEADER_LIMIT = "X-RateLimit-Limit"
-HEADER_REMAINING = "X-RateLimit-Remaining"
-HEADER_RESET = "X-RateLimit-Reset"
+HEADER_LIMIT = "RateLimit-Limit"
+HEADER_REMAINING = "RateLimit-Remaining"
+HEADER_RESET = "RateLimit-Reset"
 
 # TTL of Redis counter bucket (1 hour)
 _BUCKET_TTL = 3600
@@ -28,8 +29,8 @@ class APIKeyThrottle(BaseThrottle):
     query parameter.  Falls through transparently (allow) when no API key is
     present so that the standard anon/user throttles still apply.
 
-    Sets ``request._api_key_headers`` dict so the RateLimitHeaderMixin can
-    populate X-RateLimit-* response headers.
+    Sets ``request._api_key_headers`` dict so middleware can
+    populate RateLimit-* response headers.
     """
 
     CACHE_PREFIX = "soroscan_api_key_quota"
@@ -217,3 +218,36 @@ class DynamicEndpointThrottle(ScopedRateThrottle):
         # Call SimpleRateThrottle.allow_request directly to skip
         # ScopedRateThrottle.allow_request, which would overwrite self.scope.
         return SimpleRateThrottle.allow_request(self, request, view)
+
+
+class UnauthenticatedIPRateThrottle(SimpleRateThrottle):
+    """
+    IP-based rate limiter for unauthenticated REST endpoints.
+
+    Only applies to requests that have NOT been authenticated (anonymous users).
+    Authenticated requests bypass this throttle entirely, allowing the
+    per-user or per-API-key throttles to govern their rate.
+
+    The throttle scope defaults to ``unauthenticated_ip`` and can be
+    overridden per-view via ``throttle_scope``.
+
+    Configuration (in settings.py ``REST_FRAMEWORK.DEFAULT_THROTTLE_RATES``)::
+
+        "unauthenticated_ip": "30/minute",   # default for unauthenticated endpoints
+
+    Or per-endpoint via ``ENDPOINT_RATE_LIMIT_UNAUTHENTICATED_IP`` env var.
+    """
+
+    scope = "unauthenticated_ip"
+
+    def get_cache_key(self, request, view):
+        if request.user and request.user.is_authenticated:
+            return None  # skip — let per-user / per-key throttles govern
+        ident = self.get_ident(request)
+        return self.cache_format % {"scope": self.scope, "ident": ident}
+
+    def allow_request(self, request, view):
+        # Authenticated users are never throttled by this class
+        if request.user and request.user.is_authenticated:
+            return True
+        return super().allow_request(request, view)

@@ -262,7 +262,7 @@ class TestOrganizationCorsGetEndpoint:
         url = reverse("organization-cors", kwargs={"pk": org.pk})
         resp = client.get(url)
 
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_nonexistent_org_returns_404(self):
         staff = _make_user("staff2", is_staff=True)

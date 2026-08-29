@@ -1,0 +1,26 @@
+query ContractDependencyGraph($contractId: String) {
+  contracts(filter: {}) {
+    id
+    name
+    address
+    riskScore
+    reachabilityPct
+    vulnerabilities {
+      id
+      title
+      severity
+      impactedContracts
+    }
+    dependencies {
+      id
+      contractAddress
+      contractName
+      dependencyType
+    }
+    dependents {
+      id
+      contractAddress
+      contractName
+    }
+  }
+}

@@ -128,11 +128,11 @@ describe("NavDrawer Component", () => {
         pathname="/"
       />
     );
-    expect(screen.getByText("DOCS")).toBeInTheDocument();
-    expect(screen.getByText("FEATURES")).toBeInTheDocument();
+    expect(screen.getByText("Documentation")).toBeInTheDocument();
+    expect(screen.getByText("Features")).toBeInTheDocument();
     expect(screen.getByText("API_DOCS")).toBeInTheDocument();
     expect(screen.getByText("GITHUB")).toBeInTheDocument();
-    expect(screen.getByText("SIGN_IN")).toBeInTheDocument();
+    expect(screen.getByText("Login")).toBeInTheDocument();
   });
 
   it("renders logout button when authenticated", () => {
@@ -145,8 +145,8 @@ describe("NavDrawer Component", () => {
         pathname="/"
       />
     );
-    expect(screen.getByText("LOGOUT")).toBeInTheDocument();
-    expect(screen.queryByText("SIGN_IN")).not.toBeInTheDocument();
+    expect(screen.getByText("Logout")).toBeInTheDocument();
+    expect(screen.queryByText("Login")).not.toBeInTheDocument();
   });
 
   it("triggers onClose when a navigation item is clicked", () => {
@@ -160,7 +160,7 @@ describe("NavDrawer Component", () => {
         pathname="/"
       />
     );
-    const docsLink = screen.getByText("DOCS");
+    const docsLink = screen.getByText("Documentation");
     fireEvent.click(docsLink);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });

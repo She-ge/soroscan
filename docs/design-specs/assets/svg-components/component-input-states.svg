@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 180" width="480" height="180" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace">
+  <rect width="480" height="180" fill="#0a0e27"/>
+  <text x="16" y="20" font-size="9" font-weight="700" fill="#94a3b8" letter-spacing="2">INPUT STATES</text>
+
+  <!-- Default -->
+  <rect x="16" y="32" width="200" height="44" rx="8" fill="none" stroke="#2d3748" stroke-width="1"/>
+  <text x="28" y="58" font-size="11" fill="#94a3b8">Enter contract address…</text>
+  <text x="16" y="88" font-size="8" fill="#64748b" letter-spacing="1">DEFAULT</text>
+
+  <!-- Focus -->
+  <rect x="240" y="28" width="200" height="44" rx="8" fill="none" stroke="#00ff41" stroke-width="1"/>
+  <rect x="238" y="26" width="204" height="48" rx="10" fill="none" stroke="#00ff41" stroke-opacity="0.5" stroke-width="3"/>
+  <text x="252" y="54" font-size="11" fill="#e2e8f0">CXYZ7…</text>
+  <text x="240" y="88" font-size="8" fill="#64748b" letter-spacing="1">FOCUS  ring-3px</text>
+
+  <!-- Error -->
+  <rect x="16" y="108" width="200" height="44" rx="8" fill="none" stroke="#ff3366" stroke-width="1"/>
+  <rect x="14" y="106" width="204" height="48" rx="10" fill="none" stroke="#ff3366" stroke-opacity="0.3" stroke-width="3"/>
+  <text x="28" y="134" font-size="11" fill="#e2e8f0">invalid address</text>
+  <text x="16" y="163" font-size="8" fill="#ff3366" letter-spacing="1">ERROR  ring-destructive/20</text>
+
+  <!-- Success -->
+  <rect x="240" y="108" width="200" height="44" rx="8" fill="none" stroke="#00ff41" stroke-width="1"/>
+  <rect x="238" y="106" width="204" height="48" rx="10" fill="none" stroke="#00ff41" stroke-opacity="0.3" stroke-width="3"/>
+  <text x="252" y="134" font-size="11" fill="#e2e8f0">CXYZ78ABD1234</text>
+  <text x="240" y="163" font-size="8" fill="#00ff41" letter-spacing="1">SUCCESS  ring-green/20</text>
+</svg>

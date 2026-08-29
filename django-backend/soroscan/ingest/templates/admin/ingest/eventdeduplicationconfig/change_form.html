@@ -1,0 +1,24 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block after_related_objects %}
+{{ block.super }}
+<div class="module" style="margin-top:1.5rem;">
+  <h2>Field selection guide</h2>
+  <p>
+    Configure which fields make an event unique for deduplication.
+    Special tokens: <code>event_type</code>, <code>ledger</code>,
+    <code>event_index</code>, <code>tx_hash</code>.
+    Any other name is read from the event payload.
+  </p>
+  <p>
+    Example fields JSON:
+    <code>["event_type", "tx_hash", "amount"]</code>
+  </p>
+  <h3>Testing endpoint</h3>
+  <p>
+    After saving, POST a sample event JSON to the admin test URL or
+    <code>POST /api/ingest/contracts/&lt;id&gt;/dedup-test/</code>.
+  </p>
+</div>
+{% endblock %}

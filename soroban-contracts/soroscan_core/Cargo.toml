@@ -7,10 +7,11 @@ description = "Core indexing contract for SoroScan"
 license = "MIT"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 soroban-sdk = "21.0.0"
+soroscan_macros = { path = "../soroscan_macros" }
 
 [dev-dependencies]
 soroban-sdk = { version = "21.0.0", features = ["testutils"] }

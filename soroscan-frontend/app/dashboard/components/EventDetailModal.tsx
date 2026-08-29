@@ -1,10 +1,13 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { formatDateTime } from "@/components/ingest/formatters";
-import type { EventRecord } from "@/components/ingest/types";
-import styles from "@/components/ingest/ingest-terminal.module.css";
-import { JsonHighlight } from "./JsonHighlight";
+import { useState } from 'react';
+
+import { CopyEventLink } from '@/components/events/CopyEventLink';
+import { formatDateTime } from '@/components/ingest/formatters';
+import type { EventRecord } from '@/components/ingest/types';
+import styles from '@/components/ingest/ingest-terminal.module.css';
+
+import { JsonHighlight } from './JsonHighlight';
 
 interface EventDetailModalProps {
   event: EventRecord;
@@ -13,64 +16,92 @@ interface EventDetailModalProps {
 
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   const [copied, setCopied] = useState<string | null>(null);
-  const [payloadView, setPayloadView] = useState<"json" | "hex">("json");
+  const [payloadView, setPayloadView] = useState<'json' | 'hex'>('json');
 
   const payloadJson = JSON.stringify(event.payload, null, 2);
   const payloadHex = toHex(payloadJson);
 
-  const copyToClipboard = async (text: string, label: string) => {
+  const copyToClipboard = async (text: string, label: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(label);
-      setTimeout(() => setCopied(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
+
+      setTimeout(() => {
+        setCopied(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+  const handleOverlayClick = (eventClick: React.MouseEvent<HTMLDivElement>): void => {
+    if (eventClick.target === eventClick.currentTarget) {
       onClose();
     }
   };
 
   return (
     <div className={styles.exportModalOverlay} onClick={handleOverlayClick}>
-      <div className={styles.exportModal}>
+      <div
+        className={styles.exportModal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="event-details-title"
+      >
         <div className={styles.exportModalHead}>
-          <h2 className={styles.exportModalTitle}>Event Details</h2>
+          <h2 id="event-details-title" className={styles.exportModalTitle}>
+            Event Details
+          </h2>
+
           <button
             type="button"
             className={styles.modalIconBtn}
             onClick={onClose}
-            aria-label="Close modal"
+            aria-label="Close event details"
           >
             ✕
           </button>
         </div>
 
         <div className={styles.exportModalBody}>
-          <div style={{ display: "grid", gap: "1rem" }}>
+          <div
+            style={{
+              display: 'grid',
+              gap: '1rem',
+            }}
+          >
             <section
               style={{
-                border: "1px solid rgba(0, 212, 255, 0.2)",
-                borderRadius: "6px",
-                padding: "0.75rem",
-                display: "grid",
-                gap: "0.55rem",
+                border: '1px solid rgba(0, 212, 255, 0.2)',
+                borderRadius: '6px',
+                padding: '0.75rem',
+                display: 'grid',
+                gap: '0.55rem',
               }}
             >
-              <h3 style={{ margin: 0, color: "#00d4ff", fontSize: "0.9rem" }}>Metadata</h3>
+              <h3
+                style={{
+                  margin: 0,
+                  color: '#00d4ff',
+                  fontSize: '0.9rem',
+                }}
+              >
+                Metadata
+              </h3>
+
               <div
                 style={{
-                  display: "grid",
-                  gap: "0.55rem",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                  display: 'grid',
+                  gap: '0.55rem',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
                 }}
               >
                 <MetaBadge label="Timestamp" value={formatDateTime(event.timestamp)} />
+
                 <MetaBadge label="Ledger" value={event.ledger.toString()} />
+
                 <MetaBadge label="Event Index" value={event.eventIndex.toString()} />
+
                 <MetaBadge label="Event Type" value={event.eventType} />
               </div>
             </section>
@@ -78,77 +109,114 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
             <DetailRow
               label="Event ID"
               value={event.id}
-              onCopy={() => copyToClipboard(event.id, "id")}
-              copied={copied === "id"}
+              onCopy={() => {
+                void copyToClipboard(event.id, 'id');
+              }}
+              copied={copied === 'id'}
             />
-            
+
             <DetailRow
               label="Contract ID"
               value={event.contractId}
-              onCopy={() => copyToClipboard(event.contractId, "contract")}
-              copied={copied === "contract"}
+              onCopy={() => {
+                void copyToClipboard(event.contractId, 'contract');
+              }}
+              copied={copied === 'contract'}
             />
-            
-            {event.contractName && (
+
+            {event.contractName ? (
               <DetailRow label="Contract Name" value={event.contractName} />
-            )}
-            
+            ) : null}
+
             <DetailRow
               label="Transaction Hash"
               value={event.txHash}
-              onCopy={() => copyToClipboard(event.txHash, "tx")}
-              copied={copied === "tx"}
+              onCopy={() => {
+                void copyToClipboard(event.txHash, 'tx');
+              }}
+              copied={copied === 'tx'}
             />
-            
+
             <div>
               <div
                 style={{
-                  marginBottom: "0.5rem",
+                  marginBottom: '0.5rem',
                 }}
               >
-                <label className={styles.fieldLabel}>Payload</label>
-                <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                <span className={styles.fieldLabel}>Payload</span>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '0.35rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <button
                     type="button"
-                    className={`${styles.btn} ${payloadView === "json" ? "" : styles.secondaryBtn}`}
-                    style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minWidth: "auto" }}
-                    onClick={() => setPayloadView("json")}
+                    className={`${styles.btn} ${payloadView === 'json' ? '' : styles.secondaryBtn}`}
+                    style={{
+                      padding: '0.25rem 0.55rem',
+                      fontSize: '0.75rem',
+                      minWidth: 'auto',
+                    }}
+                    onClick={() => {
+                      setPayloadView('json');
+                    }}
                   >
                     JSON
                   </button>
+
                   <button
                     type="button"
-                    className={`${styles.btn} ${payloadView === "hex" ? "" : styles.secondaryBtn}`}
-                    style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minWidth: "auto" }}
-                    onClick={() => setPayloadView("hex")}
+                    className={`${styles.btn} ${payloadView === 'hex' ? '' : styles.secondaryBtn}`}
+                    style={{
+                      padding: '0.25rem 0.55rem',
+                      fontSize: '0.75rem',
+                      minWidth: 'auto',
+                    }}
+                    onClick={() => {
+                      setPayloadView('hex');
+                    }}
                   >
                     HEX
                   </button>
+
                   <button
                     type="button"
                     className={styles.btn}
-                    style={{ padding: "0.25rem 0.55rem", fontSize: "0.75rem", minWidth: "auto" }}
-                    onClick={() => copyToClipboard(payloadView === "json" ? payloadJson : payloadHex, "payload")}
+                    style={{
+                      padding: '0.25rem 0.55rem',
+                      fontSize: '0.75rem',
+                      minWidth: 'auto',
+                    }}
+                    onClick={() => {
+                      void copyToClipboard(
+                        payloadView === 'json' ? payloadJson : payloadHex,
+                        'payload',
+                      );
+                    }}
                   >
-                    {copied === "payload" ? "Copied!" : "Copy Payload"}
+                    {copied === 'payload' ? 'Copied!' : 'Copy Payload'}
                   </button>
                 </div>
               </div>
-              {payloadView === "json" ? (
+
+              {payloadView === 'json' ? (
                 <JsonHighlight data={event.payload} theme="dark" maxHeight="300px" />
               ) : (
                 <pre
                   style={{
-                    background: "rgba(0, 0, 0, 0.3)",
-                    border: "1px solid rgba(0, 212, 255, 0.3)",
-                    padding: "0.75rem",
-                    borderRadius: "4px",
-                    overflow: "auto",
-                    maxHeight: "300px",
-                    fontSize: "0.78rem",
-                    color: "#ffd27d",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(0, 212, 255, 0.3)',
+                    padding: '0.75rem',
+                    borderRadius: '4px',
+                    overflow: 'auto',
+                    maxHeight: '300px',
+                    fontSize: '0.78rem',
+                    color: '#ffd27d',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
                   }}
                 >
                   {payloadHex}
@@ -156,26 +224,30 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
               )}
             </div>
 
-            {event.payloadHash && (
+            {event.payloadHash ? (
               <DetailRow
                 label="Payload Hash"
                 value={event.payloadHash}
-                onCopy={() => copyToClipboard(event.payloadHash!, "hash")}
-                copied={copied === "hash"}
+                onCopy={() => {
+                  void copyToClipboard(event.payloadHash ?? '', 'hash');
+                }}
+                copied={copied === 'hash'}
               />
-            )}
-            
-            {event.schemaVersion && (
+            ) : null}
+
+            {event.schemaVersion ? (
               <DetailRow label="Schema Version" value={event.schemaVersion} />
-            )}
-            
-            {event.validationStatus && (
+            ) : null}
+
+            {event.validationStatus ? (
               <DetailRow label="Validation Status" value={event.validationStatus} />
-            )}
+            ) : null}
           </div>
         </div>
 
         <div className={styles.exportModalActions}>
+          <CopyEventLink eventId={event.id} />
+
           <button
             type="button"
             className={`${styles.btn} ${styles.secondaryBtn}`}
@@ -191,24 +263,31 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
 function toHex(input: string): string {
   const bytes = new TextEncoder().encode(input);
+
   return Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join(" ");
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join(' ');
 }
 
-function MetaBadge({ label, value }: { label: string; value: string }) {
+interface MetaBadgeProps {
+  label: string;
+  value: string;
+}
+
+function MetaBadge({ label, value }: MetaBadgeProps) {
   return (
     <div>
-      <label className={styles.fieldLabel}>{label}</label>
+      <span className={styles.fieldLabel}>{label}</span>
+
       <div
         style={{
-          border: "1px solid rgba(123, 168, 181, 0.25)",
-          borderRadius: "4px",
-          background: "rgba(0, 0, 0, 0.25)",
-          color: "#d6f7ff",
-          padding: "0.4rem",
-          fontSize: "0.78rem",
-          wordBreak: "break-word",
+          border: '1px solid rgba(123, 168, 181, 0.25)',
+          borderRadius: '4px',
+          background: 'rgba(0, 0, 0, 0.25)',
+          color: '#d6f7ff',
+          padding: '0.4rem',
+          fontSize: '0.78rem',
+          wordBreak: 'break-word',
         }}
       >
         {value}
@@ -227,32 +306,44 @@ interface DetailRowProps {
 function DetailRow({ label, value, onCopy, copied }: DetailRowProps) {
   return (
     <div>
-      <label className={styles.fieldLabel}>{label}</label>
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+      <span className={styles.fieldLabel}>{label}</span>
+
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          alignItems: 'center',
+        }}
+      >
         <code
           style={{
             flex: 1,
-            background: "rgba(0, 0, 0, 0.3)",
-            border: "1px solid rgba(123, 168, 181, 0.3)",
-            padding: "0.5rem",
-            borderRadius: "4px",
-            color: "#d6f7ff",
-            wordBreak: "break-all",
-            fontSize: "0.8rem",
+            background: 'rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(123, 168, 181, 0.3)',
+            padding: '0.5rem',
+            borderRadius: '4px',
+            color: '#d6f7ff',
+            wordBreak: 'break-all',
+            fontSize: '0.8rem',
           }}
         >
           {value}
         </code>
-        {onCopy && (
+
+        {onCopy ? (
           <button
             type="button"
             className={styles.btn}
-            style={{ padding: "0.4rem 0.6rem", fontSize: "0.75rem" }}
+            style={{
+              padding: '0.4rem 0.6rem',
+              fontSize: '0.75rem',
+            }}
             onClick={onCopy}
+            aria-label={`Copy ${label}`}
           >
-            {copied ? "✓" : "📋"}
+            {copied ? '✓' : '📋'}
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );

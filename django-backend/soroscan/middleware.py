@@ -120,7 +120,7 @@ class SlowQueryMiddleware:
         with connection.execute_wrapper(_execute):
             response = self.get_response(request)
 
-        # Forward X-RateLimit-* headers set by APIKeyThrottle
+        # Forward RateLimit-* headers set by APIKeyThrottle
         headers = getattr(request, "_api_key_throttle_headers", None)
         if headers and hasattr(response, "__setitem__"):
             for name, value in headers.items():
@@ -149,6 +149,26 @@ class RequestBodySizeMiddleware:
         
         return self.get_response(request)
         
+class GracefulShutdownMiddleware:
+    """Reject new requests during shutdown and track in-flight request count."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from soroscan.shutdown import end_request, try_begin_request
+
+        if not try_begin_request():
+            return JsonResponse(
+                {"error": "Server is shutting down"},
+                status=503,
+            )
+        try:
+            return self.get_response(request)
+        finally:
+            end_request()
+
+
 class MaintenanceModeMiddleware:
     """Return 503 for all non-admin routes when MAINTENANCE_MODE=True."""
 
@@ -180,7 +200,7 @@ class ApiDeprecationMiddleware:
             if path.strip("/") == norm_request_path:
                 response["Deprecation"] = "true"
                 response["Sunset"] = config.get("sunset", "")
-                response["Link"] = f'<{config.get("replacement", "")}>; rel="replacement"'
+                response["Link"] = f'<{config.get("replacement", "")}>; rel="alternate"'
                 break
         return response
 
@@ -250,6 +270,8 @@ class CacheBustingMiddleware:
                 response["Cache-Control"] = "no-cache, no-store, must-revalidate"
                 response["Pragma"] = "no-cache"
             else:
-                response["Cache-Control"] = "private, max-age=0"
+                existing = response.get("Cache-Control", "")
+                if "max-age" not in existing:
+                    response["Cache-Control"] = "private, max-age=0"
 
         return response

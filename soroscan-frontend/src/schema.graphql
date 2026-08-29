@@ -11,11 +11,51 @@ type Query {
   # Admin / system
   systemMetrics: SystemMetrics!
   recentErrors(limit: Int): [ErrorLog!]!
+
+  # Organizations (#913)
+  myOrganizations: [Organization!]!
+  organization(id: String!): Organization
+  teamMembers(organizationId: String!): [TeamMember!]!
+  teamInvitations(organizationId: String!): [TeamInvitation!]!
+  organizationActivity(organizationId: String!): [OrgActivityEntry!]!
+
+  # Contract Dependency Graph (#922)
+  contracts(filter: ContractFilter): [ContractWithDeps!]!
 }
+
+input ContractFilter {
+  name: String
+  vulnerabilityType: String
+}
+
+type DataExportResponse {
+  requestId: String!
+  status: String!
+  expiresAt: String!
+  downloadUrl: String
+}
+
+type DeletionRequestResponse {
+  requestId: String!
+  status: String!
+  approvalDate: String
+}
+
 
 type Mutation {
   login(email: String!, password: String!): AuthPayload!
   refreshToken(refresh: String!): AuthPayload!
+  requestGDPRDataExport(organizationId: String!, format: String!): DataExportResponse!
+  requestRightToBeForgotten(userId: String!, reason: String): DeletionRequestResponse!
+
+  createOrganization(input: CreateOrganizationInput!): Organization!
+  updateOrganization(id: String!, input: UpdateOrganizationInput!): Organization!
+  inviteTeamMember(organizationId: String!, email: String!, role: OrgRole!): InviteResult!
+  updateTeamMemberRole(organizationId: String!, memberId: String!, role: OrgRole!): TeamMember!
+  removeTeamMember(organizationId: String!, memberId: String!): Boolean!
+  resendInvitation(organizationId: String!, invitationId: String!): TeamInvitation!
+  cancelInvitation(organizationId: String!, invitationId: String!): Boolean!
+  switchOrganization(organizationId: String!): Organization!
 }
 
 type Subscription {
@@ -31,6 +71,7 @@ type AuthPayload {
 type User {
   id: ID!
   email: String!
+  activeOrganizationId: String
 }
 
 type SystemMetrics {
@@ -74,4 +115,118 @@ type ContractEvent {
   ledgerSequence: Int!
   timestamp: String!
   payload: String!
+}
+
+enum OrgRole {
+  owner
+  admin
+  operator
+  viewer
+}
+
+enum DataRegion {
+  us_east
+  eu_west
+  ap_southeast
+}
+
+type Organization {
+  id: ID!
+  name: String!
+  billingContact: String!
+  dataRegion: DataRegion!
+  createdAt: String!
+  contractCount: Int!
+  webhookLimit: Int!
+}
+
+type TeamMember {
+  id: ID!
+  email: String!
+  role: OrgRole!
+  joinedAt: String!
+  lastActiveAt: String
+}
+
+type TeamInvitation {
+  id: ID!
+  email: String!
+  role: OrgRole!
+  invitedAt: String!
+  expiresAt: String!
+  status: String!
+}
+
+type OrgActivityEntry {
+  id: ID!
+  action: String!
+  actorEmail: String!
+  targetEmail: String
+  detail: String!
+  timestamp: String!
+}
+
+type InviteResult {
+  success: Boolean!
+  invitationId: String
+  message: String!
+}
+
+input CreateOrganizationInput {
+  name: String!
+  billingContact: String!
+  dataRegion: DataRegion!
+}
+
+input UpdateOrganizationInput {
+  name: String
+  billingContact: String
+  dataRegion: DataRegion
+}
+
+# ── Contract Dependency Graph (#922) ──────────────────────────────────────────
+
+enum VulnerabilitySeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  NONE
+}
+
+enum DependencyType {
+  DIRECT
+  INDIRECT
+  CIRCULAR
+}
+
+type ContractVulnerability {
+  id: ID!
+  title: String!
+  severity: VulnerabilitySeverity!
+  impactedContracts: [String!]!
+}
+
+type ContractDependency {
+  id: ID!
+  contractAddress: String!
+  contractName: String!
+  dependencyType: DependencyType!
+}
+
+type ContractDependent {
+  id: ID!
+  contractAddress: String!
+  contractName: String!
+}
+
+type ContractWithDeps {
+  id: ID!
+  name: String!
+  address: String!
+  riskScore: Float!
+  reachabilityPct: Float!
+  vulnerabilities: [ContractVulnerability!]!
+  dependencies: [ContractDependency!]!
+  dependents: [ContractDependent!]!
 }

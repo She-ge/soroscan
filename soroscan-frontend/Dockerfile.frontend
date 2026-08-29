@@ -1,19 +1,19 @@
 # Build Stage
 FROM node:20-alpine AS base
+RUN npm install -g pnpm
 
 # Install dependencies only when needed
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
-
 # Copy package files
 COPY soroscan-frontend/package.json soroscan-frontend/pnpm-lock.yaml* ./
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies with increased network retries for registry downloads
+RUN pnpm config set fetch-retries 10 && \
+    pnpm config set fetch-retry-maxtimeout 180000 && \
+    pnpm install --frozen-lockfile
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -21,8 +21,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY soroscan-frontend/ .
 
-# Install pnpm for build
-RUN npm install -g pnpm
 RUN pnpm run build
 
 # Production image, copy all the files and run next

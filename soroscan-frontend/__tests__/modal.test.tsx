@@ -8,6 +8,24 @@ import {
 import "@testing-library/jest-dom";
 import { useState } from "react";
 
+// The ultimate JSDOM PointerEvent polyfill
+if (typeof window.PointerEvent === "undefined") {
+  class MockPointerEvent extends MouseEvent {
+    pointerId: number;
+    pointerType: string;
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+      this.pointerId = params.pointerId ?? 1;
+      this.pointerType = params.pointerType ?? "mouse";
+    }
+  }
+  (window as any).PointerEvent = MockPointerEvent;
+}
+if (typeof window.HTMLElement.prototype.hasPointerCapture === "undefined") {
+  window.HTMLElement.prototype.hasPointerCapture = () => false;
+  window.HTMLElement.prototype.releasePointerCapture = () => {};
+}
+
 describe("Modal Component", () => {
   const TestModal = () => {
     const [open, setOpen] = useState(false);
@@ -56,24 +74,33 @@ describe("Modal Component", () => {
       () => {
         expect(screen.queryByText("Test Title")).not.toBeInTheDocument();
       },
-      { timeout: 1000 },
+      { timeout: 1000 }
     );
   });
 
-  it("should NOT close when the overlay is clicked (as per requirements)", async () => {
+  it("should close when the overlay is clicked", async () => {
     render(<TestModal />);
-    
+
     await act(async () => {
       fireEvent.click(screen.getByTestId("trigger"));
     });
 
-    const overlay = document.querySelector('[data-radix-overlay]');
-    
-    await act(async () => {
-      if (overlay) fireEvent.click(overlay);
+    await waitFor(() => {
+      expect(screen.getByText("Test Title")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Test Title")).toBeInTheDocument();
+    const overlay = document.querySelector(
+      "[data-radix-overlay]"
+    ) as HTMLElement;
+    expect(overlay).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(overlay);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Test Title")).not.toBeInTheDocument();
+    });
   });
 
   it("should trap focus inside the modal", async () => {

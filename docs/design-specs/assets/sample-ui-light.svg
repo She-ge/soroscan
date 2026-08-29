@@ -1,0 +1,201 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600"
+     font-family="'JetBrains Mono','IBM Plex Mono',monospace">
+
+  <!-- ░░ PAGE BACKGROUND ░░  hsl(215 50% 97%) = #f3f6fc -->
+  <rect width="960" height="600" fill="#f3f6fc"/>
+
+  <!-- ════════════════════════════════════════════
+       HEADER  h=60  bg: #fcfcfc
+       border-bottom: 1px solid #ccd5e5
+       ════════════════════════════════════════════ -->
+  <rect x="0" y="0" width="960" height="60" fill="#fcfcfc"/>
+  <line x1="0" y1="60" x2="960" y2="60" stroke="#ccd5e5" stroke-width="1"/>
+
+  <!-- Logo -->
+  <text x="20" y="38" font-size="16" font-weight="700" fill="#197a2f" letter-spacing="2">◆ SoroScan</text>
+
+  <!-- Header nav -->
+  <text x="280" y="37" font-size="10" fill="#197a2f" letter-spacing="1" font-weight="700">EVENTS</text>
+  <line x1="280" y1="58" x2="319" y2="58" stroke="#197a2f" stroke-width="2"/>
+  <text x="340" y="37" font-size="10" fill="#4d5e78" letter-spacing="1">PERFORMANCE</text>
+  <text x="440" y="37" font-size="10" fill="#4d5e78" letter-spacing="1">LIVE STREAM</text>
+  <text x="540" y="37" font-size="10" fill="#4d5e78" letter-spacing="1">CONTRACTS</text>
+  <text x="630" y="37" font-size="10" fill="#4d5e78" letter-spacing="1">WEBHOOKS</text>
+
+  <!-- Moon icon (light → dark toggle) -->
+  <path d="M928 22 a8 8 0 1 0 0 16 a6 6 0 1 1 0-16z" fill="none" stroke="#0a7a93" stroke-width="1.5"/>
+
+  <!-- ════════════════════════════════════════════
+       SIDEBAR  w=240  bg:#fcfcfc
+       border-right: 1px solid #ccd5e5
+       ════════════════════════════════════════════ -->
+  <rect x="0" y="60" width="240" height="540" fill="#fcfcfc"/>
+  <line x1="240" y1="60" x2="240" y2="600" stroke="#ccd5e5" stroke-width="1"/>
+
+  <!-- Active: Events -->
+  <rect x="0" y="76" width="4" height="44" fill="#197a2f"/>
+  <rect x="0" y="76" width="240" height="44" fill="#197a2f" fill-opacity="0.08"/>
+  <rect x="20" y="91" width="16" height="16" rx="2" fill="#197a2f" fill-opacity="0.5"/>
+  <text x="46" y="103" font-size="12" font-weight="600" fill="#197a2f">Events</text>
+
+  <!-- Inactive items -->
+  <rect x="20" y="135" width="16" height="16" rx="2" fill="#4d5e78" fill-opacity="0.35"/>
+  <text x="46" y="147" font-size="12" fill="#4d5e78">Performance</text>
+
+  <rect x="20" y="179" width="16" height="16" rx="2" fill="#4d5e78" fill-opacity="0.35"/>
+  <text x="46" y="191" font-size="12" fill="#4d5e78">Live Stream</text>
+
+  <rect x="20" y="223" width="16" height="16" rx="2" fill="#4d5e78" fill-opacity="0.35"/>
+  <text x="46" y="235" font-size="12" fill="#4d5e78">Contracts</text>
+
+  <rect x="20" y="267" width="16" height="16" rx="2" fill="#4d5e78" fill-opacity="0.35"/>
+  <text x="46" y="279" font-size="12" fill="#4d5e78">Webhooks</text>
+
+  <rect x="20" y="311" width="16" height="16" rx="2" fill="#4d5e78" fill-opacity="0.35"/>
+  <text x="46" y="323" font-size="12" fill="#4d5e78">Settings</text>
+</svg>
+
+  <!-- ════════════════════════════════════════════
+       MAIN CONTENT  x=240
+       ════════════════════════════════════════════ -->
+
+  <!-- Page title -->
+  <text x="264" y="92" font-size="20" font-weight="600" fill="#197a2f" letter-spacing="1">Event Records</text>
+  <text x="264" y="112" font-size="11" fill="#4d5e78">Indexed Soroban smart contract events — real-time</text>
+
+  <!-- ── STAT CARDS ── -->
+  <!-- Card 1 -->
+  <rect x="264" y="128" width="156" height="72" rx="4" fill="#fcfcfc"
+        stroke="#ccd5e5" stroke-width="1"/>
+  <text x="276" y="150" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="2">TOTAL EVENTS</text>
+  <text x="276" y="178" font-size="22" font-weight="600" fill="#197a2f">1,482,309</text>
+  <text x="276" y="194" font-size="9" fill="#4d5e78">↑ 4.2% this hour</text>
+
+  <!-- Card 2 -->
+  <rect x="432" y="128" width="156" height="72" rx="4" fill="#fcfcfc"
+        stroke="#ccd5e5" stroke-width="1"/>
+  <text x="444" y="150" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="2">ACTIVE CONTRACTS</text>
+  <text x="444" y="178" font-size="22" font-weight="600" fill="#0a7a93">347</text>
+  <text x="444" y="194" font-size="9" fill="#4d5e78">↑ 12 new today</text>
+
+  <!-- Card 3 -->
+  <rect x="600" y="128" width="156" height="72" rx="4" fill="#fcfcfc"
+        stroke="#ccd5e5" stroke-width="1"/>
+  <text x="612" y="150" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="2">FAILED EVENTS</text>
+  <text x="612" y="178" font-size="22" font-weight="600" fill="#b8003a">23</text>
+  <text x="612" y="194" font-size="9" fill="#4d5e78">↓ 8% from yesterday</text>
+
+  <!-- Card 4 -->
+  <rect x="768" y="128" width="156" height="72" rx="4" fill="#fcfcfc"
+        stroke="#ccd5e5" stroke-width="1"/>
+  <text x="780" y="150" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="2">AVG LATENCY</text>
+  <text x="780" y="178" font-size="22" font-weight="600" fill="#8f5e00">142ms</text>
+  <text x="780" y="194" font-size="9" fill="#4d5e78">P99: 380ms</text>
+
+  <!-- ── EVENT TABLE PANEL ── -->
+  <rect x="264" y="216" width="672" height="264" rx="4" fill="#fcfcfc"
+        stroke="#ccd5e5" stroke-width="1"/>
+
+  <!-- Panel title -->
+  <text x="280" y="238" font-size="9" font-weight="700" fill="#197a2f" letter-spacing="2">EVENT RECORDS</text>
+
+  <!-- Filter badge -->
+  <rect x="560" y="225" width="60" height="20" rx="10" fill="#197a2f" fill-opacity="0.08"
+        stroke="#197a2f" stroke-opacity="0.30" stroke-width="1"/>
+  <text x="590" y="239" font-size="8" font-weight="600" fill="#197a2f" text-anchor="middle" letter-spacing="1">ALL</text>
+
+  <!-- Refresh button -->
+  <rect x="630" y="225" width="80" height="20" rx="4" fill="#197a2f"/>
+  <text x="670" y="239" font-size="8" font-weight="700" fill="#fcfcfc" text-anchor="middle">↻ REFRESH</text>
+
+  <!-- Table header -->
+  <rect x="264" y="248" width="672" height="28" fill="#e8eef6"/>
+  <text x="280" y="266" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="1">TIMESTAMP</text>
+  <text x="390" y="266" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="1">CONTRACT</text>
+  <text x="560" y="266" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="1">EVENT TYPE</text>
+  <text x="680" y="266" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="1">STATUS</text>
+  <text x="780" y="266" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="1">LEDGER</text>
+  <text x="870" y="266" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="1">TX</text>
+
+  <!-- Row 1 -->
+  <line x1="264" y1="276" x2="936" y2="276" stroke="#e8eef6" stroke-width="1"/>
+  <text x="280" y="294" font-size="10" fill="#1e2440">2026-07-30 14:22:01</text>
+  <text x="390" y="294" font-size="10" fill="#0a7a93">CXYZ78…ABD1</text>
+  <text x="560" y="294" font-size="10" fill="#1e2440">transfer</text>
+  <circle cx="692" cy="290" r="4" fill="#197a2f"/>
+  <text x="704" y="294" font-size="10" fill="#197a2f">ACTIVE</text>
+  <text x="780" y="294" font-size="10" fill="#1e2440">51,204,101</text>
+  <text x="870" y="294" font-size="10" fill="#0a7a93">a1b2c3…</text>
+
+  <!-- Row 2 -->
+  <line x1="264" y1="304" x2="936" y2="304" stroke="#e8eef6" stroke-width="1"/>
+  <text x="280" y="322" font-size="10" fill="#1e2440">2026-07-30 14:21:58</text>
+  <text x="390" y="322" font-size="10" fill="#0a7a93">CABC12…XYZ9</text>
+  <text x="560" y="322" font-size="10" fill="#1e2440">mint</text>
+  <circle cx="692" cy="318" r="4" fill="#8f5e00"/>
+  <text x="704" y="322" font-size="10" fill="#8f5e00">PENDING</text>
+  <text x="780" y="322" font-size="10" fill="#1e2440">51,204,099</text>
+  <text x="870" y="322" font-size="10" fill="#0a7a93">d4e5f6…</text>
+
+  <!-- Row 3 -->
+  <line x1="264" y1="332" x2="936" y2="332" stroke="#e8eef6" stroke-width="1"/>
+  <text x="280" y="350" font-size="10" fill="#1e2440">2026-07-30 14:21:55</text>
+  <text x="390" y="350" font-size="10" fill="#0a7a93">CDEF34…GHI5</text>
+  <text x="560" y="350" font-size="10" fill="#1e2440">burn</text>
+  <circle cx="692" cy="346" r="4" fill="#b8003a"/>
+  <text x="704" y="350" font-size="10" fill="#b8003a">FAILED</text>
+  <text x="780" y="350" font-size="10" fill="#1e2440">51,204,095</text>
+  <text x="870" y="350" font-size="10" fill="#0a7a93">g7h8i9…</text>
+
+  <!-- Row 4 -->
+  <line x1="264" y1="360" x2="936" y2="360" stroke="#e8eef6" stroke-width="1"/>
+  <text x="280" y="378" font-size="10" fill="#1e2440">2026-07-30 14:21:50</text>
+  <text x="390" y="378" font-size="10" fill="#0a7a93">CJKL56…MNO7</text>
+  <text x="560" y="378" font-size="10" fill="#1e2440">swap</text>
+  <circle cx="692" cy="374" r="4" fill="#197a2f"/>
+  <text x="704" y="378" font-size="10" fill="#197a2f">ACTIVE</text>
+  <text x="780" y="378" font-size="10" fill="#1e2440">51,204,091</text>
+  <text x="870" y="378" font-size="10" fill="#0a7a93">j1k2l3…</text>
+
+  <!-- Row 5 -->
+  <line x1="264" y1="388" x2="936" y2="388" stroke="#e8eef6" stroke-width="1"/>
+  <text x="280" y="406" font-size="10" fill="#1e2440">2026-07-30 14:21:44</text>
+  <text x="390" y="406" font-size="10" fill="#0a7a93">CPQR78…STU9</text>
+  <text x="560" y="406" font-size="10" fill="#1e2440">approve</text>
+  <circle cx="692" cy="402" r="4" fill="#6e819c"/>
+  <text x="704" y="406" font-size="10" fill="#6e819c">INACTIVE</text>
+  <text x="780" y="406" font-size="10" fill="#1e2440">51,204,088</text>
+  <text x="870" y="406" font-size="10" fill="#0a7a93">m4n5o6…</text>
+
+  <!-- Pagination -->
+  <rect x="264" y="452" width="672" height="28" fill="#e8eef6"/>
+  <text x="280" y="470" font-size="9" fill="#4d5e78">Showing 1–5 of 1,482,309 events</text>
+  <rect x="820" y="456" width="48" height="20" rx="4" fill="none" stroke="#adbacf" stroke-width="1"/>
+  <text x="844" y="470" font-size="9" fill="#4d5e78" text-anchor="middle">PREV</text>
+  <rect x="876" y="456" width="48" height="20" rx="4" fill="#197a2f"/>
+  <text x="900" y="470" font-size="9" font-weight="700" fill="#fcfcfc" text-anchor="middle">NEXT</text>
+
+  <!-- ── Input + Badges ── -->
+  <text x="264" y="510" font-size="9" font-weight="700" fill="#4d5e78" letter-spacing="2">FILTER BY CONTRACT</text>
+  <rect x="264" y="520" width="320" height="44" rx="8" fill="#fcfcfc" stroke="#adbacf" stroke-width="1"/>
+  <text x="280" y="546" font-size="11" fill="#718096">Enter contract ID…</text>
+
+  <!-- Badges -->
+  <rect x="600" y="530" width="56" height="24" rx="12" fill="#197a2f" fill-opacity="0.08"
+        stroke="#197a2f" stroke-opacity="0.30" stroke-width="1"/>
+  <circle cx="614" cy="542" r="4" fill="#197a2f"/>
+  <text x="638" y="546" font-size="9" font-weight="600" fill="#197a2f" text-anchor="middle" letter-spacing="1">LIVE</text>
+
+  <rect x="664" y="530" width="68" height="24" rx="12" fill="#8f5e00" fill-opacity="0.08"
+        stroke="#8f5e00" stroke-opacity="0.30" stroke-width="1"/>
+  <circle cx="678" cy="542" r="4" fill="#8f5e00"/>
+  <text x="706" y="546" font-size="9" font-weight="600" fill="#8f5e00" text-anchor="middle" letter-spacing="1">PENDING</text>
+
+  <rect x="740" y="530" width="60" height="24" rx="12" fill="#b8003a" fill-opacity="0.08"
+        stroke="#b8003a" stroke-opacity="0.30" stroke-width="1"/>
+  <circle cx="754" cy="542" r="4" fill="#b8003a"/>
+  <text x="780" y="546" font-size="9" font-weight="600" fill="#b8003a" text-anchor="middle" letter-spacing="1">FAILED</text>
+
+  <!-- Label -->
+  <text x="264" y="595" font-size="8" fill="#718096" letter-spacing="1">LIGHT THEME — HSL TOKENS — WCAG 2.1 AA</text>
+</svg>

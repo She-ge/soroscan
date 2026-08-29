@@ -73,6 +73,7 @@ export function ContractForm({ contract, onSave, onCancel }: ContractFormProps) 
 
       <Input
         label="Name"
+        data-testid="contract-name-input"
         value={formData.name}
         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
         placeholder="My Contract"
@@ -99,13 +100,13 @@ export function ContractForm({ contract, onSave, onCancel }: ContractFormProps) 
         <div className="flex justify-end">
           <span
             className={`text-xs font-terminal-mono ${
-              formData.description.length >= DESCRIPTION_WARNING_THRESHOLD
+              (formData.description?.length ?? 0) >= DESCRIPTION_WARNING_THRESHOLD
                 ? "text-terminal-danger"
                 : "text-terminal-gray"
             }`}
             aria-live="polite"
           >
-            {formData.description.length}/{DESCRIPTION_MAX_LENGTH}
+            {formData.description?.length ?? 0}/{DESCRIPTION_MAX_LENGTH}
           </span>
         </div>
       </div>
@@ -158,7 +159,13 @@ export function ContractForm({ contract, onSave, onCancel }: ContractFormProps) 
       )}
 
      <div className="flex flex-col sm:flex-row gap-3 pt-4">
-        <Button type="submit" variant="primary" disabled={isSubmitting} className="flex-1">
+        <Button
+          type="submit"
+          variant="primary"
+          data-testid="contract-save-btn"
+          disabled={isSubmitting}
+          className="flex-1"
+        >
           {isSubmitting ? "SAVING..." : "SAVE CHANGES"}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting} className="sm:w-auto">

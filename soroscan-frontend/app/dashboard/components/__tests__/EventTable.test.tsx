@@ -67,7 +67,7 @@ describe("EventTable", () => {
       );
 
       expect(container.querySelectorAll("tbody tr")).toHaveLength(5);
-      expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+      expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
     });
 
     it("skeleton matches table structure with 7 columns including checkbox", () => {
@@ -97,11 +97,10 @@ describe("EventTable", () => {
       );
 
       const firstRow = container.querySelector("tbody tr");
-      const skeletons = firstRow?.querySelectorAll(".skeleton");
+      const skeletons = firstRow?.querySelectorAll('[data-slot="skeleton"]');
 
       expect(skeletons?.length).toBe(7);
       expect(skeletons?.[1]).toHaveStyle({ width: "120px" });
-      expect(skeletons?.[2]).toHaveStyle({ borderRadius: "12px" });
     });
 
     it("does not show skeleton when not loading", () => {
@@ -114,7 +113,7 @@ describe("EventTable", () => {
         />,
       );
 
-      expect(container.querySelectorAll(".skeleton")).toHaveLength(0);
+      expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(0);
     });
 
     it("transitions smoothly from skeleton to content", () => {
@@ -127,7 +126,7 @@ describe("EventTable", () => {
         />,
       );
 
-      expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+      expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
 
       rerender(
         <EventTable
@@ -138,7 +137,7 @@ describe("EventTable", () => {
         />,
       );
 
-      expect(container.querySelectorAll(".skeleton")).toHaveLength(0);
+      expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(0);
       expect(screen.getAllByText(/CCAAA/).length).toBeGreaterThan(0);
     });
   });

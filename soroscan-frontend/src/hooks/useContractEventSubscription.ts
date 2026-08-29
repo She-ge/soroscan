@@ -66,9 +66,8 @@ export function useContractEventSubscription({
     typeof window !== "undefined" && !!process.env.NEXT_PUBLIC_WS_URL;
 
   const [events, setEvents] = useState<ContractEventItem[]>([]);
-  const [connectionState, setConnectionState] = useState<ConnectionState>(
-    wsAvailable ? "disconnected" : "unavailable"
-  );
+  // True once the socket has delivered at least one payload.
+  const [hasReceivedData, setHasReceivedData] = useState(false);
 
   // Track mount state to avoid state updates after unmount
   const mountedRef = useRef(true);
@@ -86,15 +85,10 @@ export function useContractEventSubscription({
       if (event) {
         setEvents((prev) => [event, ...prev].slice(0, maxEvents));
       }
-      setConnectionState("connected");
+      setHasReceivedData(true);
     },
     [maxEvents]
   );
-
-  const handleError = useCallback(() => {
-    if (!mountedRef.current) return;
-    setConnectionState("reconnecting");
-  }, []);
 
   const { loading, error } = useSubscription<{
     contractEvent: ContractEventItem;
@@ -102,8 +96,17 @@ export function useContractEventSubscription({
     variables: { contractId },
     skip: !wsAvailable,
     onData: handleData,
-    onError: handleError,
   });
+
+  // A live socket that has not yet emitted an event is still "connected" —
+  // deriving the state avoids reporting "Disconnected" on an idle contract.
+  const connectionState: ConnectionState = !wsAvailable
+    ? "unavailable"
+    : error
+      ? "reconnecting"
+      : hasReceivedData || !loading
+        ? "connected"
+        : "disconnected";
 
   return {
     events,

@@ -5,3 +5,11 @@ target-version = ['py311']
 [tool.isort]
 profile = "black"
 line_length = 88
+
+[tool.pyright]
+pythonPath = "django-backend/venv/bin/python"
+venvPath = "."
+venv = "django-backend/venv"
+extraPaths = ["django-backend"]
+
+

@@ -106,6 +106,38 @@ export interface GetEventsParams {
 
 export type GetEventsResponse = PaginatedResponse<ContractEvent>;
 
+/** Query events across up to ten contracts in one request. */
+export interface GetEventsByContractsParams {
+  contractIds: ContractId[];
+  eventType?: EventType;
+  startLedger?: number;
+  endLedger?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface GetEventsByContractsResponse {
+  count: number;
+  results: ContractEvent[];
+  contractIds: ContractId[];
+}
+
+/** SC-38 input for a versioned event. Both hash values are 32-byte hex strings. */
+export interface RecordStructuredEventParams {
+  contractId: ContractId;
+  eventType: EventType;
+  payloadHash: string;
+  schemaVersion: number;
+  correlationId: string;
+}
+
+export interface RecordStructuredEventResponse {
+  status: "submitted" | "failed";
+  txHash?: string;
+  transactionStatus: string;
+  error?: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Contracts
 // ─────────────────────────────────────────────────────────────────────────────
@@ -220,6 +252,54 @@ export interface Ledger {
   baseReserve: number;
 }
 
+/**
+ * SC-38: Input for submitting a structured, deduplicated event.
+ * The `correlationId` must be unique per event; duplicate submissions are
+ * rejected by the contract so callers can safely retry on network error.
+ */
+export interface RecordStructuredEventParams {
+  contractId: ContractId;
+  eventType: EventType;
+  payloadHash: string;
+  /** Must be > 0. Used by the contract to select the correct decoder. */
+  schemaVersion: number;
+  /** 32-byte hex correlation id for idempotent submission. */
+  correlationId: string;
+}
+
+export interface RecordStructuredEventResponse {
+  status: "submitted" | "failed";
+  txHash?: string;
+  transactionStatus: string;
+  error?: string;
+}
+
+/** Maximum number of producer-defined tags per SC-24 event. */
+export const MAX_TAGS = 4;
+
+/**
+ * SC-24 input for a tagged event. Tags are short producer-defined
+ * classification strings (e.g. ["defi", "token"]) that allow off-chain
+ * indexers to filter events without decoding the full payload.
+ * At most {@link MAX_TAGS} tags may be supplied.
+ */
+export interface RecordTaggedEventParams {
+  contractId: ContractId;
+  eventType: EventType;
+  payloadHash: string;
+  /** Up to {@link MAX_TAGS} producer-defined classification tags. */
+  tags?: string[];
+}
+
+export interface RecordTaggedEventResponse {
+  status: "submitted" | "failed";
+  txHash?: string;
+  transactionStatus: string;
+  error?: string;
+  /** Echo of the tags that were submitted with the event. */
+  tags: string[];
+}
+
 export interface GetLedgersParams {
   after?: string;
   before?: string;
@@ -300,6 +380,155 @@ export interface UpdateWebhookParams {
 export interface WebhookListResponse {
   items: Webhook[];
   totalCount: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SC-16: Contract health
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ContractHealth {
+  /** Contract address */
+  contractId: string;
+  /** Health status (healthy/unhealthy) */
+  status: string;
+  /** Timestamp of last event */
+  lastEventTime: string | null;
+  /** Minutes since last event */
+  minutesSinceLastEvent: number | null;
+  /** ABI decode errors in last hour */
+  abiDecodeErrors1h: number;
+  /** Consecutive indexing failures */
+  consecutiveFailures: number;
+  /** Error message if unhealthy */
+  errorMessage: string;
+  /** When health was last checked */
+  checkedAt: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SC-29: Batch event recording
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface EventEntry {
+  /** Target contract address */
+  contractId: ContractId;
+  /** Event type name (e.g. "transfer", "swap") */
+  eventType: EventType;
+  /** SHA-256 hash of the event payload (hex) */
+  payloadHash: string;
+}
+
+export interface RecordEventsBatchParams {
+  /** 1–25 event entries to record in a single transaction */
+  events: EventEntry[];
+}
+
+export interface RecordEventsBatchResponse {
+  status: string;
+  /** New total event count after the batch */
+  totalEvents: number;
+  txHash: string | null;
+  transactionStatus: string | null;
+  error: string | null;
+}
+
+export interface GetAdminResponse {
+  admin_address: string | null;
+}
+
+export interface IsIndexerResponse {
+  is_indexer: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SC-9: Indexer authorization
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AddIndexerParams {
+  /** Stellar address of the indexer to authorize */
+  indexerAddress: StellarAddress;
+}
+
+export interface AddIndexerResponse {
+  status: string;
+  txHash: string | null;
+  transactionStatus: string | null;
+  error: string | null;
+// SC-30: Recent contract events
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Maximum number of events that can be requested via `getContractRecentEvents`. */
+export const MAX_RECENT_EVENTS_LIMIT = 20;
+
+export interface GetContractRecentEventsParams {
+  /** Contract address to fetch recent events for */
+  contractId: ContractId;
+  /** Maximum number of events to return (1-20, default 10) */
+  limit?: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WebSocket
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface WebSocketClientConfig {
+  /** Base URL of the SoroScan WebSocket server (e.g., "wss://api.soroscan.io") */
+  wsUrl: string;
+
+  /** Optional API key for authentication */
+  apiKey?: string;
+
+  /** Initial reconnection delay in milliseconds (default: 1000) */
+  initialReconnectDelay?: number;
+
+  /** Maximum reconnection delay in milliseconds (default: 30000) */
+  maxReconnectDelay?: number;
+
+  /** Backoff multiplier for exponential backoff (default: 2) */
+  backoffMultiplier?: number;
+
+  /** Whether to add jitter to reconnection delays (default: true) */
+  useJitter?: boolean;
+
+  /** Maximum messages to buffer while disconnected (default: 1000) */
+  maxBufferSize?: number;
+}
+
+export type EventCallback = (event: ContractEvent) => void;
+export type ConnectionCallback = () => void;
+export type ErrorCallback = (error: Error) => void;
+export type ReconnectingCallback = (attempt: number, delay: number) => void;
+
+export interface EventFilter {
+  /** Filter by contract ID */
+  contractId?: string;
+
+  /** Filter by event type */
+  eventType?: EventType;
+
+  /** Filter by topics */
+  topics?: Partial<ContractEventTopic>[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SC-13: Per-indexer event statistics
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface IndexerStats {
+  /** The indexer's Stellar address */
+  indexer: string;
+  /** Total events recorded by this indexer */
+  eventsRecorded: number;
+// SC-28: Contract pause status
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ContractStatus {
+  /** Whether event recording is currently paused */
+  paused: boolean;
+  /** Current admin address */
+  admin: string;
+  /** Total events recorded so far */
+  totalEvents: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

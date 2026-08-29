@@ -6,7 +6,9 @@ describe("Dashboard Components", () => {
   describe("EventTable", () => {
     it("renders default empty state when hasActiveFilters is false", () => {
       render(<EventTable events={[]} loading={false} onEventClick={jest.fn()} hasActiveFilters={false} />);
-      expect(screen.getByText("No events found. Select a contract and adjust filters to view events.")).toBeInTheDocument();
+      // Replaced the combined text assertion with separated assertions for title and description
+      expect(screen.getByText("No events found")).toBeInTheDocument();
+      expect(screen.getByText("Select a contract and adjust filters to view events.")).toBeInTheDocument();
     });
 
     it("renders friendly empty state with clear filters button when hasActiveFilters is true", () => {

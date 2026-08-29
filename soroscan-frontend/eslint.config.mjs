@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // GraphQL codegen output — do not lint generated files
+    "src/generated/**",
+    // Playwright E2E (Node test runner — not React components)
+    "tests/**",
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 

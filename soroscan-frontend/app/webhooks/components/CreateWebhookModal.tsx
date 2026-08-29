@@ -4,7 +4,9 @@ import * as React from "react"
 import { Wand2 } from "lucide-react"
 import { Modal } from "@/components/terminal/Modal"
 import { Input } from "@/components/terminal/Input"
+import { ValidatedInput } from "@/components/terminal/ValidatedInput"
 import { Button } from "@/components/terminal/Button"
+import { isValidUrl } from "@/lib/validators"
 import { FilterBuilderModal } from "./FilterBuilderModal"
 import type { Webhook, EventType, WebhookStatus } from "../types"
 import type { FilterExpression } from "@/components/ui/WebhookFilterExpressionBuilder"
@@ -26,15 +28,6 @@ interface CreateWebhookModalProps {
   onCreate: (webhook: Omit<Webhook, "id" | "createdAt" | "totalDeliveries" | "secret" | "successRate">) => void
 }
 
-function isValidUrl(str: string): boolean {
-  try {
-    const u = new URL(str)
-    return u.protocol === "http:" || u.protocol === "https:"
-  } catch {
-    return false
-  }
-}
-
 export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookModalProps) {
   const [url, setUrl] = React.useState("")
   const [urlTouched, setUrlTouched] = React.useState(false)
@@ -44,6 +37,7 @@ export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookM
   const [timeoutInput, setTimeoutInput] = React.useState("30")
   const [timeoutTouched, setTimeoutTouched] = React.useState(false)
   const [submitting, setSubmitting] = React.useState(false)
+  const urlInputRef = React.useRef<React.ElementRef<typeof ValidatedInput>>(null)
 
   // Filter expression state
   const [filterExpression, setFilterExpression] = React.useState<FilterExpression | undefined>(undefined)
@@ -56,7 +50,6 @@ export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookM
   const urlValid = isValidUrl(url)
   const timeoutValue = Number(timeoutInput)
   const timeoutValid = Number.isInteger(timeoutValue) && timeoutValue >= 5 && timeoutValue <= 60
-  const urlError = urlTouched && !urlValid ? "Must be a valid https:// URL" : null
   const timeoutError = timeoutTouched && !timeoutValid ? "Timeout must be a whole number between 5 and 60 seconds." : null
 
   const toggleType = (t: EventType) => {
@@ -102,9 +95,9 @@ export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookM
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!urlValid) { setUrlTouched(true); return }
-    if (!urlValid || !timeoutValid) {
-      setUrlTouched(true)
+    setUrlTouched(true)
+    const urlOk = urlInputRef.current?.validate() ?? urlValid
+    if (!urlOk || !timeoutValid) {
       setTimeoutTouched(true)
       return
     }
@@ -129,6 +122,7 @@ export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookM
         eventTypes: selectedTypes.length === 0 ? ["ALL"] : selectedTypes,
         contractFilter: contractFilter.trim() || undefined,
         status,
+        isActive: status === "ACTIVE",
         timeoutSeconds: timeoutValue,
         filterExpression: filterExpressionStr || undefined,
         customHeaders: Object.keys(headerRecord).length > 0 ? headerRecord : undefined,
@@ -156,21 +150,22 @@ export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookM
       <Modal isOpen={isOpen} onClose={handleClose} title="NEW_WEBHOOK_SUBSCRIPTION">
         <form onSubmit={handleSubmit} className="space-y-5 text-sm">
           {/* URL */}
-          <div>
-            <Input
-              id="webhook-url-input"
-              label="ENDPOINT_URL *"
-              type="url"
-              placeholder="https://yourapp.io/webhook"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onBlur={() => setUrlTouched(true)}
-              aria-invalid={!!urlError}
-            />
-            {urlError && (
-              <p className="text-terminal-danger text-[10px] mt-1 ml-1">{urlError}</p>
-            )}
-          </div>
+          <ValidatedInput
+            ref={urlInputRef}
+            id="webhook-url-input"
+            data-testid="webhook-url-input"
+            label="ENDPOINT_URL *"
+            type="url"
+            placeholder="https://yourapp.io/webhook"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onBlur={() => setUrlTouched(true)}
+            validators={{
+              required: "Must be a valid https:// URL",
+              url: "Must be a valid https:// URL",
+            }}
+            hint="HTTPS endpoint that receives signed event payloads"
+          />
 
           {/* Event timeout */}
           <div>
@@ -239,13 +234,16 @@ export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookM
           </div>
 
           {/* Contract filter */}
-          <Input
+          <ValidatedInput
             id="contract-filter-input"
             label="CONTRACT_FILTER (optional)"
             type="text"
             placeholder="CABC...9X4Z — leave blank for all contracts"
             value={contractFilter}
             onChange={(e) => setContractFilter(e.target.value)}
+            validators={{ maxLength: 56 }}
+            hint="Leave blank to receive events from all contracts"
+            showSuccess={false}
           />
 
           {/* Filter expression builder */}
@@ -367,6 +365,7 @@ export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookM
             <Button
               type="submit"
               variant="primary"
+              data-testid="create-webhook-submit"
               disabled={submitting || (urlTouched && !urlValid)}
               className="flex-1"
             >
