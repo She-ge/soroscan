@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { Trash2, FlaskConical, ChevronDown, ChevronUp } from "lucide-react"
+import { EmptyState, EmptyStateIcon } from "@/components/ui/empty-state"
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
   SortDirectionIndicator,
@@ -134,7 +135,8 @@ function WebhookCard({
             <WebhookDeliveryStatusBadge
               state={getDeliveryState(
                 wh.isActive ?? true,
-                wh.lastDeliverySuccess ?? wh.lastStatusCode ? wh.lastStatusCode < 300 : true,
+                wh.lastDeliverySuccess ??
+                  (wh.lastStatusCode !== undefined ? wh.lastStatusCode < 300 : true),
                 wh.failureCount ?? 0
               )}
               lastDeliveryTime={wh.lastDelivery}
@@ -166,16 +168,22 @@ function WebhookCard({
               </Button>
             </Link>
             <button
+              type="button"
               onClick={() => onTest(wh.id)}
               disabled={isTesting}
               title="Test webhook"
+              aria-label={`Test webhook ${wh.id}`}
+              data-testid={`test-webhook-${wh.id}`}
               className="min-w-[44px] min-h-[44px] flex items-center justify-center border border-terminal-cyan/40 text-terminal-cyan hover:border-terminal-cyan hover:bg-terminal-cyan/10 transition-colors disabled:opacity-50"
             >
               <FlaskConical size={14} />
             </button>
             <button
+              type="button"
               onClick={() => onDelete(wh.id)}
               title="Delete webhook"
+              aria-label={`Delete webhook ${wh.id}`}
+              data-testid={`delete-webhook-${wh.id}`}
               className="min-w-[44px] min-h-[44px] flex items-center justify-center border border-terminal-danger/40 text-terminal-danger hover:border-terminal-danger hover:bg-terminal-danger/10 transition-colors"
             >
               <Trash2 size={14} />
@@ -211,18 +219,23 @@ export function WebhookTable({ webhooks, onDelete, onTest, testingId, testResult
 
   if (webhooks.length === 0) {
     return (
-      <div className="border border-terminal-green/20 p-12 text-center font-terminal-mono space-y-3">
-        <div className="text-terminal-green text-2xl">[ ]</div>
-        <div className="text-terminal-gray text-sm">NO_SUBSCRIPTIONS_FOUND</div>
-        <div className="text-terminal-gray/50 text-xs">Create your first webhook to start receiving events</div>
-      </div>
+      <EmptyState
+        variant="terminal"
+        icon={
+          <EmptyStateIcon>
+            <div className="text-terminal-green text-2xl">[ ]</div>
+          </EmptyStateIcon>
+        }
+        title="NO_SUBSCRIPTIONS_FOUND"
+        description="Create your first webhook to start receiving events."
+      />
     )
   }
 
   return (
     <>
-      {/* Mobile: stacked cards (hidden on md+) */}
-      <div className="md:hidden space-y-2" data-testid="webhook-mobile-list">
+      {/* Mobile: stacked cards (hidden on sm+) */}
+      <div className="sm:hidden space-y-2" data-testid="webhook-mobile-list">
         {sorted.map((wh) => (
           <WebhookCard
             key={wh.id}
@@ -235,8 +248,8 @@ export function WebhookTable({ webhooks, onDelete, onTest, testingId, testResult
         ))}
       </div>
 
-      {/* Desktop: table (hidden below md) */}
-      <div className="hidden md:block overflow-x-auto" data-testid="webhook-desktop-table">
+      {/* Desktop: table (hidden below sm) */}
+      <div className="hidden sm:block overflow-x-auto" data-testid="webhook-desktop-table">
         <Table>
           <TableHeader>
             <TableRow>
@@ -351,16 +364,22 @@ export function WebhookTable({ webhooks, onDelete, onTest, testingId, testResult
                         </Button>
                       </Link>
                       <button
+                        type="button"
                         onClick={() => onTest(wh.id)}
                         disabled={isTesting}
                         title="Test webhook"
+                        aria-label={`Test webhook ${wh.id}`}
+                        data-testid="test-webhook-btn"
                         className="h-7 w-7 flex items-center justify-center border border-terminal-cyan/40 text-terminal-cyan hover:border-terminal-cyan hover:bg-terminal-cyan/10 transition-colors disabled:opacity-50"
                       >
                         <FlaskConical size={12} />
                       </button>
                       <button
+                        type="button"
                         onClick={() => onDelete(wh.id)}
                         title="Delete webhook"
+                        aria-label={`Delete webhook ${wh.id}`}
+                        data-testid="delete-webhook-btn"
                         className="h-7 w-7 flex items-center justify-center border border-terminal-danger/40 text-terminal-danger hover:border-terminal-danger hover:bg-terminal-danger/10 transition-colors"
                       >
                         <Trash2 size={12} />

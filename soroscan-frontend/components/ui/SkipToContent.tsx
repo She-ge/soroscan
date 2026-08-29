@@ -12,16 +12,7 @@ export function SkipToContent() {
   return (
     <a
       href="#main-content"
-      className={[
-        /* Visually hidden by default */
-        "absolute -translate-y-full left-4 top-4 z-9999",
-        "rounded px-4 py-2",
-        "bg-terminal-black text-terminal-green border border-terminal-green",
-        "font-terminal-mono text-sm font-bold tracking-widest uppercase",
-        /* Slide into view on focus */
-        "focus:translate-y-0 focus:outline-none focus-visible:translate-y-0",
-        "transition-transform duration-150",
-      ].join(" ")}
+      className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-terminal-black focus:text-terminal-green focus:border focus:border-terminal-green focus:rounded focus:outline-none font-terminal-mono text-sm font-bold tracking-widest uppercase"
     >
       Skip to main content
     </a>

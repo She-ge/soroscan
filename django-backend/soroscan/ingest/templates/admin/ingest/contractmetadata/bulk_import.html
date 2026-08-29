@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>Bulk import contract metadata</h1>
+<p>
+  Upload a CSV or JSON file. Validation runs before writes.
+  Use <strong>dry run</strong> to preview, and choose <strong>rollback</strong>
+  (default) or <strong>skip</strong> on error.
+</p>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <fieldset class="module aligned">
+    <div class="form-row">
+      <label for="id_file">File:</label>
+      <input type="file" name="file" id="id_file" required accept=".csv,.json,text/csv,application/json">
+    </div>
+    <div class="form-row">
+      <label for="id_format">Format:</label>
+      <select name="format" id="id_format">
+        <option value="">Auto-detect</option>
+        <option value="csv">CSV</option>
+        <option value="json">JSON</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="id_on_error">On error:</label>
+      <select name="on_error" id="id_on_error">
+        <option value="rollback">Rollback</option>
+        <option value="skip">Skip row</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="id_dry_run">
+        <input type="checkbox" name="dry_run" id="id_dry_run"> Dry run (validate only)
+      </label>
+    </div>
+  </fieldset>
+  <div class="submit-row">
+    <input type="submit" value="Import" class="default">
+    <a href="{% url 'admin:ingest_contractmetadata_changelist' %}" class="button cancel-link">Cancel</a>
+  </div>
+</form>
+
+{% if report %}
+  <h2>Import report</h2>
+  <pre style="background:#111;color:#eee;padding:1rem;overflow:auto;">{{ report }}</pre>
+{% endif %}
+{% endblock %}

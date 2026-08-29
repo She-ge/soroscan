@@ -1,13 +1,27 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import "../styles/landing.css"
 import { Navbar } from "@/components/terminal/landing/Navbar"
 import { Hero } from "@/components/terminal/landing/Hero"
 import { Features } from "@/components/terminal/landing/Features"
-import { EventStream } from "@/components/terminal/landing/EventStream"
 import { Footer } from "@/components/terminal/landing/Footer"
-import { CodeSnippet } from "@/components/terminal/landing/CodeSnippet"
+import { Skeleton } from "@/components/ui/skeleton"
+
+// Below-the-fold: code-split out of the initial bundle.
+const CodeSnippet = dynamic(
+  () => import("@/components/terminal/landing/CodeSnippet").then((m) => m.CodeSnippet),
+  { loading: () => <Skeleton className="h-64 w-full" /> }
+)
+
+// EventStream opens a WebSocket connection on mount (via LiveEventStream) —
+// deferred and rendered client-only so the connection doesn't compete with
+// initial page load/LCP, and isn't part of the server-rendered HTML.
+const EventStream = dynamic(
+  () => import("@/components/terminal/landing/EventStream").then((m) => m.EventStream),
+  { loading: () => <Skeleton className="h-96 w-full" />, ssr: false }
+)
 
 const PY_EXAMPLE = `from soroscan import SoroScanClient
 

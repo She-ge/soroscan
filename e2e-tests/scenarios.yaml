@@ -1,0 +1,32 @@
+# Critical user workflows for end-to-end scenario coverage (issue #519).
+# Each scenario maps to a pytest test in django-backend.
+scenarios:
+  - id: user_signup_to_viewing_events
+    description: User signs up, registers a contract, and views indexed events
+    critical: true
+    implemented: true
+    test: soroscan.ingest.tests.test_e2e_workflows::test_e2e_user_signup_to_viewing_events
+
+  - id: webhook_subscription_lifecycle
+    description: User creates, tests, lists, and deletes a webhook subscription
+    critical: true
+    implemented: true
+    test: soroscan.ingest.tests.test_e2e_workflows::test_e2e_webhook_subscription_lifecycle
+
+  - id: compliance_data_export
+    description: Staff user exports compliance audit trail as CSV
+    critical: true
+    implemented: true
+    test: soroscan.ingest.tests.test_e2e_workflows::test_e2e_compliance_data_export
+
+  - id: admin_ingest_error_review
+    description: Staff user reviews grouped ingest errors in the admin API
+    critical: true
+    implemented: true
+    test: soroscan.ingest.tests.test_e2e_workflows::test_e2e_admin_ingest_error_review
+
+  - id: api_key_lifecycle
+    description: User creates and revokes an API key for programmatic access
+    critical: true
+    implemented: false
+    test: soroscan.ingest.tests.test_e2e_workflows::test_e2e_api_key_lifecycle

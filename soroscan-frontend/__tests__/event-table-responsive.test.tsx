@@ -103,7 +103,7 @@ describe("EventTable responsive card grid", () => {
     );
 
     expect(container.querySelectorAll("tbody tr")).toHaveLength(5);
-    expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
   });
 
   it("shows empty state when no events are available", () => {

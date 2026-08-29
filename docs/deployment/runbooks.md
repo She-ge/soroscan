@@ -41,3 +41,19 @@ kubectl rollout undo deployment/soroscan-backend -n soroscan
 - Document timeline and root cause.
 - Create follow-up tasks for recurring issues.
 - Review and update runbooks.
+
+## Incident response playbooks
+
+Detailed alert → action playbooks (with automation hooks) live under
+[`playbooks/`](./playbooks/README.md):
+
+| Incident | Playbook |
+|----------|----------|
+| Event ingestion lag | [event-ingestion-lag.md](./playbooks/event-ingestion-lag.md) |
+| Webhook delivery failure burst | [webhook-delivery-failure-burst.md](./playbooks/webhook-delivery-failure-burst.md) |
+| Database connection pool exhausted | [database-connection-pool-exhausted.md](./playbooks/database-connection-pool-exhausted.md) |
+| RPC endpoint unavailable | [rpc-endpoint-unavailable.md](./playbooks/rpc-endpoint-unavailable.md) |
+
+Prometheus alerts reference these playbooks via `runbook_url`. Remediation rules
+in Django (`RemediationRule`) encode the automated half of each mapping and are
+evaluated every 5 minutes by `evaluate_remediation_rules`.

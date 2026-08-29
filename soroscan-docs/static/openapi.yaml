@@ -411,3 +411,34 @@ paths:
       responses:
         '200':
           description: Service is healthy
+
+  /schema/versions/:
+    get:
+      summary: List supported event schema (ABI) versions
+      tags: [System]
+      security: []
+      responses:
+        '200':
+          description: Supported Soroban contract event schema (ABI) versions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  versions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        version:
+                          type: integer
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        status:
+                          type: string
+                  latest:
+                    type: integer
+                  count:
+                    type: integer

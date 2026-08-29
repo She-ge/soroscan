@@ -65,6 +65,9 @@ class ContractStats(BaseModel):
     last_activity: datetime | None = None
 
 
+MAX_RECENT_EVENTS_LIMIT = 20
+
+
 class PaginatedResponse(BaseModel, Generic[T]):
     """Generic paginated response wrapper."""
 
@@ -72,6 +75,24 @@ class PaginatedResponse(BaseModel, Generic[T]):
     next: str | None = Field(None, description="URL to next page")
     previous: str | None = Field(None, description="URL to previous page")
     results: list[T] = Field(..., description="Page results")
+
+
+class GetEventsByContractsRequest(BaseModel):
+    """SC-23 request for a single query spanning several Soroban contracts."""
+
+    contract_ids: list[str] = Field(min_length=1, max_length=10)
+    event_type: str | None = None
+    ledger_min: int | None = Field(default=None, ge=0)
+    ledger_max: int | None = Field(default=None, ge=0)
+    ordering: str = "-timestamp"
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=50, ge=1, le=200)
+
+
+class GetEventsByContractsResponse(PaginatedResponse[ContractEvent]):
+    """A page of events and the contract addresses used to produce it."""
+
+    contract_ids: list[str]
 
 
 class RecordEventRequest(BaseModel):
@@ -89,3 +110,97 @@ class RecordEventResponse(BaseModel):
     tx_hash: str | None = Field(None, description="Transaction hash")
     transaction_status: str | None = Field(None, description="Transaction status")
     error: str | None = Field(None, description="Error message if failed")
+
+
+# ── SC-9: Indexer authorization ───────────────────────────────────────────────
+
+class AddIndexerRequest(BaseModel):
+    """Request model for authorizing an indexer (SC-9)."""
+
+    indexer_address: str = Field(..., max_length=56, description="Indexer Stellar address")
+
+
+class AddIndexerResponse(BaseModel):
+    """Response from authorizing an indexer (SC-9)."""
+
+    status: str = Field(..., description="Submission status")
+    tx_hash: str | None = Field(None, description="Transaction hash")
+    transaction_status: str | None = Field(None, description="Transaction status")
+    error: str | None = Field(None, description="Error message if failed")
+# ── SC-15: Contract authorization queries ─────────────────────────────────────
+
+class IsIndexerResponse(BaseModel):
+    """Response for indexer authorization check (SC-15)."""
+
+    is_indexer: bool = Field(..., description="Whether the address is authorized")
+
+
+class GetAdminResponse(BaseModel):
+    """Response for contract admin query (SC-15)."""
+
+    admin_address: str | None = Field(None, description="Current admin address")
+# ── SC-17: Contract event type info ───────────────────────────────────────────
+
+class ContractEventTypeInfo(BaseModel):
+    """Event type summary for a contract (SC-17)."""
+
+    event_type: str = Field(..., description="Event type name")
+    count: int = Field(..., description="Number of events of this type")
+    first_seen: str = Field(..., description="ISO timestamp of first occurrence")
+    last_seen: str = Field(..., description="ISO timestamp of last occurrence")
+
+
+# ── SC-29: Batch event recording ──────────────────────────────────────────────
+
+class EventEntry(BaseModel):
+    """A single event entry for batch recording (SC-29)."""
+
+    contract_id: str = Field(..., max_length=56, description="Target contract address")
+    event_type: str = Field(..., max_length=100, description="Event type name")
+    payload_hash: str = Field(..., max_length=64, description="SHA-256 hash of payload (hex)")
+
+
+class RecordEventsBatchRequest(BaseModel):
+    """Request model for batch event recording (SC-29). Max 25 entries."""
+
+    events: list[EventEntry] = Field(..., min_length=1, max_length=25)
+
+
+class RecordEventsBatchResponse(BaseModel):
+    """Response from batch event recording (SC-29)."""
+
+    status: str = Field(..., description="Submission status")
+    total_events: int = Field(..., description="New total event count after batch")
+    tx_hash: str | None = Field(None, description="Transaction hash")
+    transaction_status: str | None = Field(None, description="Transaction status")
+    error: str | None = Field(None, description="Error message if failed")
+
+
+# ── SC-13: Per-indexer event statistics ───────────────────────────────────────
+
+class IndexerStats(BaseModel):
+    """Per-indexer event recording statistics (SC-13)."""
+
+    indexer: str = Field(..., description="The indexer's Stellar address")
+    events_recorded: int = Field(..., description="Total events recorded by this indexer")
+# ── SC-28: Contract pause status ──────────────────────────────────────────────
+
+class ContractStatus(BaseModel):
+    """Contract pause/health status (SC-28)."""
+
+    paused: bool = Field(..., description="Whether event recording is currently paused")
+    admin: str = Field(..., description="Current admin address")
+    total_events: int = Field(..., description="Total events recorded so far")
+# ── SC-16: Contract health ─────────────────────────────────────────────────────
+
+class ContractHealth(BaseModel):
+    """Health status for a tracked contract (SC-16)."""
+
+    contract_id: str = Field(..., description="Contract address")
+    status: str = Field(..., description="Health status (healthy/unhealthy)")
+    last_event_time: datetime | None = Field(None, description="Timestamp of last event")
+    minutes_since_last_event: int | None = Field(None, description="Minutes since last event")
+    abi_decode_errors_1h: int = Field(default=0, description="ABI decode errors in last hour")
+    consecutive_failures: int = Field(default=0, description="Consecutive indexing failures")
+    error_message: str = Field(default="", description="Error message if unhealthy")
+    checked_at: datetime | None = Field(None, description="When health was last checked")

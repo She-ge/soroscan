@@ -35,13 +35,14 @@ interface AlertProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<
   dismissible?: boolean
   onDismiss?: () => void
   copyable?: boolean
+  actions?: React.ReactNode
 }
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
-  ({ className, variant = "info", title, description, dismissible = false, onDismiss, copyable = true, ...props }, ref) => {
+  ({ className, variant = "info", title, description, dismissible = false, onDismiss, copyable = true, actions, ...props }, ref) => {
     const [isVisible, setIsVisible] = React.useState(true)
     const [copied, setCopied] = React.useState(false)
-    const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>()
+    const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
     const Icon = variantIcons[variant || "info"]
 
     const handleDismiss = () => {
@@ -86,6 +87,7 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
         <div className="flex flex-col gap-1 flex-1">
           {title && <h5 className="font-semibold leading-none tracking-tight">{title}</h5>}
           {description && <div className="text-sm opacity-90">{description}</div>}
+          {actions && <div className="mt-2 flex gap-2 items-center">{actions}</div>}
         </div>
         {copyable && (title || description) && (
           <button

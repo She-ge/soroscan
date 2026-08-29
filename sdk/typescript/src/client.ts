@@ -1,8 +1,13 @@
 import type {
   SoroScanClientConfig,
   SoroScanApiError,
+  ContractHealth,
   GetEventsParams,
   GetEventsResponse,
+  GetEventsByContractsParams,
+  GetEventsByContractsResponse,
+  RecordStructuredEventParams,
+  RecordStructuredEventResponse,
   GetContractsParams,
   GetContractsResponse,
   GetContractParams,
@@ -18,7 +23,17 @@ import type {
   Webhook,
   WebhookListResponse,
   PaginatedResponse,
+  RecordEventsBatchParams,
+  RecordEventsBatchResponse,
+  IndexerStats,
+  ContractStatus,
+  AddIndexerParams,
+  AddIndexerResponse,
+  GetAdminResponse,
+  IsIndexerResponse,
 } from "./types.js";
+import { MAX_RECENT_EVENTS_LIMIT } from "./types.js";
+import { EventQueryBuilder, ContractQueryBuilder } from "./builder.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Error class
@@ -132,6 +147,38 @@ export class SoroScanClient {
     return json as T;
   }
 
+  // ─── Builder factories (SC-10) ────────────────────────────────────────────
+
+  /**
+   * Create a fluent event query builder (SC-10).
+   *
+   * @example
+   * const result = await client
+   *   .events()
+   *   .filterByContract("CCAAA...")
+   *   .filterByEventType("transfer")
+   *   .filterByLedgerRange(1_000, 2_000)
+   *   .execute();
+   */
+  events(): EventQueryBuilder {
+    return new EventQueryBuilder(this);
+  }
+
+  /**
+   * Create a fluent contract query builder (SC-10).
+   *
+   * @example
+   * const result = await client
+   *   .contracts()
+   *   .filterByType("token")
+   *   .filterByVerified(true)
+   *   .search("my-token")
+   *   .execute();
+   */
+  contracts(): ContractQueryBuilder {
+    return new ContractQueryBuilder(this);
+  }
+
   // ─── Events ────────────────────────────────────────────────────────────────
 
   /**
@@ -147,7 +194,46 @@ export class SoroScanClient {
     });
   }
 
+  /** Fetch events for several contracts with one indexed query. */
+  async getEventsByContracts(
+    params: GetEventsByContractsParams
+  ): Promise<GetEventsByContractsResponse> {
+    return this.#request<GetEventsByContractsResponse>("POST", "/v1/events/by-contracts", {
+      body: params,
+    });
+  }
+
+  /**
+   * Submit an SC-38 structured event. The correlation ID makes retry handling
+   * explicit: the contract rejects a repeated ID without publishing twice.
+   */
+  async recordStructuredEvent(
+    params: RecordStructuredEventParams
+  ): Promise<RecordStructuredEventResponse> {
+    const response = await this.#request<{
+      status: "submitted" | "failed";
+      tx_hash?: string;
+      transaction_status: string;
+      error?: string;
+    }>("POST", "/api/record/structured/", {
+      body: {
+        contract_id: params.contractId,
+        event_type: params.eventType,
+        payload_hash: params.payloadHash,
+        schema_version: params.schemaVersion,
+        correlation_id: params.correlationId,
+      },
+    });
+    return {
+      status: response.status,
+      txHash: response.tx_hash,
+      transactionStatus: response.transaction_status,
+      error: response.error,
+    };
+  }
+
   // ─── Contracts ─────────────────────────────────────────────────────────────
+
 
   /**
    * Retrieve a paginated list of deployed contracts.
@@ -177,7 +263,112 @@ export class SoroScanClient {
     );
   }
 
+  /**
+   * Get recent events for a specific contract (SC-16).
+   *
+   * @example
+   * const events = await client.getContractEvents('CCAAA...', 20);
+   * for (const event of events) {
+   *   console.log(event.event_type, event.timestamp);
+   * }
+   */
+  async getContractEvents(
+    contractId: string,
+    limit: number = 100
+  ): Promise<import("./types.js").ContractEvent[]> {
+    return this.#request<import("./types.js").ContractEvent[]>(
+      "GET",
+      `/v1/contracts/${encodeURIComponent(contractId)}/events`,
+      { query: { limit } }
+    );
+  }
+
+  /**
+   * Get health status for a tracked contract (SC-16).
+   *
+   * @example
+   * const health = await client.getContractHealth('CCAAA...');
+   * console.log('Status:', health.status);
+   * console.log('Consecutive failures:', health.consecutiveFailures);
+   */
+  async getContractHealth(contractId: string): Promise<ContractHealth> {
+    return this.#request<ContractHealth>(
+      "GET",
+      `/v1/contracts/${encodeURIComponent(contractId)}/health`
+    );
+  }
+
   // ─── Transactions ──────────────────────────────────────────────────────────
+
+  /**
+   * Submit an SC-38 structured event. The correlation ID makes retry handling
+   * explicit: the contract rejects a repeated ID without publishing twice.
+   */
+  async recordStructuredEvent(
+    params: RecordStructuredEventParams
+  ): Promise<RecordStructuredEventResponse> {
+    const response = await this.#request<{
+      status: "submitted" | "failed";
+      tx_hash?: string;
+      transaction_status: string;
+      error?: string;
+    }>("POST", "/api/record/structured/", {
+      body: {
+        contract_id: params.contractId,
+        event_type: params.eventType,
+        payload_hash: params.payloadHash,
+        schema_version: params.schemaVersion,
+        correlation_id: params.correlationId,
+      },
+    });
+    return {
+      status: response.status,
+      txHash: response.tx_hash,
+      transactionStatus: response.transaction_status,
+      error: response.error,
+    };
+  }
+
+  /**
+   * Submit an SC-24 tagged event.
+   *
+   * Tags are short producer-defined classification strings (e.g. `["defi",
+   * "token"]`) that allow off-chain indexers to filter events without decoding
+   * the full payload. At most 4 tags may be supplied per event.
+   *
+   * @example
+   * const result = await client.recordTaggedEvent({
+   *   contractId: 'CCAAA...',
+   *   eventType: 'transfer',
+   *   payloadHash: 'a'.repeat(64),
+   *   tags: ['defi', 'token'],
+   * });
+   */
+  async recordTaggedEvent(
+    params: RecordTaggedEventParams
+  ): Promise<RecordTaggedEventResponse> {
+    const response = await this.#request<{
+      status: "submitted" | "failed";
+      tx_hash?: string;
+      transaction_status: string;
+      error?: string;
+      tags: string[];
+    }>("POST", "/api/record/tagged/", {
+      body: {
+        contract_id: params.contractId,
+        event_type: params.eventType,
+        payload_hash: params.payloadHash,
+        tags: params.tags ?? [],
+      },
+    });
+    return {
+      status: response.status,
+      txHash: response.tx_hash,
+      transactionStatus: response.transaction_status,
+      error: response.error,
+      tags: response.tags,
+    };
+  }
 
   /**
    * Retrieve a paginated list of transactions, optionally filtered by contract
@@ -232,6 +423,82 @@ export class SoroScanClient {
   }
 
   // ─── Webhooks ──────────────────────────────────────────────────────────────
+
+  /**
+   * Record multiple events in a single transaction (SC-29).
+   * Maximum 25 events per batch.
+   *
+   * @example
+   * const result = await client.recordEventsBatch({
+   *   events: [
+   *     { contractId: 'CCAAA...', eventType: 'transfer', payloadHash: 'abc...' },
+   *     { contractId: 'CCAAA...', eventType: 'swap', payloadHash: 'def...' },
+   *   ],
+   * });
+   * console.log('Total events:', result.totalEvents);
+   */
+  async recordEventsBatch(
+    params: RecordEventsBatchParams
+  ): Promise<RecordEventsBatchResponse> {
+    return this.#request<RecordEventsBatchResponse>(
+      "POST",
+      "/v1/record-events-batch",
+      { body: params }
+    );
+  }
+
+  /** Check whether an address is an authorized indexer (SC-15). */
+  async isIndexer(indexerAddress: string): Promise<IsIndexerResponse> {
+    return this.#request<IsIndexerResponse>("GET", "/api/ingest/indexers/check/", {
+      query: { indexer_address: indexerAddress },
+    });
+  }
+
+  /** Return the current SoroScan contract admin address (SC-15). */
+  async getAdmin(): Promise<GetAdminResponse> {
+    return this.#request<GetAdminResponse>("GET", "/api/ingest/contract/admin/");
+  }
+
+  /**
+   * Authorize an indexer address on the SoroScan contract (SC-9).
+   *
+   * @example
+   * const result = await client.addIndexer({
+   *   indexerAddress: 'GABC...',
+   * });
+   */
+  async addIndexer(params: AddIndexerParams): Promise<AddIndexerResponse> {
+    return this.#request<AddIndexerResponse>(
+      "POST",
+      "/api/ingest/indexers/add/",
+      {
+        body: {
+          indexer_address: params.indexerAddress,
+        },
+      }
+    );
+  }
+
+  /**
+   * Get event recording statistics for a specific indexer (SC-13).
+   *
+   * @example
+   * const stats = await client.getIndexerStats('GABC...');
+   * console.log('Events recorded:', stats.eventsRecorded);
+   */
+  async getIndexerStats(indexer: string): Promise<IndexerStats> {
+    return this.#request<IndexerStats>("GET", `/v1/indexer-stats/${indexer}`);
+  }
+  /*
+   * Get the contract's current pause/health status (SC-28).
+   *
+   * @example
+   * const status = await client.getContractStatus();
+   * console.log('Paused:', status.paused);
+   */
+  async getContractStatus(): Promise<ContractStatus> {
+    return this.#request<ContractStatus>("GET", "/v1/contract-status");
+  }
 
   /**
    * Create a new webhook subscription.

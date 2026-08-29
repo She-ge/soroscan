@@ -1,10 +1,10 @@
 import { TimelineView } from "@/components/ingest/TimelineView";
 
-export default function ContractTimelinePage({
+export default async function ContractTimelinePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = params;
+  const { id } = await params;
   return <TimelineView contractId={id} />;
 }

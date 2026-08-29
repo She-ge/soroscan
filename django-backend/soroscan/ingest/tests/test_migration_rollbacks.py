@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 import pytest
 from django.db import DEFAULT_DB_ALIAS, connections
+from django.db.migrations.exceptions import IrreversibleError
 from django.db.migrations.executor import MigrationExecutor
 from django.db.migrations.loader import MigrationLoader
 from django.db.utils import OperationalError, ProgrammingError, IntegrityError
@@ -185,6 +186,7 @@ def _assert_seed_data(state, database, seed_data):
         assert Event.objects.using(database).count() == seed_data["event_count"]
 
 
+@pytest.mark.migration
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("migration_node", _ordered_ingest_migrations())
 def test_ingest_migration_forward_and_backward_paths(migration_node):
@@ -219,6 +221,16 @@ def test_ingest_migration_forward_and_backward_paths(migration_node):
         rolled_back_state = executor.loader.project_state(previous_targets)
         _assert_schema_matches_state(connection, rolled_back_state)
         _assert_seed_data(rolled_back_state, database, seed_data)
+
+        executor = MigrationExecutor(connection)
+        executor.migrate([migration_node])
+        reapplied_state = executor.loader.project_state([migration_node])
+        _assert_schema_matches_state(connection, reapplied_state)
+        _assert_seed_data(reapplied_state, database, seed_data)
+    except IrreversibleError:
+        pytest.skip(
+            f"{migration_node[0]}.{migration_node[1]} is intentionally irreversible"
+        )
     except (OperationalError, ProgrammingError) as e:
         # Ignore database-specific rollback/schema modification quirks
         # SQLite uses OperationalError; Postgres uses ProgrammingError
@@ -235,3 +247,55 @@ def test_ingest_migration_forward_and_backward_paths(migration_node):
             MigrationExecutor(connection).migrate(leaf_targets)
         except (OperationalError, ProgrammingError):
             pass  # If the DB is completely disjointed, allow it to fail silently so next parameterized test truncates it.
+
+
+def _migration_is_reversible(migration) -> bool:
+    if not migration.operations:
+        return True
+    return all(getattr(operation, "reversible", True) for operation in migration.operations)
+
+
+@pytest.mark.migration
+def test_project_migrations_are_only_on_ingest():
+    """SoroScan's only local Django app with migrations is ingest."""
+    from django.conf import settings
+
+    local_labels = [
+        app.rsplit(".", 1)[-1]
+        for app in settings.INSTALLED_APPS
+        if str(app).startswith("soroscan")
+    ]
+    assert local_labels == [APP_LABEL]
+    assert _ordered_ingest_migrations(), "expected ingest migrations on the graph"
+
+
+@pytest.mark.migration
+def test_irreversible_migrations_are_explicitly_identified():
+    loader = MigrationLoader(None, ignore_no_migrations=True)
+    irreversible = []
+    for node in _ordered_ingest_migrations():
+        migration = loader.graph.nodes[node]
+        if not _migration_is_reversible(migration):
+            irreversible.append(f"{node[0]}.{node[1]}")
+    # Document the current set so new irreversible migrations fail this test
+    # until they are reviewed. Empty is the expected healthy state.
+    assert irreversible == [], (
+        "New irreversible migrations must be reviewed and listed in "
+        "docs/testing/migrations.md before they are accepted: "
+        + ", ".join(irreversible)
+    )
+
+
+@pytest.mark.migration
+@pytest.mark.django_db(transaction=True)
+def test_fresh_database_applies_all_ingest_migrations():
+    database = DEFAULT_DB_ALIAS
+    connection = connections[database]
+    executor = MigrationExecutor(connection)
+    leaf_targets = executor.loader.graph.leaf_nodes(app=APP_LABEL)
+    executor.migrate(leaf_targets)
+    current_state = executor.loader.project_state(leaf_targets)
+    _assert_schema_matches_state(connection, current_state)
+    seed_data = _seed_historical_data(current_state, database)
+    _assert_seed_data(current_state, database, seed_data)
+

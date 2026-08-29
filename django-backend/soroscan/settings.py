@@ -105,6 +105,7 @@ ENABLE_SILK = env.bool("ENABLE_SILK", default=False)
 MIDDLEWARE = [
     # PrometheusBeforeMiddleware must be first to capture all requests.
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
+    "soroscan.middleware.GracefulShutdownMiddleware",
     "soroscan.monitoring.ErrorRateMetricsMiddleware",
     "soroscan.middleware.RequestBodySizeMiddleware",
     "soroscan.middleware.MaintenanceModeMiddleware",
@@ -176,6 +177,20 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
             ),
         }
     )
+    DATABASE_STATEMENT_TIMEOUT = env.int(
+        "DATABASE_STATEMENT_TIMEOUT", default=5000
+    )
+    current_options = DATABASES["default"]["OPTIONS"].get("options", "")
+    timeout_flag = f"-c statement_timeout={DATABASE_STATEMENT_TIMEOUT}"
+    DATABASES["default"]["OPTIONS"]["options"] = (
+        f"{current_options} {timeout_flag}".strip()
+        if current_options
+        else timeout_flag
+    )
+else:
+    DATABASE_STATEMENT_TIMEOUT = env.int(
+        "DATABASE_STATEMENT_TIMEOUT", default=5000
+    )
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -220,6 +235,7 @@ RATE_LIMIT_INGEST = env("RATE_LIMIT_INGEST", default="10/minute")
 RATE_LIMIT_GRAPHQL = env("RATE_LIMIT_GRAPHQL", default="60/minute")
 ENDPOINT_RATE_LIMIT_SEARCH = env("ENDPOINT_RATE_LIMIT_SEARCH", default="30/minute")
 ENDPOINT_RATE_LIMIT_STATS = env("ENDPOINT_RATE_LIMIT_STATS", default="100/minute")
+RATE_LIMIT_UNAUTHENTICATED_IP = env("RATE_LIMIT_UNAUTHENTICATED_IP", default="30/minute")
 
 # REST Framework
 REST_FRAMEWORK = {
@@ -252,14 +268,36 @@ REST_FRAMEWORK = {
         "graphql": RATE_LIMIT_GRAPHQL,
         "events_search": ENDPOINT_RATE_LIMIT_SEARCH,
         "contract_stats": ENDPOINT_RATE_LIMIT_STATS,
+        "unauthenticated_ip": RATE_LIMIT_UNAUTHENTICATED_IP,
     },
 }
 
 # Spectacular Settings
 SPECTACULAR_SETTINGS = {
     "TITLE": "SoroScan API",
-    "DESCRIPTION": "REST API documentation for SoroScan, a Stellar Soroban smart contract indexer.",
-    "VERSION": "1.0.0",
+    "DESCRIPTION": (
+        "REST API documentation for SoroScan — a developer-focused indexing service "
+        "for Soroban smart contract events on the Stellar blockchain. Provides endpoints "
+        "for querying indexed events, managing tracked contracts, configuring webhooks, "
+        "and monitoring ingest health."
+    ),
+    "VERSION": SOFTWARE_VERSION,
+    # Exclude the schema endpoint itself from the generated schema
+    "SERVE_INCLUDE_SCHEMA": False,
+    # Split request/response components for cleaner schema output
+    "COMPONENT_SPLIT_REQUEST": True,
+    # Contact and license info
+    "CONTACT": {"name": "SoroScan", "url": "https://github.com/SoroScan/soroscan"},
+    "LICENSE": {"name": "MIT"},
+    # Tags for logical grouping in Swagger UI
+    "TAGS": [
+        {"name": "contracts", "description": "Tracked contract management"},
+        {"name": "events", "description": "Indexed contract event queries"},
+        {"name": "webhooks", "description": "Webhook subscription management"},
+        {"name": "ingest", "description": "Event ingestion and indexing"},
+        {"name": "analytics", "description": "Cost, rate-limit, and error analytics"},
+        {"name": "admin", "description": "Staff-only administrative endpoints"},
+    ],
 }
 
 # Simple JWT Settings
@@ -273,11 +311,19 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-# CORS
-origins_str = env("ALLOWED_ORIGINS", default="")
-CORS_ALLOWED_ORIGINS = [o.strip() for o in origins_str.split(",") if o.strip()] if origins_str else []
-CORS_ALLOW_ALL_ORIGINS = DEBUG
-CORS_ALLOW_CREDENTIALS = True  # Required for Apollo Client with credentials: 'include'
+# CORS Configuration
+if "ALLOWED_ORIGINS" in os.environ:
+    raw_origins = os.environ["ALLOWED_ORIGINS"]
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip() 
+        for origin in raw_origins.split(",") 
+        if origin.strip()
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
+
+CORS_ALLOW_ALL_ORIGINS = DEBUG and not CORS_ALLOWED_ORIGINS
+CORS_ALLOW_CREDENTIALS = True
 
 # Channels
 CHANNEL_LAYERS = {
@@ -296,6 +342,12 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+# Graceful shutdown: wait up to 30s for active tasks after SIGTERM
+CELERY_WORKER_SOFT_SHUTDOWN_TIMEOUT = 30
+SHUTDOWN_TIMEOUT_SECONDS = env.int("SHUTDOWN_TIMEOUT_SECONDS", default=30)
+# Task timeout limits — hard limit kills the task, soft limit raises SoftTimeLimitExceeded
+CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT", default=600)
+CELERY_TASK_SOFT_TIME_LIMIT = env.int("CELERY_TASK_SOFT_TIME_LIMIT", default=540)
 CELERY_TASK_ROUTES = {
     "ingest.tasks.ingest_latest_events": {"queue": "high_priority"},
     "ingest.tasks.dispatch_webhook": {"queue": "default"},
@@ -346,13 +398,44 @@ CELERY_BEAT_SCHEDULE = {
         "task": "ingest.tasks.warm_event_count_cache",
         "schedule": 300,  # every 5 minutes
     },
+    "snapshot-contract-state": {
+        "task": "ingest.tasks.snapshot_contract_state",
+        "schedule": 600,  # every 10 minutes
+    },
+    "auto-resume-paused-contracts": {
+        "task": "ingest.tasks.auto_resume_paused_contracts",
+        "schedule": 300,  # every 5 minutes
+    },
+    # Issue #778 — warm contract name lookup cache daily
+    "warm-contract-name-cache": {
+        "task": "soroscan.ingest.tasks.warm_contract_name_cache",
+        "schedule": 86400,  # daily
+    },
 }
+
+# Analytics — anomaly detection threshold
+# Volume drop percentage that triggers an anomaly flag on an aggregation bucket.
+# e.g. 50 means: flag the bucket if current count < 50 % of the 7-day rolling avg.
+ANALYTICS_ANOMALY_DROP_PCT = env.int("ANALYTICS_ANOMALY_DROP_PCT", default=50)
+# Minimum events in the rolling average before anomaly detection kicks in.
+# Prevents false positives on very low-traffic contracts.
+ANALYTICS_ANOMALY_MIN_BASELINE = env.int("ANALYTICS_ANOMALY_MIN_BASELINE", default=10)
+
+# Contract health check thresholds (configurable via environment)
+# Minutes without a new event before a contract is considered degraded
+HEALTH_DEGRADED_MINUTES = env.int("HEALTH_DEGRADED_MINUTES", default=30)
+# Minutes without a new event before a contract is considered failed
+HEALTH_FAILED_MINUTES = env.int("HEALTH_FAILED_MINUTES", default=120)
+# ABI decode error count in the last hour that triggers degraded status
+HEALTH_ABI_ERROR_THRESHOLD = env.int("HEALTH_ABI_ERROR_THRESHOLD", default=5)
 
 # Data Retention Configuration
 # Number of days to retain deduplication logs before cleanup
 DEDUP_LOG_RETENTION_DAYS = env("DEDUP_LOG_RETENTION_DAYS", default=90, cast=int)
 # Number of days to retain contract events before pruning
 EVENT_RETENTION_DAYS = env("EVENT_RETENTION_DAYS", default=30, cast=int)
+# Issue #765 — number of days to retain webhook delivery logs
+WEBHOOK_DELIVERY_RETENTION_DAYS = env.int("WEBHOOK_DELIVERY_RETENTION_DAYS", default=30)
 
 # Alert deduplication window
 ALERT_DEDUP_WINDOW_SECONDS = env.int("ALERT_DEDUP_WINDOW_SECONDS", default=300)
@@ -393,6 +476,7 @@ STELLAR_NETWORK_PASSPHRASE = env(
 )
 SOROSCAN_CONTRACT_ID = env("SOROSCAN_CONTRACT_ID", default="")
 INDEXER_SECRET_KEY = env("INDEXER_SECRET_KEY", default="")
+ADMIN_SECRET_KEY = env("ADMIN_SECRET_KEY", default=INDEXER_SECRET_KEY)
 
 # Available Soroban networks exposed via GET /api/ingest/networks/.
 # Override individual RPC URLs via the corresponding env vars if needed.
@@ -435,6 +519,10 @@ GRAPHQL_N1_DETECTION_ENABLED = env.bool(
     "GRAPHQL_N1_DETECTION_ENABLED",
     default=DEBUG,
 )
+
+# Contract state snapshot capture (issue #798)
+CONTRACT_SNAPSHOT_INTERVAL = env.int("CONTRACT_SNAPSHOT_INTERVAL", default=1000)
+CONTRACT_SNAPSHOT_MAX_BYTES = env.int("CONTRACT_SNAPSHOT_MAX_BYTES", default=1_048_576)
 
 # Ed25519 seed (32 bytes hex) for webhook X-Signature headers.
 WEBHOOK_ED25519_SIGNING_SEED = env("WEBHOOK_ED25519_SIGNING_SEED", default="")
@@ -513,6 +601,11 @@ LOGGING["loggers"]["django.performance.database"] = {
 LOGGING["loggers"]["soroscan.graphql.n1_detection"] = {
     "handlers": ["console"],
     "level": "WARNING",
+    "propagate": False,
+}
+LOGGING["loggers"]["soroscan.graphql"] = {
+    "handlers": ["console"],
+    "level": env("GRAPHQL_RESOLVER_LOG_LEVEL", default="INFO"),
     "propagate": False,
 }
 

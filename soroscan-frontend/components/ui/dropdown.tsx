@@ -16,6 +16,8 @@ export interface DropdownProps
   value?: string
   onChange: (value: string) => void
   placeholder?: string
+  /** Accessible label forwarded to the listbox — used by screen readers when no visible label is present */
+  listboxLabel?: string
 }
 
 function getNextEnabledIndex(
@@ -47,6 +49,7 @@ const Dropdown = React.forwardRef<HTMLButtonElement, DropdownProps>(
       onChange,
       placeholder = "Select an option",
       disabled = false,
+      listboxLabel,
       ...props
     },
     ref
@@ -245,6 +248,7 @@ const Dropdown = React.forwardRef<HTMLButtonElement, DropdownProps>(
           <ul
             id={listboxId}
             role="listbox"
+            aria-label={listboxLabel}
             data-slot="dropdown-options"
             className="bg-popover text-popover-foreground absolute top-full z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md"
           >

@@ -20,18 +20,32 @@ pip install soroscan-sdk
 
 ### CLI
 
-Installing the package exposes the `soroscan` command:
+Installing the package exposes the `soroscan` command for local developer use.
+Commands print a table by default; pass `--output json` for machine-readable results.
 
 ```bash
-export SOROSCAN_API_KEY="your-api-key"
-export SOROSCAN_BASE_URL="https://api.soroscan.io"
+pip install soroscan-sdk
 
-soroscan events --contract CCAAA... --event-type transfer --limit 10
-soroscan events --contract CCAAA... --output json
+export SOROSCAN_API_KEY="your-api-key"
+export SOROSCAN_BASE_URL="https://api.soroscan.io"   # or http://localhost:8000
+
+# Query events
+soroscan events --contract ABC123 --event-type transfer --limit 10
+soroscan events --contract ABC123 --output json
+
+# Webhooks
 soroscan webhooks list
 soroscan webhooks test 1
+
+# Contracts
 soroscan contracts list --search token
 soroscan contracts get 1 --output json
+soroscan contracts events CCAAA... --limit 20
+soroscan contracts recent-events CCAAA... --limit 10
+soroscan contracts health CCAAA... --output json
+
+# Record an event
+soroscan record-event CCAAA... transfer <payload-hash>
 ```
 
 ### Synchronous Client
@@ -166,7 +180,41 @@ client.delete_contract(contract_id: str) -> None
 client.get_contract_stats(contract_id: str) -> ContractStats
 ```
 
+#### Get Contract Events (SC-16)
+```python
+client.get_contract_events(
+    contract_id: str,
+    limit: int = 100
+) -> list[ContractEvent]
+```
+
+#### Get Contract Health (SC-16)
+```python
+client.get_contract_health(
+    contract_id: str
+) -> ContractHealth
+```
+
 ### Events
+
+#### Query Events Across Contracts (SC-23)
+
+Use one request when a service needs a unified, ledger-ordered event stream from
+several related contracts. A query can include up to ten contract addresses.
+
+```python
+events = client.get_events_by_contracts(
+    contract_ids=["CCAAA...", "CCBBB..."],
+    event_type="transfer",
+    ledger_min=100_000,
+    page_size=100,
+)
+
+for event in events.results:
+    print(event.contract_id, event.event_type, event.ledger)
+```
+
+`AsyncSoroScanClient.get_events_by_contracts()` accepts the same arguments.
 
 #### Query Events
 ```python
@@ -247,6 +295,7 @@ All response models are Pydantic v2 models with full type safety:
 
 - `TrackedContract`: Registered contract details
 - `ContractEvent`: Indexed event data
+- `ContractHealth` (SC-16): Health status of a tracked contract
 - `WebhookSubscription`: Webhook configuration
 - `ContractStats`: Aggregate statistics
 - `PaginatedResponse[T]`: Generic paginated wrapper

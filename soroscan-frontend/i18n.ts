@@ -1,7 +1,8 @@
 import {getRequestConfig} from 'next-intl/server';
+import {locales, defaultLocale} from './lib/locales';
 
-export const locales = ['en', 'es'] as const;
-export const defaultLocale = 'en';
+export {locales, defaultLocale};
+export type {AppLocale} from './lib/locales';
 
 // Re-export routing for use in other modules
 export const routing = {

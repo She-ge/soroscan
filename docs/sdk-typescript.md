@@ -62,8 +62,23 @@ do {
   after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
 } while (after);
 ```
+### Tagged Events (SC-24)
+
+You can submit events classified by up to 4 tags to support efficient event category indexing:
+
+```typescript
+const response = await client.recordTaggedEvent({
+  contractId: "CCAAA...",
+  eventType: "transfer",
+  payloadHash: "a".repeat(64),
+  tags: ["defi", "token"],
+});
+
+console.log(`Status: ${response.status}, tags: ${response.tags.join(", ")}`);
+```
 
 ## Features
+
 
 - **Strict Typing**: Full TypeScript support for all request and response shapes.
 - **Zero Dependencies**: Uses native `fetch` API for a minimal footprint.
@@ -85,3 +100,5 @@ try {
 ```
 
 For more details, see the [TypeScript SDK README](https://github.com/Harbduls/soroscan/tree/main/sdk/typescript).
+
+If you want to add or maintain SDK methods, use the [SDK Development Guide](./contributing/sdk-development.md).

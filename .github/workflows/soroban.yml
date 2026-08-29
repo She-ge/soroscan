@@ -2,12 +2,12 @@ name: Soroban Contract CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - 'soroban-contracts/**'
       - '.github/workflows/soroban.yml'
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - 'soroban-contracts/**'
       - '.github/workflows/soroban.yml'
@@ -15,17 +15,17 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
-      
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -36,30 +36,30 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      
+
       - name: Check formatting
         working-directory: ./soroban-contracts/soroscan_core
         run: cargo fmt -- --check
-      
+
       - name: Run clippy
         working-directory: ./soroban-contracts/soroscan_core
-        run: cargo clippy --all-targets -- -D warnings
-      
+        run: cargo clippy --all-targets --no-deps -- -D warnings
+
       - name: Run tests
         working-directory: ./soroban-contracts/soroscan_core
         run: cargo test
-      
+
       - name: Build WASM contract
         working-directory: ./soroban-contracts/soroscan_core
         run: |
           cargo build --target wasm32-unknown-unknown --release
-      
+
       - name: Verify WASM artifact
         working-directory: ./soroban-contracts/soroscan_core
         run: |
           ls -lh target/wasm32-unknown-unknown/release/*.wasm
           file target/wasm32-unknown-unknown/release/*.wasm
-      
+
       - name: Upload WASM artifact
         uses: actions/upload-artifact@v4
         with:

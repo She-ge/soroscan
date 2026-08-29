@@ -622,6 +622,7 @@ class TestDispatchWebhookTimeout:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.headers = {"X-SoroScan-Ack": "ok"}
+            mock_response.text = "ok"
             mock_post.return_value = mock_response
 
             dispatch_webhook.apply(args=[webhook.id, event.id])

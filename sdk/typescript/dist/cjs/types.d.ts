@@ -61,6 +61,34 @@ export interface GetEventsParams {
     last?: number;
 }
 export type GetEventsResponse = PaginatedResponse<ContractEvent>;
+/** Query events across up to ten contracts in one request. */
+export interface GetEventsByContractsParams {
+    contractIds: ContractId[];
+    eventType?: EventType;
+    startLedger?: number;
+    endLedger?: number;
+    page?: number;
+    pageSize?: number;
+}
+export interface GetEventsByContractsResponse {
+    count: number;
+    results: ContractEvent[];
+    contractIds: ContractId[];
+}
+/** SC-38 input for a versioned event. Both hash values are 32-byte hex strings. */
+export interface RecordStructuredEventParams {
+    contractId: ContractId;
+    eventType: EventType;
+    payloadHash: string;
+    schemaVersion: number;
+    correlationId: string;
+}
+export interface RecordStructuredEventResponse {
+    status: "submitted" | "failed";
+    txHash?: string;
+    transactionStatus: string;
+    error?: string;
+}
 export type ContractType = "token" | "nft" | "dex" | "lending" | "custom";
 export interface ContractSpec {
     functions: ContractFunction[];
@@ -207,6 +235,44 @@ export interface UpdateWebhookParams {
 export interface WebhookListResponse {
     items: Webhook[];
     totalCount: number;
+}
+export interface ContractHealth {
+    /** Contract address */
+    contractId: string;
+    /** Health status (healthy/unhealthy) */
+    status: string;
+    /** Timestamp of last event */
+    lastEventTime: string | null;
+    /** Minutes since last event */
+    minutesSinceLastEvent: number | null;
+    /** ABI decode errors in last hour */
+    abiDecodeErrors1h: number;
+    /** Consecutive indexing failures */
+    consecutiveFailures: number;
+    /** Error message if unhealthy */
+    errorMessage: string;
+    /** When health was last checked */
+    checkedAt: string | null;
+}
+export interface EventEntry {
+    /** Target contract address */
+    contractId: ContractId;
+    /** Event type name (e.g. "transfer", "swap") */
+    eventType: EventType;
+    /** SHA-256 hash of the event payload (hex) */
+    payloadHash: string;
+}
+export interface RecordEventsBatchParams {
+    /** 1–25 event entries to record in a single transaction */
+    events: EventEntry[];
+}
+export interface RecordEventsBatchResponse {
+    status: string;
+    /** New total event count after the batch */
+    totalEvents: number;
+    txHash: string | null;
+    transactionStatus: string | null;
+    error: string | null;
 }
 export interface SoroScanApiError {
     code: string;

@@ -15,6 +15,14 @@ import TabItem from '@theme/TabItem';
 This guide covers recommended production deployments for SoroScan, including local Docker Compose, Kubernetes (Helm + Terraform), an AWS/EKS example, monitoring, backups, security, runbooks, and troubleshooting.
 
 **Quick links**
+- [Docker Compose](deployment/docker-compose)
+- [Kubernetes (Helm)](deployment/kubernetes)
+- [AWS EKS (Terraform)](deployment/aws)
+- [Monitoring & Observability](deployment/monitoring)
+- [Backups & Disaster Recovery](deployment/backups)
+- [Troubleshooting & Runbooks](deployment/runbooks)
+- [Pre-Deployment Security Checklist](deployment/security)
+- [Cost Estimates](deployment/costs)
 - [Docker Compose](./docker-compose)
 - [Kubernetes (Helm)](./kubernetes)
 - [AWS EKS (Terraform)](./aws)

@@ -2,26 +2,30 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { Button } from "../Button"
 import { LogOut } from "lucide-react"
 import { isLoggedIn, clearTokens } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 import { HamburgerToggle } from "@/components/ui/hamburger-toggle"
+import { LanguageSelector } from "@/components/ui/LanguageSelector"
 import { NavDrawer } from "./NavDrawer"
-
-const navLinks = [
-  { href: "/docs",      label: "DOCS" },
-  { href: "/features",  label: "FEATURES" },
-  { href: "/api/docs/", label: "API_DOCS", external: true },
-  { href: "https://github.com/SoroScan/soroscan", label: "GITHUB", external: true },
-]
 
 export function Navbar() {
   const [open, setOpen] = React.useState(false)
   const [authenticated, setAuthenticated] = React.useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  const t = useTranslations("Navigation")
+
+  const navLinks = [
+    { href: "/docs", label: t("docs") },
+    { href: "/features", label: t("features") },
+    { href: "/developer/api-explorer", label: "API_Explorer" },
+    { href: "https://github.com/SoroScan/soroscan", label: "GITHUB", external: true },
+  ]
 
   React.useEffect(() => {
     setAuthenticated(isLoggedIn())
@@ -34,14 +38,21 @@ export function Navbar() {
   }
 
   return (
-    <nav className="border-b border-terminal-green/30 px-6 md:px-8 py-4 flex flex-col bg-terminal-black/80 backdrop-blur-md sticky top-0 z-50">
+    <nav className="border-b border-[#00e5ff]/20 px-6 md:px-8 py-4 flex flex-col bg-[#091a21]/90 backdrop-blur-md sticky top-0 z-50">
       <div className="flex justify-between items-center">
         {/* Logo */}
         <Link
           href="/"
-          className="text-terminal-green text-lg md:text-xl font-bold tracking-tighter hover:text-terminal-cyan transition-colors font-terminal-mono"
+          className="flex items-center gap-2 transition-opacity hover:opacity-90"
         >
-          [SOROSCAN]
+          <Image
+            src="/soroscan-logo-dark.png"
+            alt="SoroScan Logo"
+            width={140}
+            height={36}
+            className="h-8 w-auto object-contain"
+            priority
+          />
         </Link>
 
         {/* Desktop links */}
@@ -72,22 +83,24 @@ export function Navbar() {
         </div>
 
           <div className="hidden md:flex items-center gap-3">
+            <LanguageSelector />
+
             {authenticated ? (
-              <Button 
-                size="sm" 
-                variant="secondary" 
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={handleLogout}
                 className="group"
               >
                 <LogOut size={14} className="mr-2 group-hover:text-terminal-danger transition-colors" />
-                LOGOUT
+                {t("logout")}
               </Button>
             ) : (
               <Link href="/login">
-                <Button size="sm" variant="secondary">SIGN_IN</Button>
+                <Button size="sm" variant="secondary">{t("login")}</Button>
               </Link>
             )}
-            
+
             <a
               href="/api/docs/"
               target="_blank"

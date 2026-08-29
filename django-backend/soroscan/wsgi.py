@@ -13,3 +13,7 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "soroscan.settings")
 
 application = get_wsgi_application()
+
+from soroscan.shutdown import register_shutdown_handlers  # noqa: E402
+
+register_shutdown_handlers()

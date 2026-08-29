@@ -3,10 +3,10 @@ Health check endpoints for Kubernetes liveness/readiness probes.
 """
 import time
 import requests
+import redis as redis_lib
 
-from django.core.cache import cache
 from django.db import connection
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.conf import settings
@@ -39,6 +39,7 @@ def get_uptime_payload() -> dict:
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def health_view(request):
     """Liveness probe - app is running."""
     return Response(
@@ -51,6 +52,7 @@ def health_view(request):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def readiness_view(request):
     """Readiness probe - DB, Redis, and Soroban RPC are connected."""
     components = {
@@ -68,14 +70,24 @@ def readiness_view(request):
         components["database"] = f"degraded: {str(e)}"
         overall_status = "degraded"
 
-    # 2. Redis Check
-    try:
-        cache.set("health_check", "1", timeout=5)
-        if cache.get("health_check") != "1":
-            components["redis"] = "degraded: failed to read/write cache"
+    # 2. Redis Check — direct PING via redis-py
+    redis_url = getattr(settings, "REDIS_URL", None)
+    if redis_url:
+        try:
+            r = redis_lib.Redis.from_url(redis_url, socket_timeout=2)
+            r.ping()
+            r.close()
+        except redis_lib.ConnectionError as e:
+            components["redis"] = f"degraded: connection refused: {e}"
             overall_status = "degraded"
-    except Exception as e:
-        components["redis"] = f"degraded: {str(e)}"
+        except redis_lib.TimeoutError as e:
+            components["redis"] = f"degraded: timeout: {e}"
+            overall_status = "degraded"
+        except Exception as e:
+            components["redis"] = f"degraded: {e}"
+            overall_status = "degraded"
+    else:
+        components["redis"] = "degraded: REDIS_URL not configured"
         overall_status = "degraded"
 
     # 3. Soroban RPC Check
@@ -110,6 +122,7 @@ def readiness_view(request):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([])
 def worker_health_view(request):
     """Worker health probe - checks Celery workers are responding."""
     try:

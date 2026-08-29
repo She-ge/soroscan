@@ -106,7 +106,7 @@ export function Drawer({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="text-terminal-green/60 hover:text-terminal-green transition-colors text-lg leading-none p-1 focus:outline-none focus:ring-1 focus:ring-terminal-green/50"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-terminal-green/60 hover:text-terminal-green transition-colors focus:outline-none focus:ring-1 focus:ring-terminal-green/50"
                 aria-label="Close drawer"
               >
                 <X size={18} />

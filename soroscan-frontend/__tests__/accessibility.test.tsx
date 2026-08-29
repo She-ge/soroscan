@@ -92,4 +92,11 @@ describe("Navbar ARIA attributes", () => {
     const toggle = screen.getByRole("button", { name: /toggle menu/i });
     expect(toggle).toHaveAttribute("aria-controls", "mobile-menu");
   });
+
+  it("hamburger button meets minimum touch target size (44px)", () => {
+    render(<Navbar />);
+    const toggle = screen.getByRole("button", { name: /toggle menu/i });
+    expect(toggle).toHaveClass("min-h-[44px]");
+    expect(toggle).toHaveClass("min-w-[44px]");
+  });
 });

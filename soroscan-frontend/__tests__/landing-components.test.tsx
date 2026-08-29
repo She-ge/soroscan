@@ -140,8 +140,8 @@ describe("Navbar", () => {
 
   it("renders desktop nav links", () => {
     render(<Navbar />)
-    expect(screen.getAllByText("DOCS").length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText("FEATURES").length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText("Documentation").length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText("Features").length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText("GITHUB").length).toBeGreaterThanOrEqual(1)
   })
 
@@ -149,10 +149,10 @@ describe("Navbar", () => {
     render(<Navbar />)
     const toggle = screen.getByRole("button", { name: /toggle menu/i })
     // Before click — only desktop links (could be 1 or more)
-    const before = screen.getAllByText("DOCS").length
+    const before = screen.getAllByText("Documentation").length
     fireEvent.click(toggle)
     // After click — mobile menu adds an extra set of links
-    const after = screen.getAllByText("DOCS").length
+    const after = screen.getAllByText("Documentation").length
     expect(after).toBeGreaterThan(before)
   })
 })
