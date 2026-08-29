@@ -198,7 +198,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        return args.func(args)
+        result: int = args.func(args)
+        return result
     except SoroScanError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
