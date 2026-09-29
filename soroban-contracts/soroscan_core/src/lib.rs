@@ -312,7 +312,7 @@ impl SoroScanCore {
 
         // Increment counter with overflow protection
         let mut count: u64 = env.storage().instance().get(&COUNTER_KEY).unwrap_or(0);
-        count = count.saturating_add(1);
+        count = count.checked_add(1).unwrap_or(u64::MAX);
         env.storage().instance().set(&COUNTER_KEY, &count);
 
         // Store latest event by type
@@ -333,7 +333,7 @@ impl SoroScanCore {
         contract_stats.set(
             contract_id.clone(),
             ContractStats {
-                event_count: current_stats.event_count.saturating_add(1),
+                event_count: current_stats.event_count.checked_add(1).unwrap_or(u64::MAX),
             },
         );
         env.storage()
@@ -418,7 +418,8 @@ impl SoroScanCore {
             .instance()
             .get::<Symbol, u64>(&COUNTER_KEY)
             .unwrap_or(0)
-            .saturating_add(1);
+            .checked_add(1)
+            .unwrap_or(u64::MAX);
         env.storage().instance().set(&COUNTER_KEY, &count);
         env.storage().instance().set(&correlation_key, &record);
         env.storage().instance().set(
@@ -658,7 +659,7 @@ impl SoroScanCore {
                 timestamp,
             };
 
-            count = count.saturating_add(1);
+            count = count.checked_add(1).unwrap_or(u64::MAX);
             env.storage().instance().set(&entry.event_type, &record);
 
             // Store latest event by contract (SC-16)
@@ -671,7 +672,7 @@ impl SoroScanCore {
             contract_stats.set(
                 entry.contract_id.clone(),
                 ContractStats {
-                    event_count: current_stats.event_count.saturating_add(1),
+                    event_count: current_stats.event_count.checked_add(1).unwrap_or(u64::MAX),
                 },
             );
 
@@ -855,7 +856,7 @@ impl SoroScanCore {
             .get(&INDEXER_COUNTS_KEY)
             .unwrap_or_else(|| Map::new(env));
         let current = counts.get(indexer.clone()).unwrap_or(0);
-        counts.set(indexer.clone(), current.saturating_add(by));
+        counts.set(indexer.clone(), current.checked_add(by).unwrap_or(u64::MAX));
         env.storage().instance().set(&INDEXER_COUNTS_KEY, &counts);
     }
     /// Pause event recording (SC-28).
@@ -976,7 +977,8 @@ impl SoroScanCore {
             .instance()
             .get::<Symbol, u64>(&COUNTER_KEY)
             .unwrap_or(0)
-            .saturating_add(1);
+            .checked_add(1)
+            .unwrap_or(u64::MAX);
         env.storage().instance().set(&COUNTER_KEY, &count);
         env.storage()
             .instance()
@@ -2026,5 +2028,35 @@ mod tests {
         assert_eq!(events.len(), 2);
         assert_eq!(events.get(0).unwrap().event_type, symbol_short!("mint"));
         assert_eq!(events.get(1).unwrap().event_type, symbol_short!("swap"));
+    }
+
+    #[test]
+    fn test_event_count_overflow_protection() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let (client, admin, indexer) = setup_contract(&env);
+        let target = Address::generate(&env);
+
+        client.add_indexer(&admin, &indexer);
+
+        // Simulate event counter set to u64::MAX
+        let contract_id = client.address.clone();
+        env.as_contract(&contract_id, || {
+            env.storage().instance().set(&COUNTER_KEY, &u64::MAX);
+        });
+
+        assert_eq!(client.total_events(), u64::MAX);
+
+        // Recording an event should handle u64 overflow using checked_add without panic
+        let count = client.record_event(
+            &indexer,
+            &target,
+            &symbol_short!("overflow"),
+            &BytesN::from_array(&env, &[0u8; 32]),
+        );
+
+        assert_eq!(count, u64::MAX);
+        assert_eq!(client.total_events(), u64::MAX);
     }
 }
