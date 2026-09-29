@@ -72,11 +72,17 @@ export function EventExplorerDashboard() {
   const [newEventsCount, setNewEventsCount] = useState(0);
   const previousEventsRef = useRef<EventRecord[]>([]);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   // ── Persist page size ──────────────────────────────────────────────────────
   useEffect(() => {
     localStorage.setItem(PAGE_SIZE_STORAGE_KEY, pageSize.toString());
   }, [pageSize]);
+
+  // Scroll the events table into view on page change for smooth UX
+  useEffect(() => {
+    tableRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [currentPage]);
 
   // ── Multi-select state ─────────────────────────────────────────────────────
   /**
@@ -451,6 +457,7 @@ export function EventExplorerDashboard() {
           initialQuery={filters.searchQuery}
         />
 
+        <div ref={tableRef}>
         <DashboardPanel
           elevation="default"
           title="Contract Events"
@@ -525,6 +532,7 @@ export function EventExplorerDashboard() {
             onPageSizeChange={handlePageSizeChange}
           />
         </DashboardPanel>
+        </div>
       </DashboardWorkspace>
 
       {selectedEvent && (

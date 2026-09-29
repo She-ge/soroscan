@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ExportEventsModal } from "@/components/ingest/ExportEventsModal";
 import {
@@ -44,6 +44,7 @@ export function EventExplorerView({ contractId }: { contractId: string }) {
     isError: false,
   });
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const tableRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -116,6 +117,11 @@ export function EventExplorerView({ contractId }: { contractId: string }) {
       active = false;
     };
   }, [contractId]);
+
+  // Scroll the events table into view on page change for smooth UX
+  useEffect(() => {
+    tableRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [page]);
 
   useEffect(() => {
     let active = true;
@@ -284,7 +290,7 @@ export function EventExplorerView({ contractId }: { contractId: string }) {
           </div>
         </section>
 
-        <section className={styles.timelinePanel} aria-label="Events table">
+        <section ref={tableRef} className={styles.timelinePanel} aria-label="Events table">
           <div className={styles.panelHead}>
             <h2 className={styles.sectionTitle}>Events</h2>
             <p className={styles.summary}>
