@@ -38,7 +38,7 @@ import {
 import { type DegradationContext } from "@/lib/tooltip-content-guidelines";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-export type ContractHealthStatus = "healthy" | "degraded" | "paused" | "error";
+export type ContractHealthStatus = "healthy" | "degraded" | "paused" | "error" | "offline";
 
 /**
  * Health Status Configuration with exact color specifications
@@ -95,8 +95,29 @@ export const HEALTH_STATUS_CONFIG = {
     icon: XCircle,
     animate: false,
     severity: "error"
+  },
+  offline: {
+    label: "Offline",
+    description: "Contract is currently offline or unreachable",
+    colors: {
+      primary: "#94a3b8", // terminal-gray / slate-400
+      background: "rgba(148, 163, 184, 0.1)",
+      border: "rgba(148, 163, 184, 0.3)",
+      glow: "0 0 16px rgba(148, 163, 184, 0.4), 0 0 4px rgba(148, 163, 184, 0.3)"
+    },
+    icon: XCircle,
+    animate: false,
+    severity: "error"
   }
 } as const;
+
+export const STATUS_BACKGROUND_CLASSES: Record<ContractHealthStatus, string> = {
+  healthy: "bg-terminal-green/10 border-terminal-green/30 text-terminal-green status-healthy",
+  degraded: "bg-terminal-warning/10 border-terminal-warning/30 text-terminal-warning status-degraded",
+  paused: "bg-terminal-cyan/10 border-terminal-cyan/30 text-terminal-cyan status-paused",
+  error: "bg-terminal-danger/10 border-terminal-danger/30 text-terminal-danger status-error",
+  offline: "bg-terminal-gray/10 border-terminal-gray/30 text-terminal-gray status-offline",
+};
 
 const healthBadgeVariants = cva(
   [
@@ -269,6 +290,7 @@ const ContractHealthBadge = React.forwardRef<HTMLSpanElement, ContractHealthBadg
         tabIndex={hasTooltip ? 0 : undefined}
         className={cn(
           healthBadgeVariants({ variant, size, glow }),
+          STATUS_BACKGROUND_CLASSES[status as ContractHealthStatus] || STATUS_BACKGROUND_CLASSES.error,
           animation.animationClasses,
           className
         )}

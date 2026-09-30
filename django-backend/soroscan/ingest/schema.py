@@ -79,10 +79,23 @@ class ContractType:
     alias: auto
     is_active: auto
     last_event_at: auto
-    deprecation_status: auto
+    deprecation_status: auto = strawberry_django.field(
+        description=(
+            "Lifecycle state of the contract. One of 'active', 'deprecated', or 'suspended'. "
+            "Deprecated and suspended contracts still serve historical data but should no longer "
+            "be used for new integrations. Check the 'warnings' field for human-readable details."
+        )
+    )
     deprecation_reason: auto
     event_filter_type: auto
-    event_filter_list: strawberry.scalars.JSON
+    event_filter_list: strawberry.scalars.JSON = strawberry_django.field(
+        description=(
+            "JSON array of event type names used by the ingest filter. "
+            "When event_filter_type is 'whitelist', only event types in this list are stored. "
+            "When 'blacklist', event types in this list are dropped. "
+            "Empty when event_filter_type is 'none'."
+        )
+    )
     metadata: strawberry.scalars.JSON
     created_at: auto
 

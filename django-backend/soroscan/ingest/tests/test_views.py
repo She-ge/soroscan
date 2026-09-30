@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 import responses
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.urls import reverse
@@ -42,6 +43,23 @@ def user():
 def authenticated_client(api_client, user):
     api_client.force_authenticate(user=user)
     return api_client
+
+
+def test_version_endpoint_returns_version_and_commit(api_client):
+    with patch.dict("os.environ", {"GIT_COMMIT_SHA": "abc123"}):
+        response = api_client.get(reverse("api-version"))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == {"version": settings.SOFTWARE_VERSION, "commit": "abc123"}
+
+
+def test_version_endpoint_defaults_to_empty_commit(api_client, monkeypatch):
+    monkeypatch.delenv("GIT_COMMIT_SHA", raising=False)
+
+    response = api_client.get(reverse("api-version"))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == {"version": settings.SOFTWARE_VERSION, "commit": ""}
 
 
 @pytest.fixture

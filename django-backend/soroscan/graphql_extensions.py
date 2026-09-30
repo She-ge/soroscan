@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.cache import cache
 
 logger = logging.getLogger("soroscan.graphql")
+SLOW_RESOLVER_THRESHOLD_MS = 200
 
 
 def _get_authenticated_user(info: Info):
@@ -185,6 +186,12 @@ def log_graphql_resolver(func: Callable) -> Callable:
                 "duration_ms": round(duration_ms, 2),
                 "status": status,
             }
+
+            if duration_ms > SLOW_RESOLVER_THRESHOLD_MS:
+                logger.warning(
+                    f"Slow GraphQL resolver: {query_name} in {duration_ms:.2f}ms",
+                    extra=extra,
+                )
 
             if error:
                 extra["error"] = str(error)

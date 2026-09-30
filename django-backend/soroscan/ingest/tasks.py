@@ -4033,16 +4033,36 @@ def _detect_anomaly(rule: RemediationRule, contract: TrackedContract) -> tuple[b
 
     elif cond_type == RemediationRule.CONDITION_WEBHOOK_FAILURE_BURST:
         window_minutes = cond.get("window_minutes", 60)
-        threshold = cond.get("failure_threshold", 3)
+        failure_threshold = cond.get("failure_threshold", 3)
+        failure_ratio_percent = float(cond.get("failure_ratio_percent", 50))
         cutoff = now - timedelta(minutes=window_minutes)
-        failures = WebhookDeliveryLog.objects.filter(
+        qs = WebhookDeliveryLog.objects.filter(
             subscription__contract=contract,
-            status=WebhookDeliveryLog.STATUS_FAILED,
             timestamp__gte=cutoff,
+        )
+        total = qs.count()
+        failed = qs.filter(
+            status__in=[
+                WebhookDeliveryLog.STATUS_FAILED,
+                WebhookDeliveryLog.STATUS_DEAD_LETTER,
+            ]
         ).count()
-        if failures >= threshold:
-            return True, {"type": cond_type, "failed": failures}
-        return False, {"type": cond_type, "failed": failures}
+        ratio = (failed / total * 100.0) if total > 0 else 0.0
+        triggered = failed >= failure_threshold or (
+            total >= failure_threshold and ratio >= failure_ratio_percent
+        )
+        return (
+            triggered,
+            {
+                "type": cond_type,
+                "window_minutes": window_minutes,
+                "failure_threshold": failure_threshold,
+                "failure_ratio_percent": failure_ratio_percent,
+                "total": total,
+                "failed": failed,
+                "ratio": ratio,
+            },
+        )
 
     elif cond_type == RemediationRule.CONDITION_RPC_UNAVAILABLE:
         window_minutes = cond.get("window_minutes", 60)

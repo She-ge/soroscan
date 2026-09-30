@@ -57,7 +57,15 @@ def decode_state_payload(state_data: dict[str, Any]) -> dict[str, Any]:
     """Decode a stored snapshot payload back to plain contract state."""
     if state_data.get("_compressed"):
         raw = gzip.decompress(base64.b64decode(state_data["payload"]))
-        return json.loads(raw.decode("utf-8"))
+        try:
+            decoded = json.loads(raw.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError, TypeError) as exc:
+            logger.warning(
+                "Failed to parse stored state payload: %s",
+                exc,
+            )
+            decoded = {"raw": raw.hex()}
+        return decoded
     if state_data.get("_truncated"):
         decoded = dict(state_data)
         decoded.pop("_truncated", None)

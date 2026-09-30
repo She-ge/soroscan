@@ -6,7 +6,9 @@ behind admin-level authentication so operators can monitor DB health and
 detect connection leaks without exposing sensitive credentials.
 """
 import logging
+import os
 
+from django.conf import settings
 from django.db import connections
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers, status
@@ -15,6 +17,17 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
+
+
+@api_view(["GET"])
+def version_view(request):
+    """Return the application version and deployed Git commit SHA."""
+    return Response(
+        {
+            "version": settings.SOFTWARE_VERSION,
+            "commit": os.getenv("GIT_COMMIT_SHA", ""),
+        }
+    )
 
 
 def _collect_postgres_pool_stats(conn_wrapper):

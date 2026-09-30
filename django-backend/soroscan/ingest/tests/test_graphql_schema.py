@@ -1,6 +1,7 @@
-"""Tests for the GraphQL query depth limit (issue #1408)."""
+﻿"""Tests for the GraphQL query depth limit (issue #1408) and contract resolver behavior."""
 from __future__ import annotations
 
+import pytest
 import strawberry
 
 from soroscan.graphql_extensions import MaxQueryDepthExtension
@@ -65,3 +66,24 @@ def test_soroscan_schema_uses_depth_limit():
         isinstance(ext, MaxQueryDepthExtension) and ext.max_depth == 7
         for ext in soroscan_schema.extensions
     )
+
+
+@pytest.mark.django_db
+def test_contract_query_nonexistent_id_returns_null():
+    """Querying an unregistered contract ID returns null without errors (#1508).
+
+    The resolver's ``TrackedContract.DoesNotExist`` path must surface as
+    ``{"contract": null}`` on the wire, not as an unhandled server error.
+    """
+    nonexistent = "C" + "A" * 55  # 56-char Stellar-style contract ID
+    query = """
+        query($id: String!) {
+            contract(contractId: $id) {
+                contractId
+            }
+        }
+    """
+    result = soroscan_schema.execute_sync(query, variable_values={"id": nonexistent})
+
+    assert result.errors is None
+    assert result.data == {"contract": None}

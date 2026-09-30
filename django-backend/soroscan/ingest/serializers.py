@@ -10,6 +10,7 @@ from django.utils.text import slugify
 from .cache_utils import get_event_count
 from .models import (
     APIKey,
+    ContractDeployment,
     ContractEvent,
     ContractInvocation,
     ContractMetadata,
@@ -328,6 +329,34 @@ class TrackedContractSerializer(serializers.ModelSerializer):
             if not TeamMembership.objects.filter(team=value, user=user).exists():
                 raise serializers.ValidationError("You are not a member of this team.")
         return value
+
+
+class ContractDeploymentSerializer(serializers.ModelSerializer):
+    detected_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = ContractDeployment
+        fields = [
+            "id",
+            "bytecode_hash",
+            "ledger_deployed",
+            "deployer_address",
+            "is_upgrade",
+            "tx_hash",
+            "notes",
+            "detected_at",
+        ]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if representation["detected_at"] is None:
+            discovery_date = getattr(instance.contract, "created_at", None)
+            detected_at_field = self.fields["detected_at"]
+            representation["detected_at"] = detected_at_field.to_representation(
+                discovery_date
+            )
+        return representation
+
 
 class ContractEventSerializer(serializers.ModelSerializer):
     """

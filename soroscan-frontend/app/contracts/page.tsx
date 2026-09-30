@@ -145,20 +145,20 @@ export default function ContractsPage() {
 
         {/* Contract Summary Stats */}
         {contracts.length > 0 && !isLoading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="rounded border border-terminal-green/20 p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+            <div className="h-full flex flex-col justify-between rounded border border-terminal-green/20 p-4">
               <p className="text-xs text-terminal-gray mb-1">Total Contracts</p>
               <p className="text-2xl font-bold text-terminal-green">{contracts.length}</p>
             </div>
-            <div className="rounded border border-terminal-cyan/20 p-4">
+            <div className="h-full flex flex-col justify-between rounded border border-terminal-cyan/20 p-4">
               <p className="text-xs text-terminal-gray mb-1">Active</p>
               <p className="text-2xl font-bold text-terminal-cyan">{activeContracts}</p>
             </div>
-            <div className="rounded border border-terminal-yellow/20 p-4">
+            <div className="h-full flex flex-col justify-between rounded border border-terminal-yellow/20 p-4">
               <p className="text-xs text-terminal-gray mb-1">Total Events</p>
               <p className="text-2xl font-bold text-terminal-yellow">{totalEvents}</p>
             </div>
-            <div className="rounded border border-terminal-magenta/20 p-4">
+            <div className="h-full flex flex-col justify-between rounded border border-terminal-magenta/20 p-4">
               <p className="text-xs text-terminal-gray mb-1">Avg Events</p>
               <p className="text-2xl font-bold text-terminal-magenta">
                 {contracts.length > 0 ? Math.round(totalEvents / contracts.length) : 0}

@@ -40,6 +40,15 @@ def test_single_leaf_node():
     )
 
 
+def test_no_conflicting_migration_heads():
+    """Assert no app has multiple unmerged migration leaf nodes."""
+    loader = MigrationLoader(None, ignore_no_migrations=True)
+
+    conflicts = loader.detect_conflicts()
+
+    assert conflicts == {}, f"Expected no conflicting migration heads, found: {conflicts}"
+
+
 # ---------------------------------------------------------------------------
 # Preservation property tests (Task 2)
 # These tests PASS on unfixed code — they establish the baseline behavior

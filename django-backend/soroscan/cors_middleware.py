@@ -49,15 +49,15 @@ logger = logging.getLogger(__name__)
 # re-reading from the DB.
 ORG_CORS_CACHE_TTL: int = 60
 
-# Module-level cache: maps origin -> True for fast membership tests.
-_org_origins_cache: dict[str, bool] = {}
+# Module-level cache for fast membership tests.
+_org_origins_cache: set[str] = set()
 _org_origins_cache_loaded_at: float = 0.0
 
 
-def _get_org_origins() -> dict[str, bool]:
+def _get_org_origins() -> set[str]:
     """
-    Read cors_origins from every Organization row and return a set-like dict.
-    Falls back to an empty dict on any DB error so the middleware never breaks
+    Read cors_origins from every Organization row and return a set of origins.
+    Falls back to an empty set on any DB error so the middleware never breaks
     a request.
     """
     global _org_origins_cache, _org_origins_cache_loaded_at
@@ -74,7 +74,7 @@ def _get_org_origins() -> dict[str, bool]:
                 origin_clean = origin.strip().rstrip("/")
                 if origin_clean:
                     origins.add(origin_clean)
-        _org_origins_cache = {o: True for o in origins}
+        _org_origins_cache = origins
         _org_origins_cache_loaded_at = now
     except Exception as exc:
         logger.warning("Failed to refresh org CORS cache: %s", exc)
@@ -86,7 +86,7 @@ def _is_global_origin_allowed(origin: str) -> bool:
     """Return True if the origin is permitted by the global CORS settings."""
     if getattr(settings, "CORS_ALLOW_ALL_ORIGINS", False):
         return True
-    global_origins = getattr(settings, "CORS_ALLOWED_ORIGINS", [])
+    global_origins = set(getattr(settings, "CORS_ALLOWED_ORIGINS", []))
     return origin in global_origins
 
 

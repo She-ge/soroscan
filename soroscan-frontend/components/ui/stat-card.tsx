@@ -32,7 +32,7 @@ export function StatCard({ title, value, trendValue, icon, isLoading, className 
   }
 
   return (
-    <Card hoverable className={cn("p-6 flex items-start justify-between", className)}>
+    <Card hoverable className={cn("h-full flex flex-col justify-between p-6", className)}>
       <div>
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
         <h3 className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-50">{value}</h3>

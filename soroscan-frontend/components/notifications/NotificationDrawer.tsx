@@ -138,9 +138,33 @@ export function NotificationDrawer({
             <p className="text-xs text-terminal-green/50 text-center py-8">LOADING...</p>
           )}
           {!loading && notifications.length === 0 && (
-            <p className="text-xs text-terminal-green/40 text-center py-12">
-              NO NOTIFICATIONS
-            </p>
+            <div
+              data-testid="empty-notification-state"
+              className="m-4 flex flex-col items-center justify-center p-6 text-center rounded border border-terminal-green/20 bg-terminal-green/5"
+            >
+              <div className="w-10 h-10 rounded-full bg-terminal-green/10 border border-terminal-green/30 flex items-center justify-center mb-3 text-terminal-green">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <p className="text-xs font-semibold text-terminal-green">
+                All clear! No new notifications
+              </p>
+              <p className="mt-1 text-[11px] text-terminal-gray">
+                You have no unread notifications at this time.
+              </p>
+            </div>
           )}
           {!loading && notifications.map((n) => (
             <NotificationItem key={n.id} notification={n} onMarkRead={onMarkRead} />

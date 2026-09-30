@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from soroscan.ingest.serializers import ContractDeploymentSerializer
 from soroscan.ingest.models import (
     AuditLog,
     ContractABIVersion,
@@ -198,6 +199,20 @@ class TestDeploymentTimelineView:
         response = auth_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["deployments"]) == 2
+
+    def test_missing_deployment_timestamp_uses_contract_discovery_date(self, contract):
+        deployment = ContractDeployment.objects.create(
+            contract=contract,
+            bytecode_hash="d" * 64,
+            ledger_deployed=4000,
+        )
+        deployment.detected_at = None
+
+        data = ContractDeploymentSerializer(deployment).data
+
+        detected_at_field = ContractDeploymentSerializer().fields["detected_at"]
+        expected_date = detected_at_field.to_representation(contract.created_at)
+        assert data["detected_at"] == expected_date
 
     def test_compatibility_warnings_shown(self, auth_client, contract):
         deployment = ContractDeployment.objects.create(

@@ -1,4 +1,9 @@
-"""Small tracing and payload-compression helpers for ingest flows."""
+"""Tracing and payload-compression helpers for ingest flows.
+
+Payload compression observations are recorded as the
+``soroscan_event_payload_compression_ratio`` Prometheus histogram and exposed
+in Prometheus text format at ``/metrics``.
+"""
 
 from __future__ import annotations
 
@@ -63,7 +68,12 @@ def span(
 
 
 def payload_compression_ratio(payload: dict[str, Any]) -> float | None:
-    """Observe and return the zlib compression ratio for a JSON payload."""
+    """Observe and return the zlib compression ratio for a JSON payload.
+
+    The histogram value is compressed byte length divided by raw byte length
+    and is exported as ``soroscan_event_payload_compression_ratio``. Empty or
+    non-dictionary payloads are ignored and return ``None``.
+    """
     if not isinstance(payload, dict) or not payload:
         return None
 
