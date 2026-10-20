@@ -6,6 +6,7 @@ These endpoints return the cursor-based pagination shape expected by
 """
 from __future__ import annotations
 
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -69,17 +70,19 @@ def list_events(request):
 
     Query params:
     - first (int) - Maximum items to return, capped at 200 (default 20)
+    - after (string) - Return events after this ledger-event_index cursor
+    - before (string) - Return events before this ledger-event_index cursor
     - contractId (string) - Filter by Soroban contract ID
     - eventType (string) - Filter by event type label
 
     - 200: Paginated event list with pageInfo cursors
     """
     try:
-        first = min(int(request.query_params.get("first", 20)), 200)
+        first = max(0, min(int(request.query_params.get("first", 20)), 200))
     except (TypeError, ValueError):
         first = 20
 
-    queryset = ContractEvent.objects.select_related("contract").order_by("-timestamp")
+    queryset = ContractEvent.objects.select_related("contract")
 
     contract_id = request.query_params.get("contractId")
     if contract_id:
@@ -89,16 +92,86 @@ def list_events(request):
     if event_type:
         queryset = queryset.filter(event_type=event_type)
 
+    base_queryset = queryset
     total = queryset.count()
-    events = list(queryset[:first])
+
+    cursor_values: dict[str, tuple[int, int]] = {}
+    for cursor_name in ("after", "before"):
+        cursor = request.query_params.get(cursor_name)
+        if cursor is None:
+            continue
+        try:
+            ledger, event_index = (int(value) for value in cursor.split("-", 1))
+        except (ValueError, TypeError):
+            return Response(
+                {"error": f"Invalid {cursor_name} cursor"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if ledger < 0 or event_index < 0:
+            return Response(
+                {"error": f"Invalid {cursor_name} cursor"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        cursor_values[cursor_name] = (ledger, event_index)
+
+    queryset = base_queryset.order_by("-ledger", "-event_index", "-id")
+    if "after" in cursor_values:
+        ledger, event_index = cursor_values["after"]
+        queryset = queryset.filter(
+            Q(ledger__lt=ledger) | Q(ledger=ledger, event_index__lt=event_index)
+        )
+    if "before" in cursor_values:
+        ledger, event_index = cursor_values["before"]
+        queryset = queryset.filter(
+            Q(ledger__gt=ledger) | Q(ledger=ledger, event_index__gt=event_index)
+        )
+
+    page_events = list(queryset[: first + 1])
+    has_more_in_range = len(page_events) > first
+    events = page_events[:first]
+
+    if events:
+        start_event = events[0]
+        end_event = events[-1]
+        has_previous_page = base_queryset.filter(
+            Q(ledger__gt=start_event.ledger)
+            | Q(
+                ledger=start_event.ledger,
+                event_index__gt=start_event.event_index,
+            )
+        ).exists()
+        has_next_page = base_queryset.filter(
+            Q(ledger__lt=end_event.ledger)
+            | Q(
+                ledger=end_event.ledger,
+                event_index__lt=end_event.event_index,
+            )
+        ).exists()
+    else:
+        has_previous_page = False
+        has_next_page = False
+        if "after" in cursor_values:
+            ledger, event_index = cursor_values["after"]
+            has_previous_page = base_queryset.filter(
+                Q(ledger__gt=ledger) | Q(ledger=ledger, event_index__gt=event_index)
+            ).exists()
+        if "before" in cursor_values:
+            ledger, event_index = cursor_values["before"]
+            has_next_page = base_queryset.filter(
+                Q(ledger__lt=ledger) | Q(ledger=ledger, event_index__lt=event_index)
+            ).exists()
+
+    if first == 0:
+        has_next_page = has_more_in_range
+
     items = [_event_to_sdk(event) for event in events]
 
     return Response(
         {
             "items": items,
             "pageInfo": {
-                "hasNextPage": total > first,
-                "hasPreviousPage": False,
+                "hasNextPage": has_next_page,
+                "hasPreviousPage": has_previous_page,
                 "startCursor": items[0]["pagingToken"] if items else None,
                 "endCursor": items[-1]["pagingToken"] if items else None,
             },
