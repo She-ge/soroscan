@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AppShell } from "@/components/layout/AppShell";
+import { SkipToContent } from "@/components/ui/SkipToContent";
 
 jest.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
@@ -80,14 +81,24 @@ describe("AppShell mobile navigation", () => {
     expect(drawer.querySelector('a[href="/contracts"]')).toBeInTheDocument();
   });
 
-  it("renders child content in main area", () => {
-    render(
-      <AppShell>
-        <div data-testid="page-content">Dashboard content</div>
-      </AppShell>,
+  it("does not add a nested main landmark or duplicate skip link", () => {
+    const { container } = render(
+      <>
+        <SkipToContent />
+        <main id="main-content" tabIndex={-1}>
+          <AppShell>
+            <div data-testid="page-content">Dashboard content</div>
+          </AppShell>
+        </main>
+      </>,
     );
 
     expect(screen.getByTestId("page-content")).toBeInTheDocument();
+    expect(container.querySelectorAll("main")).toHaveLength(1);
+    expect(container.querySelectorAll("#main-content")).toHaveLength(1);
+    expect(
+      screen.getAllByRole("link", { name: /skip to main content/i }),
+    ).toHaveLength(1);
   });
 
   it("renders sidebar nav links with icon + label pattern", () => {
