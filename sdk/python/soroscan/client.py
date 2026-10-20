@@ -32,11 +32,15 @@ from soroscan.models import (
     GetEventsByContractsResponse,
     IndexerStats,
     IsIndexerResponse,
+    MAX_TAGS,
     PaginatedResponse,
     RecordEventRequest,
     RecordEventResponse,
     RecordEventsBatchRequest,
     RecordEventsBatchResponse,
+    StructuredEventRequest,
+    TaggedEventRequest,
+    TaggedEventResponse,
     TrackedContract,
     WebhookSubscription,
 )
@@ -259,6 +263,27 @@ class SoroScanClient:
             raise SoroScanConnectionError(f"Could not connect to {url}: {exc}", url=url) from exc
         except httpx.NetworkError as exc:
             raise SoroScanConnectionError(f"Network error reaching {url}: {exc}", url=url) from exc
+
+    def _request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
+        """
+        Execute an HTTP request via _safe_request and handle the response.
+
+        Args:
+            method: HTTP method (GET, POST, PATCH, DELETE, etc.)
+            path: API path (e.g., "/api/contracts/")
+            **kwargs: Additional arguments passed to _safe_request
+
+        Returns:
+            Parsed JSON response data
+
+        Raises:
+            SoroScanConnectionError: On connection/timeout errors
+            SoroScanTimeoutError: On request timeout
+            SoroScanAPIError / SoroScanValidationError / etc.: On HTTP errors
+        """
+        url = urljoin(self.base_url, path)
+        response = self._safe_request(method, url, **kwargs)
+        return self._handle_response(response)
 
     def get_contracts(
         self,
@@ -1365,6 +1390,66 @@ class AsyncSoroScanClient:
         )
         data = self._handle_response(response)
         return RecordEventResponse.model_validate(data)
+
+    async def record_structured_event(
+        self,
+        contract_id: str,
+        event_type: str,
+        payload_hash: str,
+        schema_version: int,
+        correlation_id: str,
+    ) -> RecordEventResponse:
+        """Submit an idempotent SC-38 structured event asynchronously."""
+        request = StructuredEventRequest(
+            contract_id=contract_id,
+            event_type=event_type,
+            payload_hash=payload_hash,
+            schema_version=schema_version,
+            correlation_id=correlation_id,
+        )
+        response = await self._client.post(
+            urljoin(self.base_url, "/api/record/structured/"),
+            headers=self._get_headers(),
+            json=request.model_dump(),
+        )
+        data = self._handle_response(response)
+        return RecordEventResponse.model_validate(data)
+
+    async def record_tagged_event(
+        self,
+        contract_id: str,
+        event_type: str,
+        payload_hash: str,
+        tags: list[str] | None = None,
+    ) -> TaggedEventResponse:
+        """Submit an SC-24 tagged event asynchronously.
+
+        Tags are short producer-defined classification strings that allow
+        off-chain indexers to filter events without decoding the full payload.
+        At most ``MAX_TAGS`` tags may be supplied per event.
+
+        Args:
+            contract_id: Target contract address
+            event_type: Event type name
+            payload_hash: SHA-256 hash of payload (hex)
+            tags: Up to 4 classification tag strings (default: empty list)
+
+        Returns:
+            TaggedEventResponse with submission status and echoed tags
+        """
+        request = TaggedEventRequest(
+            contract_id=contract_id,
+            event_type=event_type,
+            payload_hash=payload_hash,
+            tags=tags or [],
+        )
+        response = await self._client.post(
+            urljoin(self.base_url, "/api/record/tagged/"),
+            headers=self._get_headers(),
+            json=request.model_dump(),
+        )
+        data = self._handle_response(response)
+        return TaggedEventResponse.model_validate(data)
 
     async def add_indexer(self, indexer_address: str) -> AddIndexerResponse:
         """

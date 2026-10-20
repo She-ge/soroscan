@@ -27,6 +27,7 @@ from .models import (
     TrackedContract,
     WebhookSubscription,
 )
+from .services.event_dedup import ALLOWED_DEDUP_FIELDS
 
 _CONTRACT_ID_RE = re.compile(r"^C[A-Z2-7]{55}$")
 _VALID_NETWORKS = {choice[0] for choice in TrackedContract.Network.choices}
@@ -470,6 +471,9 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
             "delivery_sla_seconds",
             "escalation_policy",
             "filter_condition",
+            "timeout_seconds",
+            "retry_backoff_strategy",
+            "retry_backoff_seconds",
             "created_at",
             "last_triggered",
             "failure_count",
@@ -485,6 +489,36 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
         if not isinstance(value, dict):
             raise serializers.ValidationError("filter_condition must be an object.")
         _validate_filter_condition_node(value)
+        return value
+
+    def validate_timeout_seconds(self, value):
+        if value is None:
+            return value
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise serializers.ValidationError("timeout_seconds must be an integer.")
+        if value < 1 or value > 60:
+            raise serializers.ValidationError("timeout_seconds must be between 1 and 60.")
+        return value
+
+    def validate_retry_backoff_strategy(self, value):
+        if value in (None, ""):
+            return value
+        allowed = {"exponential", "linear", "fixed"}
+        if value not in allowed:
+            raise serializers.ValidationError(
+                "retry_backoff_strategy must be one of: exponential, linear, fixed."
+            )
+        return value
+
+    def validate_retry_backoff_seconds(self, value):
+        if value is None:
+            return value
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise serializers.ValidationError("retry_backoff_seconds must be an integer.")
+        if value < 1 or value > 3600:
+            raise serializers.ValidationError(
+                "retry_backoff_seconds must be between 1 and 3600."
+            )
         return value
 
     def validate(self, attrs):
@@ -866,9 +900,14 @@ class EventDeduplicationConfigSerializer(serializers.Serializer):
         for item in value:
             name = str(item).strip()
             if not name:
-                continue
+                raise serializers.ValidationError("Deduplication field cannot be blank.")
             if len(name) > 128:
                 raise serializers.ValidationError(f"Field name too long: {name}")
+            if name not in ALLOWED_DEDUP_FIELDS:
+                raise serializers.ValidationError(
+                    f"Unknown deduplication field '{name}'. Allowed fields: "
+                    f"{', '.join(ALLOWED_DEDUP_FIELDS)}"
+                )
             cleaned.append(name)
         return cleaned
 

@@ -259,7 +259,7 @@ jobs:
 
       - name: Install Python SDK
         working-directory: sdk/python
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev]" pytest-timeout
 
       - name: Run Python SDK integration tests
         working-directory: sdk/python
@@ -366,7 +366,7 @@ jobs:
 
       - name: Install TypeScript SDK dependencies
         working-directory: sdk/typescript
-        run: npm ci
+        run: npm install
 
       - name: Run TypeScript SDK integration tests
         working-directory: sdk/typescript

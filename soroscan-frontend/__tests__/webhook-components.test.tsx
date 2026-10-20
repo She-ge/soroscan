@@ -242,6 +242,30 @@ describe("CreateWebhookModal", () => {
     expect(screen.getByText(/Timeout must be a whole number between 5 and 60 seconds./)).toBeInTheDocument()
   })
 
+  it("associates the timeout error with its input via aria-describedby", () => {
+    render(
+      <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
+    )
+    const timeoutInput = screen.getByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
+
+    // Valid state: no error association, aria-invalid is false.
+    expect(timeoutInput).toHaveAttribute("aria-invalid", "false")
+    expect(timeoutInput).not.toHaveAttribute("aria-describedby")
+
+    fireEvent.change(timeoutInput, { target: { value: "3" } })
+    fireEvent.blur(timeoutInput)
+
+    const error = screen.getByRole("alert")
+    expect(error).toHaveAttribute("id", "timeout-input-error")
+    expect(timeoutInput).toHaveAttribute("aria-invalid", "true")
+    expect(timeoutInput).toHaveAttribute("aria-describedby", "timeout-input-error")
+
+    // Recovering clears the association so stale errors are not announced.
+    fireEvent.change(timeoutInput, { target: { value: "30" } })
+    expect(timeoutInput).toHaveAttribute("aria-invalid", "false")
+    expect(timeoutInput).not.toHaveAttribute("aria-describedby")
+  })
+
   it("accepts a valid timeout value", () => {
     render(
       <CreateWebhookModal isOpen onClose={mockClose} onCreate={mockCreate} />
@@ -350,9 +374,48 @@ describe("CreateWebhookModal", () => {
 
 // ── WebhookDetailPage ───────────────────────────────────────────────────────
 describe("WebhookDetailPage", () => {
-  it("renders timeout editor and updates the configured timeout", () => {
+  const apiWebhook = {
+    id: "wh_001",
+    target_url: "https://api.myapp.io/hooks/soroban",
+    event_type: "SWAP_COMPLETE",
+    contract_id: "CABC...9X4Z",
+    is_active: true,
+    status: "active",
+    created_at: "2026-02-10T09:12:00Z",
+    last_triggered: "2026-02-23T22:34:01Z",
+    timeout_seconds: 30,
+    secret: "whsec_test",
+    failure_count: 0,
+    total_deliveries: 42,
+    success_rate: 98.7,
+    last_status_code: 200,
+  };
+
+  beforeEach(() => {
+    global.fetch = jest.fn(async (url: unknown) => {
+      const href = String(url);
+      if (href.includes("/deliveries/")) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([]),
+        } as Response;
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(apiWebhook),
+      } as Response;
+    }) as jest.Mock;
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("renders timeout editor and updates the configured timeout", async () => {
     render(<WebhookDetailPage />)
-    const timeoutInput = screen.getByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
+    const timeoutInput = await screen.findByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
 
     expect(timeoutInput.value).toBe("30")
 
@@ -360,20 +423,28 @@ describe("WebhookDetailPage", () => {
     fireEvent.blur(timeoutInput)
     fireEvent.click(screen.getByText("SAVE"))
 
-    expect(screen.queryByText(/Timeout must be between 5 and 60 seconds./)).not.toBeInTheDocument()
-    expect(screen.getByText("Timeout updated successfully.")).toBeInTheDocument()
-    expect(screen.getByText("25s")).toBeInTheDocument()
+    expect(await screen.findByText("Timeout updated successfully.")).toBeInTheDocument()
+    expect(screen.getByText("25s")).toBeInTheDocument();
   })
 
-  it("prevents saving an out-of-range timeout", () => {
+  it("prevents saving an out-of-range timeout", async () => {
     render(<WebhookDetailPage />)
-    const timeoutInput = screen.getByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
+    const timeoutInput = await screen.findByLabelText("REQUEST_TIMEOUT (seconds)") as HTMLInputElement
 
     fireEvent.change(timeoutInput, { target: { value: "2" } })
     fireEvent.blur(timeoutInput)
     fireEvent.click(screen.getByText("SAVE"))
 
-    expect(screen.getByText(/Timeout must be between 5 and 60 seconds./)).toBeInTheDocument()
+    expect(await screen.findByText(/Timeout must be between 5 and 60 seconds./)).toBeInTheDocument()
+  })
+
+  it("shows loading, then webhook detail loaded from the API", async () => {
+    render(<WebhookDetailPage />)
+    expect(await screen.findByText("https://api.myapp.io/hooks/soroban")).toBeInTheDocument()
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/webhooks/wh_001/"),
+      expect.anything(),
+    );
   })
 })
 

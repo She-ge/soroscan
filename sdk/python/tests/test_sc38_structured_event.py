@@ -43,3 +43,23 @@ async def test_async_record_structured_event(base_url: str, httpx_mock: HTTPXMoc
     async with AsyncSoroScanClient(base_url=base_url) as client:
         result = await client.record_structured_event("CABC", "transfer", "a" * 64, 1, "b" * 64)
     assert result.tx_hash == "abc"
+
+
+@pytest.mark.anyio
+async def test_async_record_structured_event_serializes_payload(
+    base_url: str, httpx_mock: HTTPXMock
+) -> None:
+    """Async client serializes all structured-event fields in the request body."""
+    httpx_mock.add_response(
+        url=f"{base_url}/api/record/structured/", status_code=202,
+        json={"status": "submitted", "tx_hash": "abc", "transaction_status": "PENDING"},
+    )
+    async with AsyncSoroScanClient(base_url=base_url) as client:
+        await client.record_structured_event("CABC", "swap", "a" * 64, 2, "b" * 64)
+
+    request = httpx_mock.get_requests()[0]
+    assert json.loads(request.content) == {
+        "contract_id": "CABC", "event_type": "swap", "payload_hash": "a" * 64,
+        "schema_version": 2, "correlation_id": "b" * 64,
+    }
+

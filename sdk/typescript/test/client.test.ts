@@ -207,7 +207,7 @@ describe("User-Agent header", () => {
     await makeClient().getEvents();
 
     expect(DEFAULT_USER_AGENT).toBe("SoroScan-TS-SDK/1.4.0");
-    expect(sentHeaders()["User-Agent"]).toBe("SoroScan-TS-SDK/1.4.0");
+    expect(sentHeaders()["User-Agent"]).toBe(DEFAULT_USER_AGENT);
   });
 
   it("uses a custom userAgent when provided", async () => {

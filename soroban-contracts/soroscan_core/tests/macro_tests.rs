@@ -205,4 +205,48 @@ mod macro_integration_tests {
             "All events should be recorded with various symbols"
         );
     }
+
+    #[test]
+    fn test_emit_soroscan_event_macro_with_tuple_payload() {
+        // Regression test for #1649: a payload containing commas (a tuple) used
+        // to be naively split, which expanded to malformed code. The macro must
+        // accept it as a single argument and publish exactly one event.
+        use soroscan_macros::emit_soroscan_event;
+
+        let env = Env::default();
+        let contract_id = env.register_contract(None, SoroScanCore);
+
+        let sender: u32 = 1;
+        let receiver: u32 = 2;
+        let amount: i128 = 3;
+
+        env.as_contract(&contract_id, || {
+            emit_soroscan_event!(env, symbol_short!("swap"), (sender, receiver, amount));
+        });
+
+        let events = env.events().all();
+        assert_eq!(
+            events.len(),
+            1,
+            "tuple payload should emit exactly one event"
+        );
+    }
+
+    #[test]
+    fn test_emit_soroscan_batch_macro_with_tuple_argument() {
+        // Regression test for #1649: the same comma-splitting bug affected
+        // emit_soroscan_batch!. An argument containing a comma (here a tuple)
+        // must be accepted intact.
+        use soroscan_macros::emit_soroscan_batch;
+
+        let env = Env::default();
+        let contract_id = env.register_contract(None, SoroScanCore);
+        let indexer = Address::generate(&env);
+
+        env.as_contract(&contract_id, || {
+            emit_soroscan_batch!(env, indexer, (5u32, 6u32), 42u32);
+        });
+
+        assert_eq!(env.events().all().len(), 1);
+    }
 }

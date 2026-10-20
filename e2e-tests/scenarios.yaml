@@ -28,5 +28,5 @@ scenarios:
   - id: api_key_lifecycle
     description: User creates and revokes an API key for programmatic access
     critical: true
-    implemented: false
+    implemented: true
     test: soroscan.ingest.tests.test_e2e_workflows::test_e2e_api_key_lifecycle

@@ -1,5 +1,6 @@
 export {
   SoroScanClient,
+  DEFAULT_USER_AGENT,
   // Error hierarchy — all classes exported for instanceof checks
   SoroScanError,
   SoroScanApiError,
@@ -94,7 +95,7 @@ export type {
   SoroScanApiErrorResponse,
 } from "./types.js";
 
-export * from "./features/sc36";
-export * from "./features/sc31";
-export * from "./features/sc21";
-export * from "./features/sc20";
+export * from "./features/sc36.js";
+export * from "./features/sc31.js";
+export * from "./features/sc21.js";
+export * from "./features/sc20.js";

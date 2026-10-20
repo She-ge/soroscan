@@ -10,7 +10,7 @@ maintains per-contract event counters and recent-event buffers.
 
 | Tool | Version | Install |
 |------|---------|---------|
-| Rust | 1.74+ | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
+| Rust | 1.85+ | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | `wasm32-unknown-unknown` target | — | `rustup target add wasm32-unknown-unknown` |
 | Stellar CLI (`stellar`) | 21+ | See [Stellar CLI docs](https://developers.stellar.org/docs/tools/stellar-cli) |
 
@@ -63,6 +63,23 @@ cargo test
 All tests use `soroban-sdk`'s `testutils` feature (`Env::default()`,
 `register_contract`, `mock_all_auths`) and run entirely off-chain — no network
 connection is required.
+
+### Test coverage
+
+| Test | What it covers |
+|------|----------------|
+| `test_add_indexer` | Admin can add an indexer; `IndexerAdded` event is emitted |
+| `test_remove_indexer` | Admin can remove an indexer; `IndexerRemoved` event is emitted |
+| `test_pause_indexer` | Admin can pause an indexer; `IndexerPaused` event is emitted |
+| `test_resume_indexer` | Admin can resume a paused indexer; `IndexerResumed` event is emitted |
+| `test_transfer_admin` | Admin ownership is transferred; `AdminTransferred` event is emitted |
+| `test_pause_contract` | Admin can pause the contract; `ContractPaused` event is emitted |
+| `test_unpause_contract` | Admin can unpause the contract; `ContractUnpaused` event is emitted |
+| `test_rejected_calls_publish_no_events` | Unauthorized/rejected calls emit no events |
+| `test_record_event_topics_and_payload` | `record_event` emits the expected topics and payload |
+| `test_record_event_stored_record_matches` | Stored record matches the submitted event |
+| `test_structured_event_duplicate_correlation` | Structured SC-38 events handle duplicate correlation IDs |
+| `test_tagged_event` | Tagged SC-24 events are emitted correctly |
 
 ---
 

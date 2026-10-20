@@ -26,9 +26,11 @@ function LoginPageInner() {
 
   const completeLogin = (access: string, refresh: string) => {
     setTokens({ access, refresh });
-    // Replace keeps history clean and reduces redirect race in E2E flows.
-    router.replace(callbackUrl);
-    router.refresh();
+    if (typeof window !== 'undefined') {
+      window.location.href = callbackUrl;
+    } else {
+      router.replace(callbackUrl);
+    }
   };
 
   const onSubmit = async (event: React.FormEvent) => {

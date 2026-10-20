@@ -48,6 +48,7 @@ MIDDLEWARE = [
     "soroscan.middleware.PlatformVersionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "soroscan.middleware_gzip.CustomGZipMiddleware",
+    "soroscan.middleware.CacheBustingMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -145,8 +146,12 @@ REST_FRAMEWORK = {
         "dedup_test": "1000/hour",
         "events_search": "1000/hour",
         "contract_stats": "1000/hour",
+        "db_explain": "100/minute",
+        "unauthenticated_ip": "1000/hour",
     },
 }
+
+DATABASE_STATEMENT_TIMEOUT = 5000
 
 
 

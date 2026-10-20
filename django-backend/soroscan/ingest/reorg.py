@@ -13,6 +13,7 @@ from django.db import transaction
 from stellar_sdk.soroban_server import SorobanServer
 
 from soroscan.circuit_breaker import execute_with_circuit_breaker
+from soroscan.ingest import metrics as ingest_metrics
 from soroscan.ingest.models import ContractEvent, IndexerState, WebhookDeliveryLog
 
 logger = logging.getLogger(__name__)
@@ -77,6 +78,8 @@ def detect_reorg(head: LedgerHead) -> int | None:
             head.sequence,
             extra={"ledger_sequence": head.sequence},
         )
+        ingest_metrics.reorg_detected_total.inc()
+        ingest_metrics.last_reorg_ledger.set(head.sequence + 1)
         return head.sequence + 1
 
     if head.sequence == prev_seq and head.hash != prev_hash:
@@ -85,6 +88,8 @@ def detect_reorg(head: LedgerHead) -> int | None:
             prev_seq,
             extra={"ledger_sequence": prev_seq},
         )
+        ingest_metrics.reorg_detected_total.inc()
+        ingest_metrics.last_reorg_ledger.set(prev_seq)
         return prev_seq
 
     return None
@@ -126,6 +131,9 @@ def rollback_ledger_reorg(from_ledger: int) -> dict[str, int]:
         retracted_count,
         extra={"ledger_sequence": from_ledger},
     )
+    if orphaned_count:
+        ingest_metrics.reorg_rolled_back_events_total.inc(orphaned_count)
+    ingest_metrics.last_reorg_ledger.set(from_ledger)
     return {
         "orphaned_events": orphaned_count,
         "retracted_webhooks": retracted_count,

@@ -40,6 +40,8 @@ from soroscan.models import (
     AddIndexerResponse,
     IsIndexerResponse,
     GetAdminResponse,
+    GetEventsByContractsRequest,
+    GetEventsByContractsResponse,
     RecordEventsBatchRequest,
     RecordEventsBatchResponse,
     TrackedContract,

@@ -180,6 +180,7 @@ export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookM
               onChange={(e) => setTimeoutInput(e.target.value)}
               onBlur={() => setTimeoutTouched(true)}
               aria-invalid={!!timeoutError}
+              aria-describedby={timeoutError ? "timeout-input-error" : undefined}
             />
             <p className="text-[9px] text-terminal-gray/60 ml-1 mt-2">
               Maximum time to wait for webhook response. If your endpoint is slow, increase this. Shorter timeouts are faster but may miss responses.
@@ -200,7 +201,13 @@ export function CreateWebhookModal({ isOpen, onClose, onCreate }: CreateWebhookM
               ))}
             </div>
             {timeoutError && (
-              <p className="text-terminal-danger text-[10px] mt-1 ml-1">{timeoutError}</p>
+              <p
+                id="timeout-input-error"
+                role="alert"
+                className="text-terminal-danger text-[10px] mt-1 ml-1"
+              >
+                {timeoutError}
+              </p>
             )}
           </div>
 

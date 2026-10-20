@@ -1193,3 +1193,71 @@ class TestWarmEventCountCache:
         
         # Should warm at most 100 contracts
         assert result["contracts_warmed"] <= 100
+
+
+class TestCeleryBeatSchedule:
+    """Tests ensuring periodic tasks are properly registered in CELERY_BEAT_SCHEDULE."""
+
+    def _get_beat_schedule(self) -> dict:
+        import ast
+        from pathlib import Path
+
+        # Try importing from settings if available, else parse settings.py directly
+        try:
+            import importlib
+            prod = importlib.import_module("soroscan.settings")
+            schedule = getattr(prod, "CELERY_BEAT_SCHEDULE", None)
+            if schedule:
+                return schedule
+        except Exception:
+            pass
+
+        settings_path = Path(__file__).resolve().parents[2] / "settings.py"
+        with open(settings_path, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == "CELERY_BEAT_SCHEDULE":
+                        return ast.literal_eval(node.value)
+
+        raise RuntimeError("CELERY_BEAT_SCHEDULE not found in settings.py")
+
+    def test_missing_periodic_tasks_are_scheduled(self):
+        schedule = self._get_beat_schedule()
+
+        expected_tasks = {
+            "check-contract-health": ("soroscan.ingest.tasks.check_contract_health", 3600),
+            "detect-contract-upgrades": ("soroscan.ingest.tasks.detect_contract_upgrades", 3600),
+            "enforce-retention-policies": ("soroscan.ingest.tasks.enforce_retention_policies", 86400),
+            "process-deletion-requests": ("soroscan.ingest.tasks.process_deletion_requests", 86400),
+            "analyze-contract-dependencies": ("ingest.tasks.analyze_contract_dependencies", 3600),
+            "log-daily-platform-stats": ("ingest.tasks.log_daily_platform_stats", 86400),
+        }
+
+        for key, (task_name, expected_interval) in expected_tasks.items():
+            assert key in schedule, f"Task key '{key}' missing from CELERY_BEAT_SCHEDULE"
+            entry = schedule[key]
+            assert entry["task"] == task_name, (
+                f"Task '{key}' has task '{entry['task']}', expected '{task_name}'"
+            )
+            assert entry["schedule"] == expected_interval, (
+                f"Task '{key}' has schedule {entry['schedule']}, expected {expected_interval}"
+            )
+
+    def test_no_duplicate_task_entries(self):
+        import ast
+        from pathlib import Path
+
+        settings_path = Path(__file__).resolve().parents[2] / "settings.py"
+        with open(settings_path, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == "CELERY_BEAT_SCHEDULE":
+                        keys = [k.value for k in node.value.keys]
+                        assert len(keys) == len(set(keys)), "Duplicate keys found in CELERY_BEAT_SCHEDULE"
+

@@ -8,6 +8,8 @@ import type {
   GetEventsByContractsResponse,
   RecordStructuredEventParams,
   RecordStructuredEventResponse,
+  RecordTaggedEventParams,
+  RecordTaggedEventResponse,
   GetContractsParams,
   GetContractsResponse,
   GetContractParams,
@@ -75,9 +77,13 @@ function toQueryString(params: Record<string, unknown>): string {
 // Client
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Default User-Agent sent with every SDK request. */
+export const DEFAULT_USER_AGENT = "SoroScan-TS-SDK/1.4.0";
+
 export class SoroScanClient {
   readonly #baseUrl: string;
   readonly #apiKey: string | undefined;
+  readonly #userAgent: string;
   readonly #timeoutMs: number;
   readonly #maxRetries: number;
   readonly #initialDelayMs: number;
@@ -89,6 +95,7 @@ export class SoroScanClient {
     }
     this.#baseUrl = config.baseUrl.replace(/\/$/, "");
     this.#apiKey = config.apiKey;
+    this.#userAgent = config.userAgent ?? DEFAULT_USER_AGENT;
     this.#timeoutMs = config.timeoutMs ?? 30_000;
     this.#maxRetries = Math.max(0, Math.trunc(config.maxRetries ?? 3));
     this.#initialDelayMs = Math.max(0, config.initialDelayMs ?? 250);
@@ -111,6 +118,7 @@ export class SoroScanClient {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json",
+      "User-Agent": this.#userAgent,
     };
     if (this.#apiKey) {
       headers["Authorization"] = `Bearer ${this.#apiKey}`;
@@ -329,6 +337,33 @@ export class SoroScanClient {
   }
 
   /**
+   * Get the most recent events for a specific contract, newest first (SC-30).
+   *
+   * The limit is clamped to the server-side maximum so callers never receive
+   * a 400 for an out-of-range value.
+   *
+   * @example
+   * const events = await client.getContractRecentEvents('CCAAA...', 20);
+   * for (const event of events) {
+   *   console.log(event.event_type, event.timestamp);
+   * }
+   */
+  async getContractRecentEvents(
+    contractId: string,
+    limit: number = 10
+  ): Promise<import("./types.js").ContractEvent[]> {
+    const safeLimit = Math.min(
+      MAX_RECENT_EVENTS_LIMIT,
+      Math.max(1, Math.trunc(limit))
+    );
+    return this.#request<import("./types.js").ContractEvent[]>(
+      "GET",
+      `/api/ingest/contracts/${encodeURIComponent(contractId)}/recent-events/`,
+      { query: { limit: safeLimit } }
+    );
+  }
+
+  /**
    * Get health status for a tracked contract (SC-16).
    *
    * @example
@@ -344,35 +379,6 @@ export class SoroScanClient {
   }
 
   // ─── Transactions ──────────────────────────────────────────────────────────
-
-  /**
-   * Submit an SC-38 structured event. The correlation ID makes retry handling
-   * explicit: the contract rejects a repeated ID without publishing twice.
-   */
-  async recordStructuredEvent(
-    params: RecordStructuredEventParams
-  ): Promise<RecordStructuredEventResponse> {
-    const response = await this.#request<{
-      status: "submitted" | "failed";
-      tx_hash?: string;
-      transaction_status: string;
-      error?: string;
-    }>("POST", "/api/record/structured/", {
-      body: {
-        contract_id: params.contractId,
-        event_type: params.eventType,
-        payload_hash: params.payloadHash,
-        schema_version: params.schemaVersion,
-        correlation_id: params.correlationId,
-      },
-    });
-    return {
-      status: response.status,
-      txHash: response.tx_hash,
-      transactionStatus: response.transaction_status,
-      error: response.error,
-    };
-  }
 
   /**
    * Submit an SC-24 tagged event.

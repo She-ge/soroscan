@@ -2,19 +2,24 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 from datetime import timedelta
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 import yaml
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from soroscan.ingest.models import (
+    ArchivedEventBatch,
     ContractMetadata,
+    DataRetentionPolicy,
     IngestError,
     RemediationRule,
     WebhookDeliveryLog,
@@ -225,6 +230,14 @@ class TestDedupApi:
         assert put_resp.status_code == 200
         assert put_resp.data["fields"] == ["event_type", "amount", "tx_hash"]
 
+        invalid_resp = client.put(
+            get_url,
+            {"enabled": True, "fields": ["not_a_payload_field"]},
+            format="json",
+        )
+        assert invalid_resp.status_code == 400
+        assert "not_a_payload_field" in str(invalid_resp.data["fields"])
+
         test_url = reverse("contract-dedup-test", kwargs={"pk": contract.pk})
         test_resp = client.post(
             test_url,
@@ -244,6 +257,74 @@ class TestDedupApi:
             payload={"amount": 42},
         )
         assert test_resp.data["dedup_hash"] == expected
+
+@pytest.mark.django_db
+class TestSourceUploadPermissions:
+    def test_teamless_contract_checks_owner(self):
+        owner = UserFactory()
+        non_owner = UserFactory()
+        contract = TrackedContractFactory(owner=owner, team=None)
+        url = reverse("contract-upload-source", kwargs={"pk": contract.pk})
+
+        client = APIClient()
+        client.force_authenticate(user=non_owner)
+        denied = client.post(
+            url,
+            {
+                "contract": contract.pk,
+                "source_file": SimpleUploadedFile("contract.rs", b"fn main() {}"),
+            },
+            format="multipart",
+        )
+        assert denied.status_code == 403
+
+        client.force_authenticate(user=owner)
+        uploaded = client.post(
+            url,
+            {
+                "contract": contract.pk,
+                "source_file": SimpleUploadedFile("contract.rs", b"fn main() {}"),
+            },
+            format="multipart",
+        )
+        assert uploaded.status_code == 201
+
+
+@pytest.mark.django_db
+class TestArchiveRestorePermissions:
+    def _batch(self):
+        policy = DataRetentionPolicy.objects.create(s3_bucket="test-bucket")
+        return ArchivedEventBatch.objects.create(
+            policy=policy, s3_key="archive/batch.json.gz", event_count=0
+        )
+
+    def test_non_staff_cannot_restore_archived_events(self):
+        batch = self._batch()
+        client = APIClient()
+        client.force_authenticate(user=UserFactory())
+
+        response = client.post(
+            reverse("restore-archive"), {"batch_id": batch.pk}, format="json"
+        )
+
+        assert response.status_code == 403
+
+    @patch("boto3.client")
+    def test_staff_can_restore_archived_events(self, mock_boto_client):
+        batch = self._batch()
+        mock_boto_client.return_value.get_object.return_value = {
+            "Body": BytesIO(gzip.compress(b"[]"))
+        }
+        client = APIClient()
+        client.force_authenticate(user=UserFactory(is_staff=True))
+
+        response = client.post(
+            reverse("restore-archive"), {"batch_id": batch.pk}, format="json"
+        )
+
+        assert response.status_code == 200
+        batch.refresh_from_db()
+        assert batch.status == ArchivedEventBatch.STATUS_RESTORED
 
 
 @pytest.mark.django_db

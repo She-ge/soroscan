@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import type { ContractEvent } from "./types";
-import { WebSocketClient } from "./websocket-client";
+import type { ContractEvent } from "./types.js";
+import { WebSocketClient } from "./websocket-client.js";
 
 // Mock WebSocket
 class MockWebSocket {
@@ -244,19 +244,25 @@ describe("WebSocketClient", () => {
 
   describe("Message Buffering", () => {
     it("should buffer messages when disconnected", async () => {
-      // Implementation: subscribe throws if not connected
-      // This is the intended behavior - messages are buffered internally during reconnection
-      // but user code must subscribe after connection is established
-      expect(() => {
-        client.subscribe({ contractId: "C1234567890" });
-      }).toThrow("not connected");
+      // With the new implementation, subscribe/unsubscribe no longer throw
+      // but buffer messages internally when disconnected
+      client.subscribe({ contractId: "C1234567890" });
+      client.unsubscribe();
+
+      // Buffer should have messages
+      expect(client.getBufferSize()).toBeGreaterThan(0);
     });
 
     it("should flush buffer on reconnection", async () => {
+      // Buffer some messages while disconnected
+      client.subscribe({ contractId: "C1234567890" });
+      const bufferedSize = client.getBufferSize();
+      expect(bufferedSize).toBeGreaterThan(0);
+
       await client.connect();
       expect(client.isConnected()).toBe(true);
 
-      // In real scenario, messages would be buffered and flushed
+      // Buffer should be flushed
       expect(client.getBufferSize()).toBe(0);
     });
 
@@ -266,8 +272,18 @@ describe("WebSocketClient", () => {
         maxBufferSize: 5,
       });
 
+      // Add more messages than buffer size
+      for (let i = 0; i < 10; i++) {
+        smallClient.send({ type: "test", id: i });
+      }
+
       // Buffer should be limited to max size
-      expect(smallClient.getBufferSize()).toBe(0);
+      expect(smallClient.getBufferSize()).toBe(5);
+    });
+
+    it("should provide public send method for custom messages", async () => {
+      client.send({ type: "custom", data: "test" });
+      expect(client.getBufferSize()).toBeGreaterThan(0);
     });
   });
 
@@ -337,10 +353,10 @@ describe("WebSocketClient", () => {
       );
     });
 
-    it("should throw when subscribing while disconnected", async () => {
-      expect(() => {
-        client.subscribe();
-      }).toThrow("not connected");
+    it("should buffer when subscribing while disconnected", async () => {
+      // New implementation: buffers instead of throwing
+      client.subscribe();
+      expect(client.getBufferSize()).toBeGreaterThan(0);
     });
 
     it("should send unsubscribe message", async () => {

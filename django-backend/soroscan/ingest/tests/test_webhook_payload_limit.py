@@ -56,3 +56,72 @@ class WebhookPayloadLimitTests(TestCase):
         })
         
         self.assertTrue(serializer.is_valid())
+
+
+class WebhookTimeoutBackoffTests(TestCase):
+    def setUp(self):
+        self.contract = TrackedContractFactory()
+
+    def _subscription_data(self, **overrides):
+        data = {
+            "contract": self.contract.id,
+            "target_url": "https://example.com/webhook",
+            "secret": "testsecret123",
+        }
+        data.update(overrides)
+        return data
+
+    def test_timeout_and_backoff_defaults_exposed(self):
+        serializer = WebhookSubscriptionSerializer(data=self._subscription_data())
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        subscription = serializer.save()
+        self.assertEqual(subscription.timeout_seconds, 10)
+        self.assertEqual(subscription.retry_backoff_strategy, "exponential")
+        self.assertEqual(subscription.retry_backoff_seconds, 2)
+        rendered = WebhookSubscriptionSerializer(subscription).data
+        self.assertEqual(rendered["timeout_seconds"], 10)
+        self.assertEqual(rendered["retry_backoff_strategy"], "exponential")
+        self.assertEqual(rendered["retry_backoff_seconds"], 2)
+
+    def test_timeout_and_backoff_round_trip(self):
+        serializer = WebhookSubscriptionSerializer(data=self._subscription_data(
+            timeout_seconds=25,
+            retry_backoff_strategy="linear",
+            retry_backoff_seconds=120,
+        ))
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        subscription = serializer.save()
+        subscription.refresh_from_db()
+        self.assertEqual(subscription.timeout_seconds, 25)
+        self.assertEqual(subscription.retry_backoff_strategy, "linear")
+        self.assertEqual(subscription.retry_backoff_seconds, 120)
+        rendered = WebhookSubscriptionSerializer(subscription).data
+        self.assertEqual(rendered["timeout_seconds"], 25)
+        self.assertEqual(rendered["retry_backoff_strategy"], "linear")
+        self.assertEqual(rendered["retry_backoff_seconds"], 120)
+
+    def test_timeout_bounds_rejected(self):
+        for bad_value in (0, 61):
+            serializer = WebhookSubscriptionSerializer(
+                data=self._subscription_data(timeout_seconds=bad_value)
+            )
+            with self.assertRaises(ValidationError):
+                serializer.is_valid(raise_exception=True)
+            self.assertIn("timeout_seconds", serializer.errors)
+
+    def test_backoff_strategy_rejected(self):
+        serializer = WebhookSubscriptionSerializer(
+            data=self._subscription_data(retry_backoff_strategy="quadratic")
+        )
+        with self.assertRaises(ValidationError):
+            serializer.is_valid(raise_exception=True)
+        self.assertIn("retry_backoff_strategy", serializer.errors)
+
+    def test_backoff_seconds_bounds_rejected(self):
+        for bad_value in (0, 3601):
+            serializer = WebhookSubscriptionSerializer(
+                data=self._subscription_data(retry_backoff_seconds=bad_value)
+            )
+            with self.assertRaises(ValidationError):
+                serializer.is_valid(raise_exception=True)
+            self.assertIn("retry_backoff_seconds", serializer.errors)

@@ -67,6 +67,35 @@ def _get_authenticated_user(info: Info):
     return None
 
 
+def _get_contract_with_ownership_check(
+    contract_id: str,
+    user,
+    error_if_not_found: bool = True,
+) -> Optional[TrackedContract]:
+    """
+    Resolve a TrackedContract by contract_id ensuring the user is the owner,
+    a team member, or an organization member (consistent with TrackedContractViewSet).
+    Raises an Exception if unauthorized or (optionally) if not found.
+    """
+    try:
+        contract = TrackedContract.objects.get(contract_id=contract_id)
+    except TrackedContract.DoesNotExist:
+        if error_if_not_found:
+            raise Exception("Contract not found")
+        return None
+
+    has_permission = (
+        getattr(user, "is_staff", False)
+        or contract.owner_id == getattr(user, "pk", getattr(user, "id", None))
+        or (contract.team_id and contract.team.memberships.filter(user=user).exists())
+        or (contract.organization_id and contract.organization.memberships.filter(user=user).exists())
+    )
+    if not has_permission:
+        raise Exception("Permission denied")
+
+    return contract
+
+
 # ---------------------------------------------------------------------------
 # GraphQL types
 # ---------------------------------------------------------------------------
@@ -1055,10 +1084,7 @@ class Mutation:
         if not user:
             raise Exception("Authentication required")
 
-        try:
-            contract = TrackedContract.objects.get(contract_id=contract_id)
-        except TrackedContract.DoesNotExist:
-            raise Exception("Contract not found")
+        contract = _get_contract_with_ownership_check(contract_id, user, error_if_not_found=True)
 
         instance, _ = ContractMetadata.objects.update_or_create(
             contract=contract,
@@ -1097,8 +1123,12 @@ class Mutation:
         if not user:
             raise Exception("Authentication required")
 
+        contract = _get_contract_with_ownership_check(contract_id, user, error_if_not_found=False)
+        if contract is None:
+            return False
+
         try:
-            ContractMetadata.objects.get(contract__contract_id=contract_id).delete()
+            ContractMetadata.objects.get(contract=contract).delete()
             invalidate_cached_contract(contract_id)
             return True
         except ContractMetadata.DoesNotExist:
@@ -1183,9 +1213,8 @@ class Mutation:
         if not user:
             raise Exception("Authentication required")
 
-        try:
-            contract = TrackedContract.objects.get(contract_id=contract_id)
-        except TrackedContract.DoesNotExist:
+        contract = _get_contract_with_ownership_check(contract_id, user, error_if_not_found=False)
+        if contract is None:
             return None
 
         if name is not None:

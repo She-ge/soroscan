@@ -3925,6 +3925,21 @@ def _check_single_contract_health(contract: TrackedContract, now=None, cutoff_1h
     health.last_checked_at = now
     health.save()
 
+    metrics = _get_metrics()
+    status_values = {
+        ContractHealthCheck.Status.HEALTHY: 0,
+        ContractHealthCheck.Status.DEGRADED: 1,
+        ContractHealthCheck.Status.FAILED: 2,
+    }
+    metrics.contract_health_status_gauge.labels(
+        contract_id=contract.contract_id
+    ).set(status_values[new_status])
+    if old_status != new_status:
+        metrics.contract_health_transitions_total.labels(
+            from_status=old_status,
+            to_status=new_status,
+        ).inc()
+
     if old_status == ContractHealthCheck.Status.HEALTHY and new_status in (
         ContractHealthCheck.Status.DEGRADED,
         ContractHealthCheck.Status.FAILED,

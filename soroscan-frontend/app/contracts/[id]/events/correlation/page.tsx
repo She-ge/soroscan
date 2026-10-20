@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useParams } from 'next/navigation';
 import { Tabs } from '@/components/ui/tabs';
 import {
   CorrelatedEventsPanel,
@@ -19,12 +20,9 @@ async function fetchCorrelationData(
   return null;
 }
 
-export default function EventCorrelationPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const { id: contractId } = params;
+export default function EventCorrelationPage() {
+  const params = useParams<{ id: string }>();
+  const contractId = decodeURIComponent(params.id);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [activeEventId, setActiveEventId] = React.useState<string | null>(null);
   const [correlationData, setCorrelationData] =

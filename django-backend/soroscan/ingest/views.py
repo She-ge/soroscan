@@ -28,7 +28,7 @@ from rest_framework import renderers, serializers, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -457,10 +457,16 @@ class TrackedContractViewSet(viewsets.ModelViewSet):
         Upload contract source code for verification.
         Accepts a file (Rust code or tarball) and optional ABI JSON.
         """
-        contract = self.get_object()
+        contract = get_object_or_404(
+            TrackedContract.objects.select_related("team"), pk=pk
+        )
 
         # Check permissions - only contract owner or team members
-        if contract.owner != request.user and not contract.team.members.filter(user=request.user).exists():
+        is_team_member = (
+            contract.team is not None
+            and contract.team.members.filter(user=request.user).exists()
+        )
+        if contract.owner != request.user and not is_team_member:
             return Response({"error": "Permission denied"}, status=403)
 
         serializer = ContractSourceSerializer(data=request.data)
@@ -2129,7 +2135,7 @@ def event_type_statistics_view(request):
     },
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdminUser])
 @throttle_classes([UserRateThrottle])
 def restore_archived_events(request):
     """

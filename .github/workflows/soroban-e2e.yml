@@ -64,8 +64,8 @@ jobs:
           health_retries: "60"
           health_interval: "10"
 
-      - name: Install Rust 1.81 (compatible with soroban-sdk 21 WASM target)
-        uses: dtolnay/rust-toolchain@1.81.0
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@1.85
         with:
           targets: wasm32-unknown-unknown
 

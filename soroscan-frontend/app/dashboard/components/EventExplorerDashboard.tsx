@@ -342,10 +342,13 @@ export function EventExplorerDashboard() {
           const visibleEvents = nextExists ? result.slice(0, pageSize) : result;
           setEvents(visibleEvents);
           setHasNext(nextExists);
+        }).catch((err) => {
+          console.error("Background event refresh failed:", err);
+          showToast("Background refresh failed. Showing last loaded events.", "warning", "Refresh Failed");
         });
       }
     }
-  }, [realTimeEvents, isPaused]);
+  }, [realTimeEvents, isPaused, filters.contractId, filters.eventType, filters.since, filters.until, filters.searchQuery, currentPage, pageSize, showToast]);
 
   // Apply search filter client-side
   useEffect(() => {

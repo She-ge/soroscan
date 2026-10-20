@@ -161,6 +161,34 @@ def test_e2e_admin_ingest_error_review(api_client):
     assert data[0]["error_type"] == "decode_error"
 
 
+@pytest.mark.django_db
+def test_e2e_api_key_lifecycle(api_client):
+    """Create API key -> authenticate with it -> revoke -> verify rejection."""
+    user = User.objects.create_user(username="e2e_api_key_user", password="secret")
+    api_client.force_authenticate(user=user)
+
+    create_response = api_client.post(
+        reverse("apikey-list"),
+        {"name": "E2E Programmatic Access"},
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    key_id = create_response.data["id"]
+    plain_key = create_response.data["key"]
+    assert plain_key
+
+    key_client = APIClient()
+    key_client.credentials(HTTP_AUTHORIZATION=f"ApiKey {plain_key}")
+    auth_response = key_client.get(reverse("apikey-list"))
+    assert auth_response.status_code == status.HTTP_200_OK
+    assert any(item["id"] == key_id for item in auth_response.data["results"])
+
+    revoke_response = api_client.delete(reverse("apikey-detail", args=[key_id]))
+    assert revoke_response.status_code == status.HTTP_204_NO_CONTENT
+
+    rejected_response = key_client.get(reverse("apikey-list"))
+    assert rejected_response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 def test_e2e_framework_files_exist():
     """Sanity check that the E2E scenario catalog is present."""
     from pathlib import Path

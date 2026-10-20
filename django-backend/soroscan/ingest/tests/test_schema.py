@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from unittest.mock import Mock
 from django.utils import timezone
 
+from soroscan.ingest.models import ContractMetadata, Team, TeamMembership
 from soroscan.ingest.schema import schema
 from .factories import ContractEventFactory, TrackedContractFactory, UserFactory
 
@@ -624,3 +625,149 @@ class TestGraphQLMutations:
         result = schema.execute_sync(mutation, context_value=context)
         assert result.errors is None
         assert result.data["updateContract"] is None
+
+    def test_update_contract_non_owner_forbidden(self, contract):
+        stranger = UserFactory()
+        mutation = f"""
+            mutation {{
+                updateContract(
+                    contractId: "{contract.contract_id}",
+                    name: "Hacked Name"
+                ) {{
+                    contractId
+                    name
+                }}
+            }}
+        """
+        context = create_context_with_user(stranger)
+        result = schema.execute_sync(mutation, context_value=context)
+        assert result.errors is not None
+        assert any("Permission denied" in str(err) for err in result.errors)
+
+    def test_update_contract_team_member(self, user):
+        team = Team.objects.create(name="Dev Team")
+        contract = TrackedContractFactory(owner=user, team=team)
+        member = UserFactory()
+        TeamMembership.objects.create(team=team, user=member, role=TeamMembership.Role.MEMBER)
+
+        mutation = f"""
+            mutation {{
+                updateContract(
+                    contractId: "{contract.contract_id}",
+                    name: "Team Updated Name"
+                ) {{
+                    contractId
+                    name
+                }}
+            }}
+        """
+        context = create_context_with_user(member)
+        result = schema.execute_sync(mutation, context_value=context)
+        assert result.errors is None
+        assert result.data["updateContract"]["name"] == "Team Updated Name"
+
+    def test_set_contract_metadata_non_owner_forbidden(self, contract):
+        stranger = UserFactory()
+        mutation = f"""
+            mutation {{
+                setContractMetadata(
+                    contractId: "{contract.contract_id}",
+                    name: "Updated Meta Name"
+                ) {{
+                    name
+                }}
+            }}
+        """
+        context = create_context_with_user(stranger)
+        result = schema.execute_sync(mutation, context_value=context)
+        assert result.errors is not None
+        assert any("Permission denied" in str(err) for err in result.errors)
+
+    def test_set_contract_metadata_owner_and_team_member(self, user):
+        team = Team.objects.create(name="Dev Team 2")
+        contract = TrackedContractFactory(owner=user, team=team)
+        member = UserFactory()
+        TeamMembership.objects.create(team=team, user=member, role=TeamMembership.Role.MEMBER)
+
+        # Owner sets metadata
+        mutation_owner = f"""
+            mutation {{
+                setContractMetadata(
+                    contractId: "{contract.contract_id}",
+                    name: "Meta by Owner",
+                    description: "Created by owner",
+                    tags: ["defi"]
+                ) {{
+                    name
+                    description
+                    tags
+                }}
+            }}
+        """
+        context_owner = create_context_with_user(user)
+        result_owner = schema.execute_sync(mutation_owner, context_value=context_owner)
+        assert result_owner.errors is None
+        assert result_owner.data["setContractMetadata"]["name"] == "Meta by Owner"
+        assert result_owner.data["setContractMetadata"]["tags"] == ["defi"]
+
+        # Team member updates metadata
+        mutation_member = f"""
+            mutation {{
+                setContractMetadata(
+                    contractId: "{contract.contract_id}",
+                    name: "Meta by Member",
+                    tags: ["stellar"]
+                ) {{
+                    name
+                    tags
+                }}
+            }}
+        """
+        context_member = create_context_with_user(member)
+        result_member = schema.execute_sync(mutation_member, context_value=context_member)
+        assert result_member.errors is None
+        assert result_member.data["setContractMetadata"]["name"] == "Meta by Member"
+        assert result_member.data["setContractMetadata"]["tags"] == ["stellar"]
+
+    def test_delete_contract_metadata_non_owner_forbidden(self, contract):
+        ContractMetadata.objects.create(contract=contract, name="To Delete")
+        stranger = UserFactory()
+        mutation = f"""
+            mutation {{
+                deleteContractMetadata(contractId: "{contract.contract_id}")
+            }}
+        """
+        context = create_context_with_user(stranger)
+        result = schema.execute_sync(mutation, context_value=context)
+        assert result.errors is not None
+        assert any("Permission denied" in str(err) for err in result.errors)
+
+    def test_delete_contract_metadata_owner_and_team_member(self, user):
+        team = Team.objects.create(name="Dev Team 3")
+        contract = TrackedContractFactory(owner=user, team=team)
+        member = UserFactory()
+        TeamMembership.objects.create(team=team, user=member, role=TeamMembership.Role.MEMBER)
+
+        # Create metadata
+        ContractMetadata.objects.create(contract=contract, name="Metadata 1")
+
+        # Team member can delete
+        mutation = f"""
+            mutation {{
+                deleteContractMetadata(contractId: "{contract.contract_id}")
+            }}
+        """
+        context_member = create_context_with_user(member)
+        result_member = schema.execute_sync(mutation, context_value=context_member)
+        assert result_member.errors is None
+        assert result_member.data["deleteContractMetadata"] is True
+        assert not ContractMetadata.objects.filter(contract=contract).exists()
+
+        # Re-create and owner can delete
+        ContractMetadata.objects.create(contract=contract, name="Metadata 2")
+        context_owner = create_context_with_user(user)
+        result_owner = schema.execute_sync(mutation, context_value=context_owner)
+        assert result_owner.errors is None
+        assert result_owner.data["deleteContractMetadata"] is True
+        assert not ContractMetadata.objects.filter(contract=contract).exists()
+

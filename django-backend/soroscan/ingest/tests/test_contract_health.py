@@ -198,6 +198,29 @@ class TestCheckContractHealthTask:
             check_contract_health.apply().get()
             mock_task.assert_called()
 
+    def test_health_metrics_track_status_and_transitions(self, contract):
+        from soroscan.ingest import metrics
+
+        transition = metrics.contract_health_transitions_total.labels(
+            from_status=ContractHealthCheck.Status.HEALTHY,
+            to_status=ContractHealthCheck.Status.DEGRADED,
+        )
+        transitions_before = transition._value.get()
+
+        _event_at(contract, minutes_ago=45)
+        check_contract_health.apply().get()
+
+        gauge = metrics.contract_health_status_gauge.labels(
+            contract_id=contract.contract_id
+        )
+        assert gauge._value.get() == 1
+        assert transition._value.get() == transitions_before + 1
+
+        check_contract_health.apply().get()
+
+        assert gauge._value.get() == 1
+        assert transition._value.get() == transitions_before + 1
+
     def test_no_alert_when_status_stays_healthy(self, contract):
         """No alert when status doesn't change (already healthy, still healthy)."""
         ContractHealthCheck.objects.create(

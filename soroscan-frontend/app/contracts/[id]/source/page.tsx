@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useParams } from 'next/navigation';
 import { Tabs } from '@/components/ui/tabs';
 import {
   ContractCodeViewer,
@@ -31,12 +32,9 @@ async function submitVerificationRequest(
   await new Promise((resolve) => setTimeout(resolve, 500));
 }
 
-export default function ContractSourcePage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const { id: contractId } = params;
+export default function ContractSourcePage() {
+  const params = useParams<{ id: string }>();
+  const contractId = decodeURIComponent(params.id);
   const [contractCode, setContractCode] = React.useState<ContractCode | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 

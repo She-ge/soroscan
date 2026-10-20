@@ -1,0 +1,78 @@
+---
+# PodDisruptionBudget for backend deployment
+# Ensures at least 1 replica remains available during voluntary disruptions
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: soroscan-backend-pdb
+  namespace: soroscan
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: soroscan
+      component: backend
+
+---
+# PodDisruptionBudget for worker-high priority queue
+# Allows up to 0 unavailable (keeps 1 replica available)
+# High priority tasks need to keep at least 1 worker running
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: soroscan-worker-high-pdb
+  namespace: soroscan
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: soroscan
+      component: worker-high
+
+---
+# PodDisruptionBudget for worker-default priority queue
+# Allows up to 0 unavailable (keeps 1 replica available)
+# Default priority tasks need to keep at least 1 worker running
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: soroscan-worker-default-pdb
+  namespace: soroscan
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: soroscan
+      component: worker-default
+
+---
+# PodDisruptionBudget for worker-low priority queue
+# Allows up to 0 unavailable (keeps 1 replica available)
+# Even low priority tasks should have at least 1 worker to make progress
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: soroscan-worker-low-pdb
+  namespace: soroscan
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: soroscan
+      component: worker-low
+
+---
+# PodDisruptionBudget for worker-backfill
+# Allows up to 0 unavailable (keeps 1 replica available)
+# Backfill worker needs to keep running to continue historical data processing
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: soroscan-worker-backfill-pdb
+  namespace: soroscan
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: soroscan
+      component: worker-backfill

@@ -15,7 +15,7 @@ export interface SoroScanClientConfig {
   initialDelayMs?: number;
   /** Maximum full-jitter backoff ceiling in milliseconds (default: 10_000) */
   maxDelayMs?: number;
-  /** User-Agent header sent with every request (default: "SoroScan-TS-SDK/1.4.0") */
+  /** User-Agent header sent with every request (default: DEFAULT_USER_AGENT). */
   userAgent?: string;
 }
 
@@ -211,6 +211,14 @@ export type GetContractsResponse = PaginatedResponse<Contract>;
 
 export interface GetContractParams {
   contractId: ContractId;
+}
+
+/** Event type summary returned by the SC-17 contract event-types endpoint. */
+export interface ContractEventTypeInfo {
+  event_type: EventType;
+  count: number;
+  first_seen: ISODateString;
+  last_seen: ISODateString;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -439,6 +439,36 @@ CELERY_BEAT_SCHEDULE = {
         "task": "soroscan.ingest.tasks.emit_db_pool_metrics_task",
         "schedule": 60,
     },
+    # Evaluates contract health across active contracts hourly and raises alerts on degradation
+    "check-contract-health": {
+        "task": "soroscan.ingest.tasks.check_contract_health",
+        "schedule": 3600,
+    },
+    # Scans for contract bytecode upgrades and deployments hourly
+    "detect-contract-upgrades": {
+        "task": "soroscan.ingest.tasks.detect_contract_upgrades",
+        "schedule": 3600,
+    },
+    # Enforces data retention policies daily by pruning expired contract events
+    "enforce-retention-policies": {
+        "task": "soroscan.ingest.tasks.enforce_retention_policies",
+        "schedule": 86400,
+    },
+    # Processes pending GDPR data deletion requests daily to scrub PII fields
+    "process-deletion-requests": {
+        "task": "soroscan.ingest.tasks.process_deletion_requests",
+        "schedule": 86400,
+    },
+    # Analyzes recent contract invocations hourly to identify cross-contract dependencies
+    "analyze-contract-dependencies": {
+        "task": "ingest.tasks.analyze_contract_dependencies",
+        "schedule": 3600,
+    },
+    # Logs 24-hour platform usage and activity statistics daily
+    "log-daily-platform-stats": {
+        "task": "ingest.tasks.log_daily_platform_stats",
+        "schedule": 86400,
+    },
 }
 
 ANALYTICS_ANOMALY_DROP_PCT = env.int("ANALYTICS_ANOMALY_DROP_PCT", default=50)

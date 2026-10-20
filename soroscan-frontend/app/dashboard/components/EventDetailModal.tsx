@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,59 @@ interface EventDetailModalProps {
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [payloadView, setPayloadView] = useState<'json' | 'hex'>('json');
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Close on Escape, trap Tab focus inside the dialog, and restore focus
+  // to the previously focused element when the modal unmounts.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') {
+        return;
+      }
+      const dialog = dialogRef.current;
+      if (!dialog) {
+        return;
+      }
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+
+    // Initial focus: first focusable element so keyboard users land inside.
+    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    (firstFocusable ?? dialogRef.current)?.focus();
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true);
+      previouslyFocused?.focus();
+    };
+  }, [onClose]);
 
   const payloadJson = JSON.stringify(event.payload, null, 2);
   const payloadHex = toHex(payloadJson);
@@ -45,10 +98,12 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   return (
     <div className={styles.exportModalOverlay} onClick={handleOverlayClick}>
       <div
+        ref={dialogRef}
         className={styles.exportModal}
         role="dialog"
         aria-modal="true"
         aria-labelledby="event-details-title"
+        tabIndex={-1}
       >
         <div className={styles.exportModalHead}>
           <h2 id="event-details-title" className={styles.exportModalTitle}>

@@ -375,6 +375,21 @@ fn record_structured_event_topics_and_payload() {
     assert_eq!(record.correlation_id, correlation_id);
     assert_eq!(record.ledger, 99);
     assert_eq!(record.timestamp, 555_000);
+
+    let stored = client
+        .structured_by_correlation(&correlation_id)
+        .expect("structured record stored by correlation ID");
+    assert_eq!(stored, record);
+}
+
+#[test]
+fn structured_by_correlation_returns_none_when_missing() {
+    let env = Env::default();
+    let (contract_id, _, _) = setup(&env);
+    let client = SoroScanCoreClient::new(&env, &contract_id);
+    let correlation_id = BytesN::from_array(&env, &[0x33; 32]);
+
+    assert_eq!(client.structured_by_correlation(&correlation_id), None);
 }
 
 #[test]
@@ -461,6 +476,23 @@ fn record_tagged_event_topics_and_payload() {
     assert_eq!(record.tags.get(1).unwrap(), symbol_short!("defi"));
     assert_eq!(record.ledger, 7);
     assert_eq!(record.timestamp, 88);
+
+    let stored = client
+        .latest_tagged_by_type(&symbol_short!("trade"))
+        .expect("tagged record stored by event type");
+    assert_eq!(stored, record);
+}
+
+#[test]
+fn latest_tagged_by_type_returns_none_when_missing() {
+    let env = Env::default();
+    let (contract_id, _, _) = setup(&env);
+    let client = SoroScanCoreClient::new(&env, &contract_id);
+
+    assert_eq!(
+        client.latest_tagged_by_type(&symbol_short!("trade")),
+        None
+    );
 }
 
 #[test]
@@ -498,6 +530,55 @@ fn paused_indexer_cannot_record_tagged_or_structured_events() {
         Err(Ok(ContractError::IndexerPaused))
     );
     assert_eq!(event_count(&env), before);
+}
+
+#[test]
+fn paused_contract_rejects_tagged_events() {
+    let env = Env::default();
+    let (contract_id, admin, indexer) = setup(&env);
+    let client = SoroScanCoreClient::new(&env, &contract_id);
+    client.pause(&admin);
+
+    let target = Address::generate(&env);
+    let payload_hash = BytesN::from_array(&env, &[0u8; 32]);
+    let mut tags = Vec::new(&env);
+    tags.push_back(symbol_short!("hot"));
+    let before = event_count(&env);
+
+    assert_eq!(
+        client.try_record_tagged_event(
+            &indexer,
+            &target,
+            &symbol_short!("trade"),
+            &payload_hash,
+            &tags,
+        ),
+        Err(Ok(ContractError::ContractPaused))
+    );
+    assert_eq!(event_count(&env), before);
+}
+
+#[test]
+fn unpaused_contract_allows_tagged_events() {
+    let env = Env::default();
+    let (contract_id, admin, indexer) = setup(&env);
+    let client = SoroScanCoreClient::new(&env, &contract_id);
+    client.pause(&admin);
+    client.unpause(&admin);
+
+    let target = Address::generate(&env);
+    let payload_hash = BytesN::from_array(&env, &[0u8; 32]);
+    let mut tags = Vec::new(&env);
+    tags.push_back(symbol_short!("hot"));
+
+    let result = client.try_record_tagged_event(
+        &indexer,
+        &target,
+        &symbol_short!("trade"),
+        &payload_hash,
+        &tags,
+    );
+    assert_eq!(result, Ok(Ok(1)));
 }
 
 #[test]
@@ -695,4 +776,46 @@ fn soroscan_events_share_the_namespace_topic_and_name_their_family() {
     assert!(saw_sc38, "structured events are namespaced under sc38");
     assert!(saw_sc24, "tagged events are namespaced under sc24");
     assert!(saw_batch, "batches emit a (soroscan, batch) summary");
+}
+
+#[test]
+fn paused_contract_cannot_record_structured_events() {
+    let env = Env::default();
+    let (contract_id, admin, indexer) = setup(&env);
+    let client = SoroScanCoreClient::new(&env, &contract_id);
+
+    let target = Address::generate(&env);
+    let payload_hash = BytesN::from_array(&env, &[0x22; 32]);
+    let correlation_id = BytesN::from_array(&env, &[0x33; 32]);
+
+    client.pause(&admin);
+
+    assert_eq!(
+        client.try_record_structured_event(
+            &indexer,
+            &target,
+            &symbol_short!("escrow"),
+            &payload_hash,
+            &1,
+            &correlation_id,
+        ),
+        Err(Ok(ContractError::ContractPaused)),
+        "a paused contract must reject structured events"
+    );
+
+    client.unpause(&admin);
+
+    client.record_structured_event(
+        &indexer,
+        &target,
+        &symbol_short!("escrow"),
+        &payload_hash,
+        &1,
+        &correlation_id,
+    );
+
+    assert!(
+        !client.is_paused(),
+        "the contract is recording again after unpause"
+    );
 }

@@ -6,15 +6,13 @@ These endpoints return the cursor-based pagination shape expected by
 """
 from __future__ import annotations
 
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from soroscan.ingest.models import ContractEvent, ContractVerification, TrackedContract
-
-from rest_framework.permissions import IsAuthenticated
-from soroscan.ingest.models import WebhookDeadLetter
+from soroscan.ingest.models import ContractEvent, TrackedContract, WebhookDeadLetter
 from soroscan.ingest.services.webhook_replay import create_replay_job
 
 
@@ -130,22 +128,84 @@ def get_contract(request, contract_id: str):
     return Response(_contract_to_sdk(contract))
 
 
+def _dead_letter_entitlement_q(user) -> Q:
+    """
+    Lookup matching the dead letters a non-staff user is allowed to act on.
+
+    A caller is entitled to a dead letter when they own the contract behind
+    its subscription, or belong to the contract's team/organization.
+    """
+    return (
+        Q(subscription__contract__owner=user)
+        | Q(subscription__contract__team__memberships__user=user)
+        | Q(subscription__contract__organization__memberships__user=user)
+    )
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def bulk_replay_dead_letters(request):
     """
     Bulk replay dead-letter webhooks.
-    Expected payload: {"dead_letter_ids": [1, 2, 3]}
+
+    Expected payload: ``{"dead_letter_ids": [1, 2, 3]}``
+
+    Restricted to staff or to users entitled to the affected subscriptions
+    (contract owner, team member, or organization member). A non-staff caller
+    who references a dead letter belonging to another tenant is rejected with
+    ``403`` rather than having those ids silently skipped, so a cross-tenant
+    replay attempt can never be mistaken for success.
     """
     dead_letter_ids = request.data.get("dead_letter_ids", [])
     if not isinstance(dead_letter_ids, list) or not dead_letter_ids:
         return Response(
-            {"error": "A non-empty list of dead_letter_ids is required."}, 
-            status=status.HTTP_400_BAD_REQUEST
+            {"error": "A non-empty list of dead_letter_ids is required."},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
-    dead_letters = WebhookDeadLetter.objects.filter(id__in=dead_letter_ids, resolved=False).select_related('subscription', 'event')
-    
+    # Normalise to ints up front so the entitlement/ownership checks below
+    # operate on the same values the ORM will filter against.
+    try:
+        requested_ids = {int(dead_letter_id) for dead_letter_id in dead_letter_ids}
+    except (TypeError, ValueError):
+        return Response(
+            {"error": "dead_letter_ids must be a list of integers."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    is_staff = bool(request.user.is_staff)
+
+    if not is_staff:
+        # Reject any request that reaches for a dead letter outside the
+        # caller's tenant before creating a single replay job.
+        entitled_ids = set(
+            WebhookDeadLetter.objects.filter(id__in=requested_ids)
+            .filter(_dead_letter_entitlement_q(request.user))
+            .values_list("id", flat=True)
+        )
+        existing_ids = set(
+            WebhookDeadLetter.objects.filter(id__in=requested_ids).values_list(
+                "id", flat=True
+            )
+        )
+        if existing_ids - entitled_ids:
+            return Response(
+                {
+                    "error": "You do not have permission to replay one or more "
+                    "of the requested dead letters."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+    dead_letters = WebhookDeadLetter.objects.filter(
+        id__in=requested_ids, resolved=False
+    ).select_related("subscription", "event")
+
+    if not is_staff:
+        dead_letters = dead_letters.filter(
+            _dead_letter_entitlement_q(request.user)
+        ).distinct()
+
     jobs_created = []
     for dl in dead_letters:
         if dl.event:
@@ -155,10 +215,10 @@ def bulk_replay_dead_letters(request):
                 requested_by=request.user,
                 contract_id=dl.subscription.contract.contract_id,
                 event_type=dl.event.event_type,
-                limit=1
+                limit=1,
             )
             jobs_created.append(job.pk)
-            
+
             # Optionally mark as resolved or pending
             dl.resolved = True
             dl.resolution_note = f"Enqueued replay job {job.pk}"

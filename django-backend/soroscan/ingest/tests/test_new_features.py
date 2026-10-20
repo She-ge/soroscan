@@ -338,12 +338,14 @@ class APIKeyThrottleTests(TestCase):
 
     def test_reject_invalid_key(self):
         from soroscan.throttles import APIKeyThrottle
+        from rest_framework.exceptions import AuthenticationFailed
 
         throttle = APIKeyThrottle()
         factory = APIRequestFactory()
         request = factory.get("/api/ingest/events/", HTTP_AUTHORIZATION="ApiKey BADKEY")
         request.user = self.user
-        self.assertFalse(throttle.allow_request(request, MagicMock()))
+        with self.assertRaises(AuthenticationFailed):
+            throttle.allow_request(request, MagicMock())
 
     def test_allow_valid_key(self):
         from soroscan.throttles import APIKeyThrottle

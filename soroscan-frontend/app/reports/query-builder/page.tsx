@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { readStoredArray as readStoredArrayLib } from "@/lib/safe-storage";
 
 interface EventRow {
   contractId: string;
@@ -62,22 +63,39 @@ function downloadBlob(content: string, fileName: string, mime: string): void {
   URL.revokeObjectURL(url);
 }
 
+function isSavedReport(value: unknown): value is SavedReport {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.createdAt === "string" &&
+    Array.isArray(candidate.columns)
+  );
+}
+
+function isScheduledReport(value: unknown): value is ScheduledReport {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.reportName === "string" &&
+    typeof candidate.createdAt === "string"
+  );
+}
+
 export default function QueryBuilderReportPage() {
   const [contractFilter, setContractFilter] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState("");
   const [columns, setColumns] = useState<Array<keyof EventRow>>(selectableColumns);
   const [rowLimit, setRowLimit] = useState(1000);
   const [reportName, setReportName] = useState("");
-  const [savedReports, setSavedReports] = useState<SavedReport[]>(() => {
-    if (typeof window === "undefined") return [];
-    const saved = localStorage.getItem("savedReports");
-    return saved ? (JSON.parse(saved) as SavedReport[]) : [];
-  });
-  const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>(() => {
-    if (typeof window === "undefined") return [];
-    const scheduled = localStorage.getItem("scheduledReports");
-    return scheduled ? (JSON.parse(scheduled) as ScheduledReport[]) : [];
-  });
+  const [savedReports, setSavedReports] = useState<SavedReport[]>(() =>
+    readStoredArrayLib("savedReports", isSavedReport),
+  );
+  const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>(() =>
+    readStoredArrayLib("scheduledReports", isScheduledReport),
+  );
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [scheduleEmail, setScheduleEmail] = useState("");
   const [scheduleFrequency, setScheduleFrequency] = useState<"daily" | "weekly">("daily");

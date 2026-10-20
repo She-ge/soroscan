@@ -153,3 +153,37 @@ def test_is_event_deliverable():
     orphaned = ContractEvent(status=STATUS_ORPHANED)
     assert is_event_deliverable(confirmed) is True
     assert is_event_deliverable(orphaned) is False
+
+
+def _counter_value(counter) -> float:
+    return counter._value.get()
+
+
+@pytest.mark.django_db
+def test_detect_reorg_increments_detected_metric():
+    from soroscan.ingest import metrics as ingest_metrics
+
+    IndexerState.objects.create(key=LEDGER_SEQUENCE_KEY, value="120")
+    IndexerState.objects.create(key=LEDGER_HASH_KEY, value="hash120")
+
+    before = _counter_value(ingest_metrics.reorg_detected_total)
+    fork = detect_reorg(LedgerHead(sequence=115, hash="hash115"))
+
+    assert fork == 116
+    assert _counter_value(ingest_metrics.reorg_detected_total) == before + 1
+    assert ingest_metrics.last_reorg_ledger._value.get() == 116
+
+
+@pytest.mark.django_db
+def test_rollback_exports_rolled_back_count_and_last_ledger():
+    from soroscan.ingest import metrics as ingest_metrics
+
+    ContractEventFactory(ledger=300, status=STATUS_CONFIRMED)
+    ContractEventFactory(ledger=301, status=STATUS_CONFIRMED)
+
+    before = _counter_value(ingest_metrics.reorg_rolled_back_events_total)
+    result = rollback_ledger_reorg(from_ledger=300)
+
+    assert result["orphaned_events"] == 2
+    assert _counter_value(ingest_metrics.reorg_rolled_back_events_total) == before + 2
+    assert ingest_metrics.last_reorg_ledger._value.get() == 300
