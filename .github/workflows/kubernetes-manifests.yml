@@ -1,0 +1,29 @@
+name: Kubernetes Manifest Validation
+
+on:
+  pull_request:
+    paths:
+      - 'k8s/**'
+      - '.github/workflows/kubernetes-manifests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Kubernetes manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install kubeconform
+        run: go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.7
+
+      - name: Validate manifests
+        run: kubeconform -strict -summary -ignore-missing-schemas k8s/*.yaml
