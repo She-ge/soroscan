@@ -108,7 +108,7 @@ export default async function RootLayout({
         <WebVitalsReporter />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>
-            <main id="main-content">
+            <main id="main-content" tabIndex={-1} className="focus:outline-none">
               {children}
             </main>
           </Providers>
