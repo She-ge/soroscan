@@ -96,7 +96,7 @@ export class SoroScanClient {
     this.#baseUrl = config.baseUrl.replace(/\/$/, "");
     this.#apiKey = config.apiKey;
     this.#userAgent = config.userAgent ?? DEFAULT_USER_AGENT;
-    this.#timeoutMs = config.timeoutMs ?? 30_000;
+    this.#timeoutMs = config.timeoutMs ?? 10_000;
     this.#maxRetries = Math.max(0, Math.trunc(config.maxRetries ?? 3));
     this.#initialDelayMs = Math.max(0, config.initialDelayMs ?? 250);
     this.#maxDelayMs = Math.max(0, config.maxDelayMs ?? 10_000);
