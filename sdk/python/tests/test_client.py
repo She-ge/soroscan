@@ -4,11 +4,12 @@ import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from soroscan import SoroScanClient
+from soroscan import AsyncSoroScanClient, SoroScanClient
 from soroscan.exceptions import (
     SoroScanAuthError,
     SoroScanNotFoundError,
     SoroScanRateLimitError,
+    SoroScanServerError,
     SoroScanValidationError,
 )
 from soroscan.models import ContractEvent, ContractStats, TrackedContract, WebhookSubscription
@@ -35,16 +36,20 @@ def test_client_custom_max_retries(base_url: str) -> None:
         assert client.max_retries == 5
 
 
-def test_client_retries_transient_503(
+@pytest.mark.parametrize("status_code", [502, 503, 504])
+def test_client_retries_transient_gateway_errors(
     base_url: str,
     sample_contract_data: dict,
     httpx_mock: HTTPXMock,
+    monkeypatch: pytest.MonkeyPatch,
+    status_code: int,
 ) -> None:
-    """Test that transient 503 errors are retried up to max_retries."""
+    """Test that transient gateway errors are retried up to max_retries."""
     url = f"{base_url}/api/contracts/1/"
-    httpx_mock.add_response(url=url, status_code=503)
-    httpx_mock.add_response(url=url, status_code=503)
+    httpx_mock.add_response(url=url, status_code=status_code)
+    httpx_mock.add_response(url=url, status_code=status_code)
     httpx_mock.add_response(url=url, json=sample_contract_data)
+    monkeypatch.setattr("soroscan.client.random.uniform", lambda _start, _end: 0.0)
 
     with SoroScanClient(base_url=base_url, max_retries=3) as client:
         contract = client.get_contract("1")
@@ -65,7 +70,7 @@ def test_client_retries_exhausted_raises(
         httpx_mock.add_response(url=url, status_code=503)
 
     with SoroScanClient(base_url=base_url, max_retries=3) as client:
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(SoroScanServerError):
             client.get_contract("1")
 
     assert len(httpx_mock.get_requests()) == 4
@@ -82,6 +87,164 @@ def test_client_does_not_retry_4xx(
     with SoroScanClient(base_url=base_url, max_retries=3) as client:
         with pytest.raises(SoroScanNotFoundError):
             client.get_contract("1")
+
+    assert len(httpx_mock.get_requests()) == 1
+
+
+def test_client_does_not_retry_other_5xx(
+    base_url: str,
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Test that retries are limited to 502, 503, and 504."""
+    httpx_mock.add_response(
+        url=f"{base_url}/api/contracts/1/",
+        status_code=500,
+        json={"detail": "Server error"},
+    )
+
+    with SoroScanClient(base_url=base_url, max_retries=3) as client:
+        with pytest.raises(SoroScanServerError):
+            client.get_contract("1")
+
+    assert len(httpx_mock.get_requests()) == 1
+
+
+def test_client_retries_connection_errors(
+    base_url: str,
+    sample_contract_data: dict,
+    httpx_mock: HTTPXMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that connection errors are retried before a successful response."""
+    url = f"{base_url}/api/contracts/1/"
+    httpx_mock.add_exception(httpx.ConnectError("connection refused"), url=url)
+    httpx_mock.add_response(url=url, json=sample_contract_data)
+    monkeypatch.setattr("soroscan.client.random.uniform", lambda _start, _end: 0.0)
+
+    with SoroScanClient(base_url=base_url, max_retries=1) as client:
+        contract = client.get_contract("1")
+
+    assert isinstance(contract, TrackedContract)
+    assert len(httpx_mock.get_requests()) == 2
+
+
+def test_client_uses_exponential_backoff(
+    base_url: str,
+    sample_contract_data: dict,
+    httpx_mock: HTTPXMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that retry delays use full jitter over exponential ceilings."""
+    url = f"{base_url}/api/contracts/1/"
+    httpx_mock.add_response(url=url, status_code=503)
+    httpx_mock.add_response(url=url, status_code=503)
+    httpx_mock.add_response(url=url, json=sample_contract_data)
+    ceilings: list[float] = []
+    delays: list[float] = []
+
+    def midpoint(lower: float, upper: float) -> float:
+        ceilings.append(upper)
+        return (lower + upper) / 2
+
+    monkeypatch.setattr("soroscan.client.random.uniform", midpoint)
+    monkeypatch.setattr("soroscan.client.time.sleep", delays.append)
+
+    with SoroScanClient(base_url=base_url, max_retries=2) as client:
+        client.get_contract("1")
+
+    assert ceilings == [0.25, 0.5]
+    assert delays == [0.125, 0.25]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status_code", [502, 503, 504])
+async def test_async_client_retries_transient_gateway_errors(
+    base_url: str,
+    sample_contract_data: dict,
+    httpx_mock: HTTPXMock,
+    monkeypatch: pytest.MonkeyPatch,
+    status_code: int,
+) -> None:
+    """Test that async requests retry transient gateway errors."""
+    url = f"{base_url}/api/contracts/1/"
+    httpx_mock.add_response(url=url, status_code=status_code)
+    httpx_mock.add_response(url=url, json=sample_contract_data)
+    monkeypatch.setattr("soroscan.client.random.uniform", lambda _start, _end: 0.0)
+
+    async with AsyncSoroScanClient(base_url=base_url, max_retries=1) as client:
+        contract = await client.get_contract("1")
+
+    assert isinstance(contract, TrackedContract)
+    assert len(httpx_mock.get_requests()) == 2
+
+
+@pytest.mark.asyncio
+async def test_async_client_uses_exponential_backoff(
+    base_url: str,
+    sample_contract_data: dict,
+    httpx_mock: HTTPXMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that async retry delays use exponential backoff."""
+    url = f"{base_url}/api/contracts/1/"
+    httpx_mock.add_response(url=url, status_code=503)
+    httpx_mock.add_response(url=url, status_code=503)
+    httpx_mock.add_response(url=url, json=sample_contract_data)
+    ceilings: list[float] = []
+    delays: list[float] = []
+
+    def midpoint(lower: float, upper: float) -> float:
+        ceilings.append(upper)
+        return (lower + upper) / 2
+
+    async def record_delay(delay: float) -> None:
+        delays.append(delay)
+
+    monkeypatch.setattr("soroscan.client.random.uniform", midpoint)
+    monkeypatch.setattr("soroscan.client.asyncio.sleep", record_delay)
+
+    async with AsyncSoroScanClient(base_url=base_url, max_retries=2) as client:
+        await client.get_contract("1")
+
+    assert ceilings == [0.25, 0.5]
+    assert delays == [0.125, 0.25]
+
+
+@pytest.mark.asyncio
+async def test_async_client_retries_connection_errors(
+    base_url: str,
+    sample_contract_data: dict,
+    httpx_mock: HTTPXMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that async connection errors are retried."""
+    url = f"{base_url}/api/contracts/1/"
+    httpx_mock.add_exception(httpx.ConnectError("connection refused"), url=url)
+    httpx_mock.add_response(url=url, json=sample_contract_data)
+    monkeypatch.setattr("soroscan.client.random.uniform", lambda _start, _end: 0.0)
+
+    async with AsyncSoroScanClient(base_url=base_url, max_retries=1) as client:
+        contract = await client.get_contract("1")
+
+    assert isinstance(contract, TrackedContract)
+    assert len(httpx_mock.get_requests()) == 2
+
+
+@pytest.mark.asyncio
+async def test_async_client_does_not_retry_4xx(
+    base_url: str,
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Test that async requests do not retry client errors."""
+    httpx_mock.add_response(
+        url=f"{base_url}/api/contracts/1/",
+        status_code=404,
+        json={"detail": "Not found"},
+    )
+
+    async with AsyncSoroScanClient(base_url=base_url, max_retries=3) as client:
+        with pytest.raises(SoroScanNotFoundError):
+            await client.get_contract("1")
 
     assert len(httpx_mock.get_requests()) == 1
 
@@ -407,7 +570,7 @@ def test_validation_error(
 
     with SoroScanClient(base_url=base_url) as client:
         with pytest.raises(SoroScanValidationError):
-            client.create_contract(contract_id="invalid")
+            client.create_contract(contract_id="invalid", name="Invalid contract")
 
 
 def test_rate_limit_error(

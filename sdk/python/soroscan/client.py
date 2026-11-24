@@ -1,5 +1,8 @@
 """SoroScan API client implementations."""
 
+import asyncio
+import random
+import time
 from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urljoin
 
@@ -56,6 +59,62 @@ if TYPE_CHECKING:
     )
 
 
+class _RetryingSyncClient(httpx.Client):
+    """HTTPX client that retries transient connection and gateway failures."""
+
+    def __init__(self, *, max_retries: int, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._max_retries = max_retries
+
+    def request(self, method: str, url: str | httpx.URL, **kwargs: Any) -> httpx.Response:
+        for attempt in range(self._max_retries + 1):
+            try:
+                response = super().request(method, url, **kwargs)
+            except (httpx.NetworkError, httpx.ConnectTimeout):
+                if attempt >= self._max_retries:
+                    raise
+            else:
+                if response.status_code not in {502, 503, 504} or attempt >= self._max_retries:
+                    return response
+                response.close()
+
+            delay_ceiling = min(10.0, 0.25 * 2**attempt)
+            delay = random.uniform(0.0, delay_ceiling)
+            if delay:
+                time.sleep(delay)
+
+        raise RuntimeError("Request retry loop exited unexpectedly")
+
+
+class _RetryingAsyncClient(httpx.AsyncClient):
+    """Async HTTPX client that retries transient connection and gateway failures."""
+
+    def __init__(self, *, max_retries: int, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._max_retries = max_retries
+
+    async def request(
+        self, method: str, url: str | httpx.URL, **kwargs: Any
+    ) -> httpx.Response:
+        for attempt in range(self._max_retries + 1):
+            try:
+                response = await super().request(method, url, **kwargs)
+            except (httpx.NetworkError, httpx.ConnectTimeout):
+                if attempt >= self._max_retries:
+                    raise
+            else:
+                if response.status_code not in {502, 503, 504} or attempt >= self._max_retries:
+                    return response
+                await response.aclose()
+
+            delay_ceiling = min(10.0, 0.25 * 2**attempt)
+            delay = random.uniform(0.0, delay_ceiling)
+            if delay:
+                await asyncio.sleep(delay)
+
+        raise RuntimeError("Request retry loop exited unexpectedly")
+
+
 class SoroScanClient:
     """
     Synchronous client for the SoroScan API.
@@ -70,6 +129,7 @@ class SoroScanClient:
         base_url: str = "https://api.soroscan.io",
         api_key: str | None = None,
         timeout: float = 30.0,
+        max_retries: int = 3,
     ) -> None:
         """
         Initialize the SoroScan client.
@@ -78,11 +138,13 @@ class SoroScanClient:
             base_url: Base URL of the SoroScan API
             api_key: Optional API key for authentication
             timeout: Request timeout in seconds
+            max_retries: Maximum retries for connection errors and 502/503/504 responses
         """
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = timeout
-        self._client = httpx.Client(timeout=timeout)
+        self.max_retries = max(0, int(max_retries))
+        self._client = _RetryingSyncClient(timeout=timeout, max_retries=self.max_retries)
 
     def __enter__(self) -> "SoroScanClient":
         """
@@ -880,6 +942,7 @@ class AsyncSoroScanClient:
         base_url: str = "https://api.soroscan.io",
         api_key: str | None = None,
         timeout: float = 30.0,
+        max_retries: int = 3,
     ) -> None:
         """
         Initialize the async SoroScan client.
@@ -888,11 +951,13 @@ class AsyncSoroScanClient:
             base_url: Base URL of the SoroScan API
             api_key: Optional API key for authentication
             timeout: Request timeout in seconds
+            max_retries: Maximum retries for connection errors and 502/503/504 responses
         """
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = timeout
-        self._client = httpx.AsyncClient(timeout=timeout)
+        self.max_retries = max(0, int(max_retries))
+        self._client = _RetryingAsyncClient(timeout=timeout, max_retries=self.max_retries)
 
     async def __aenter__(self) -> "AsyncSoroScanClient":
         """

@@ -60,6 +60,31 @@ async def main():
 
 asyncio.run(main())
 ```
+
+### Retries
+
+Both clients retry transient connection failures and HTTP `502`, `503`, and `504`
+responses using exponential backoff with full jitter. `max_retries` is the number
+of additional attempts after the initial request and defaults to `3`. Backoff
+starts with a 250 ms ceiling, doubles on each attempt, and is capped at 10 seconds.
+Client errors (`4xx`), including rate limiting (`429`), are not retried.
+
+```python
+client = SoroScanClient(
+    base_url="https://api.soroscan.io",
+    api_key="your-api-key",
+    max_retries=5,
+)
+
+# The async client accepts the same option.
+async_client = AsyncSoroScanClient(
+    base_url="https://api.soroscan.io",
+    max_retries=5,
+)
+```
+
+Set `max_retries=0` to disable retries.
+
 ### Fluent Builder Pattern (issue #1281)
 
 Construct complex queries with a chainable, type-hinted builder. Every method returns `Self` for fluency; call `build()` to inspect params or `execute()` to run.

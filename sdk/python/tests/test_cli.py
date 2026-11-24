@@ -180,11 +180,12 @@ def test_events_api_error_prints_to_stderr(
     httpx_mock: HTTPXMock,
     capsys,
 ) -> None:
-    httpx_mock.add_response(
-        url=f"{base_url}/api/events/?page=1&page_size=10&ordering=-timestamp",
-        json={"detail": "Service unavailable"},
-        status_code=503,
-    )
+    for _ in range(4):
+        httpx_mock.add_response(
+            url=f"{base_url}/api/events/?page=1&page_size=10&ordering=-timestamp",
+            json={"detail": "Service unavailable"},
+            status_code=503,
+        )
 
     exit_code = main(["--base-url", base_url, "events"])
 
@@ -359,10 +360,11 @@ def test_contract_status_table_and_json(base_url, httpx_mock: HTTPXMock, capsys)
 def test_new_cli_subcommands_preserve_api_error_handling(
     base_url, httpx_mock: HTTPXMock, capsys
 ) -> None:
-    httpx_mock.add_response(
-        url=f"{base_url}/api/contract-status/",
-        json={"detail": "Service unavailable"},
-        status_code=503,
-    )
+    for _ in range(4):
+        httpx_mock.add_response(
+            url=f"{base_url}/api/contract-status/",
+            json={"detail": "Service unavailable"},
+            status_code=503,
+        )
     assert main(["--base-url", base_url, "contract-status"]) == 1
     assert "Error" in capsys.readouterr().err
