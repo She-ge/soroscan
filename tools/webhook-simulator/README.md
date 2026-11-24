@@ -1,21 +1,23 @@
 # SoroScan Webhook Simulator
 
-Standalone tool that delivers **production-shaped** SoroScan webhook payloads to a local endpoint. It does **not** require Django, Celery, Redis, or PostgreSQL.
+Standalone tool that delivers **production-shaped** SoroScan webhook payloads to a local endpoint. It does **not**
+require Django, Celery, Redis, or PostgreSQL.
 
-Use it to exercise your receiver's signature checks, acknowledgement headers, timeouts, and retry handling before pointing a real subscription at it.
+Use it to exercise your receiver's signature checks, acknowledgement headers, timeouts, and retry handling before
+pointing a real subscription at it.
 
 ## What it sends
 
 Deliveries match `dispatch_webhook` in `django-backend/soroscan/ingest/tasks.py`:
 
-| Piece | Convention |
-| --- | --- |
-| Body | Canonical JSON envelope: `contract_id`, `event_type`, `payload`, `ledger`, `event_index`, `tx_hash` (`json.dumps(..., sort_keys=True)`) |
-| `Content-Type` | `application/json` |
-| `X-SoroScan-Signature` | `sha256=<hex>` HMAC of the raw body (or `sha1=` if requested) |
-| `X-SoroScan-Timestamp` | timezone-aware ISO-8601 timestamp |
-| `X-Signature` | optional `ed25519=<base64>` when a 32-byte hex seed is provided |
-| Ping | `{"type": "ping", "timestamp": "..."}` with `X-SoroScan-Event: ping` |
+| Piece                  | Convention                                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Body                   | Canonical JSON envelope: `contract_id`, `event_type`, `payload`, `ledger`, `event_index`, `tx_hash` (`json.dumps(..., sort_keys=True)`) |
+| `Content-Type`         | `application/json`                                                                                                                      |
+| `X-SoroScan-Signature` | `sha256=<hex>` HMAC of the raw body (or `sha1=` if requested)                                                                           |
+| `X-SoroScan-Timestamp` | timezone-aware ISO-8601 timestamp                                                                                                       |
+| `X-Signature`          | optional `ed25519=<base64>` when a 32-byte hex seed is provided                                                                         |
+| Ping                   | `{"type": "ping", "timestamp": "..."}` with `X-SoroScan-Event: ping`                                                                    |
 
 Success is HTTP **2xx**. Pass `--require-ack` to also require `X-SoroScan-Ack: ok`, matching production SLA behaviour.
 

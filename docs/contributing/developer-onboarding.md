@@ -10,9 +10,9 @@ It includes local setup, running the full stack, understanding the codebase, and
 Install the following tools on your machine:
 
 1. Python 3.12+
-2. Node.js 18+
-3. Docker Engine and Docker Compose
-4. Git
+1. Node.js 18+
+1. Docker Engine and Docker Compose
+1. Git
 
 Open a terminal and confirm versions:
 
@@ -25,27 +25,28 @@ git --version
 ```
 
 ### Recommended Platform
+
 - Linux or macOS: easiest for local services and `docker compose`
 - Windows: use WSL 2 for best compatibility with Docker and Python virtual environments
 
 ## 2. Fork and Clone the Repository
 
 1. Fork the `SoroScan/soroscan` repository in GitHub.
-2. Clone your fork:
+1. Clone your fork:
 
 ```bash
 git clone https://github.com/<your-username>/soroscan.git
 cd soroscan
 ```
 
-3. Add the upstream remote:
+1. Add the upstream remote:
 
 ```bash
 git remote add upstream https://github.com/SoroScan/soroscan.git
 git fetch upstream
 ```
 
-4. Create a working branch for your first change:
+1. Create a working branch for your first change:
 
 ```bash
 git checkout -b feat/onboarding-first-contribution
@@ -54,6 +55,7 @@ git checkout -b feat/onboarding-first-contribution
 ## 3. Environment Setup
 
 SoroScan is a polyrepo with:
+
 - `django-backend/` for API and ingestion
 - `soroscan-frontend/` for the customer-facing explorer
 - `admin/` for the admin dashboard
@@ -75,6 +77,7 @@ docker compose ps
 ```
 
 Then visit:
+
 - Backend: `http://localhost:8000`
 - Frontend explorer: `http://localhost:3000`
 
@@ -155,13 +158,14 @@ docker compose up --build
 ### Option B: Manual local services
 
 1. Start PostgreSQL and Redis manually.
-2. Start the backend: `python manage.py runserver`
-3. Start the frontend: `pnpm run dev`
-4. Start the admin dashboard: `npm run dev`
+1. Start the backend: `python manage.py runserver`
+1. Start the frontend: `pnpm run dev`
+1. Start the admin dashboard: `npm run dev`
 
 ### Verify the stack
 
 Open these URLs:
+
 - `http://localhost:8000/ready` should return `200 OK`
 - `http://localhost:3000` should show the SoroScan explorer
 
@@ -175,6 +179,7 @@ If the explorer did not load or no events appear, continue to Section 12 for tro
 ## 5. Project Structure Walkthrough
 
 ### `django-backend/`
+
 - `manage.py` — Django command-line entrypoint
 - `requirements.txt` — Python dependencies
 - `soroscan/` — Django project and apps
@@ -182,6 +187,7 @@ If the explorer did not load or no events appear, continue to Section 12 for tro
 - `soroscan/ingest/tests/` — backend unit and integration tests
 
 ### `soroscan-frontend/`
+
 - `package.json` — frontend dependencies and scripts
 - `app/` — Next.js app routes and pages
 - `src/` — shared UI components and GraphQL helpers
@@ -189,20 +195,24 @@ If the explorer did not load or no events appear, continue to Section 12 for tro
 - `GRAPHQL_CODEGEN_SETUP.md` — how to regenerate GraphQL types
 
 ### `admin/`
+
 - `package.json` — admin dashboard dependencies
 - `app/` — admin dashboard source code and pages
 - `components/` — reusable admin UI components
 
 ### `soroban-contracts/`
+
 - `soroscan_core/` — Rust smart contract that emits indexed events
 - `Cargo.toml` — Rust package configuration
 
 ### `sdk/`
+
 - `python/` — Python SDK package
 - `typescript/` — TypeScript SDK package
 - `README.md` — SDK usage and contribution references
 
 ### `docs/`
+
 - `getting-started.md` — user-focused onboarding for SDKs and API
 - `deployment/` — deployment and Docker Compose guides
 - `api-reference/` — generated OpenAPI/API docs
@@ -212,9 +222,10 @@ If the explorer did not load or no events appear, continue to Section 12 for tro
 ### Finding feature code
 
 1. Use repository search for keywords such as `event_type`, `filter`, `graphql`, or `Celery`.
-2. Start from the user-facing feature and follow the call chain.
+1. Start from the user-facing feature and follow the call chain.
 
 Example: event filtering
+
 - Backend model: `django-backend/soroscan/ingest/models.py`
 - Backend view filters: `django-backend/soroscan/ingest/views.py`
 - GraphQL query handling: `django-backend/soroscan/ingest/schema.py`
@@ -254,20 +265,20 @@ git checkout main
 git merge upstream/main
 ```
 
-2. Create a feature branch:
+1. Create a feature branch:
 
 ```bash
 git checkout -b feat/describe-your-change
 ```
 
-3. Commit often with focused changes.
-4. Push your branch to your fork:
+1. Commit often with focused changes.
+1. Push your branch to your fork:
 
 ```bash
 git push origin feat/describe-your-change
 ```
 
-5. Open a PR against `main`.
+1. Open a PR against `main`.
 
 ## 8. Making Your First Contribution
 
@@ -280,10 +291,10 @@ git push origin feat/describe-your-change
 ### Example first contribution flow
 
 1. Choose a small bug or documentation issue.
-2. Reproduce the issue locally in the full stack.
-3. Edit the code and run a focused test.
-4. Commit the change with a concise message.
-5. Push your branch and open a PR.
+1. Reproduce the issue locally in the full stack.
+1. Edit the code and run a focused test.
+1. Commit the change with a concise message.
+1. Push your branch and open a PR.
 
 ### Before you start coding
 
@@ -325,9 +336,9 @@ cargo test
 ### Writing a simple unit test
 
 1. Find the component or function you changed.
-2. Add a new test file or extend an existing one.
-3. Run the targeted test case.
-4. Confirm it passes before pushing.
+1. Add a new test file or extend an existing one.
+1. Run the targeted test case.
+1. Confirm it passes before pushing.
 
 ### Coverage expectations
 
@@ -363,6 +374,7 @@ Use this checklist before opening a pull request:
 ### Common setup errors
 
 #### PostgreSQL connection issues
+
 - Confirm the database process is running on `5432`.
 - Confirm `DATABASE_URL` points to the right host and port.
 - In Docker Compose, run:
@@ -372,6 +384,7 @@ docker compose logs db
 ```
 
 #### Redis connection issues
+
 - Confirm Redis is running on `6379`.
 - In Docker Compose, run:
 
@@ -380,10 +393,12 @@ docker compose logs redis
 ```
 
 #### Port conflicts
+
 - Common ports: `5432`, `6379`, `8000`, `3000`, `3001`
 - If a port is already in use, stop the conflicting service or change the mapping in `docker-compose.yml`.
 
 #### `npm` / `pnpm` dependency conflicts
+
 - Delete `node_modules` and reinstall:
 
 ```bash
@@ -404,14 +419,16 @@ If the local database is inconsistent, use the helper script:
 ### When the explorer does not show events
 
 1. Verify the backend is healthy at `http://localhost:8000/ready`
-2. Confirm the frontend is running at `http://localhost:3000`
-3. Inspect the backend logs for ingestion errors
-4. Restart the stack if needed
+1. Confirm the frontend is running at `http://localhost:3000`
+1. Inspect the backend logs for ingestion errors
+1. Restart the stack if needed
 
 ## 12. IDE Configuration
 
 ### VS Code
+
 Recommended extensions:
+
 - Python
 - Pylance
 - ESLint
@@ -420,16 +437,19 @@ Recommended extensions:
 - Docker
 
 ### PyCharm
+
 - Use the Python interpreter from `django-backend/.venv`
 - Enable Django support and set `manage.py` as the run configuration
 
 ### Debugging locally
 
 #### Django
+
 - Set a run configuration for `manage.py runserver`
 - Use breakpoints inside `django-backend/soroscan/ingest/`
 
 #### Next.js
+
 - Use `pnpm run dev` in `soroscan-frontend`
 - Attach the debugger to `http://localhost:3000`
 

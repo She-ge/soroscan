@@ -29,6 +29,7 @@ import type {
   RecordEventsBatchResponse,
   IndexerStats,
   ContractStatus,
+  ContractStats,
   AddIndexerParams,
   AddIndexerResponse,
   GetAdminResponse,
@@ -59,6 +60,7 @@ import {
   mapApiError,
   SoroScanTimeoutError,
   SoroScanConnectionError,
+  SoroScanValidationError,
 } from "./errors.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -339,8 +341,8 @@ export class SoroScanClient {
   /**
    * Get the most recent events for a specific contract, newest first (SC-30).
    *
-   * The limit is clamped to the server-side maximum so callers never receive
-   * a 400 for an out-of-range value.
+   * `limit` must be between 1 and `MAX_RECENT_EVENTS_LIMIT` (20). An
+   * out-of-range value is rejected before any request is sent.
    *
    * @example
    * const events = await client.getContractRecentEvents('CCAAA...', 20);
@@ -352,15 +354,73 @@ export class SoroScanClient {
     contractId: string,
     limit: number = 10
   ): Promise<import("./types.js").ContractEvent[]> {
-    const safeLimit = Math.min(
-      MAX_RECENT_EVENTS_LIMIT,
-      Math.max(1, Math.trunc(limit))
-    );
+    if (!Number.isFinite(limit) || limit < 1 || limit > MAX_RECENT_EVENTS_LIMIT) {
+      throw new SoroScanValidationError(
+        `getContractRecentEvents: limit must be between 1 and ${MAX_RECENT_EVENTS_LIMIT}`,
+        "validation_error",
+        { field: "limit", value: limit },
+        "limit",
+        limit
+      );
+    }
+    const safeLimit = Math.trunc(limit);
     return this.#request<import("./types.js").ContractEvent[]>(
       "GET",
       `/api/ingest/contracts/${encodeURIComponent(contractId)}/recent-events/`,
       { query: { limit: safeLimit } }
     );
+  }
+
+  /**
+   * Get aggregate statistics for a contract (SC-42).
+   *
+   * The backend `stats` action is keyed by the contract's database id (not its
+   * Stellar address), so `contractId` here is the database id. The returned
+   * `ContractStats.contractId` is the Stellar address reported by the API.
+   *
+   * @example
+   * const stats = await client.getContractStats('42');
+   * console.log(stats.totalEvents, stats.latestLedger);
+   */
+  async getContractStats(contractId: string): Promise<ContractStats> {
+    const raw = await this.#request<{
+      contract_id?: unknown;
+      name?: unknown;
+      total_events?: unknown;
+      unique_event_types?: unknown;
+      latest_ledger?: unknown;
+      last_activity?: unknown;
+    }>(
+      "GET",
+      `/api/ingest/contracts/${encodeURIComponent(contractId)}/stats/`
+    );
+
+    if (
+      !raw ||
+      typeof raw.contract_id !== "string" ||
+      typeof raw.name !== "string" ||
+      typeof raw.total_events !== "number" ||
+      typeof raw.unique_event_types !== "number"
+    ) {
+      throw new SoroScanValidationError(
+        "SoroScanClient: invalid contract stats response",
+        "invalid_response"
+      );
+    }
+
+    const latestLedger =
+      typeof raw.latest_ledger === "number" ? raw.latest_ledger : null;
+    const lastActivity =
+      typeof raw.last_activity === "string" ? raw.last_activity : null;
+
+    return {
+      contractId: raw.contract_id,
+      name: raw.name,
+      totalEvents: raw.total_events,
+      uniqueEventTypes: raw.unique_event_types,
+      latestLedger,
+      lastActivity,
+    };
   }
 
   /**

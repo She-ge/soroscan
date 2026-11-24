@@ -1,13 +1,16 @@
 # Filter By Event Type
 
 ## Goal
+
 Retrieve all events of a specific type (e.g., `transfer` or `mint`) emitted by a contract.
 
 ## Prerequisites
+
 - SoroScan SDK installed
 - Contract is registered and active
 
 ## Code
+
 ```typescript
 import { SoroScanClient } from '@soroscan/sdk';
 
@@ -21,6 +24,7 @@ console.log(events.items);
 ```
 
 ## Expected Output
+
 ```json
 [
   {
@@ -32,4 +36,5 @@ console.log(events.items);
 ```
 
 ## Error Handling
+
 If no events match the type, an empty array is returned. If the contract is not found, a `404 Not Found` is thrown.

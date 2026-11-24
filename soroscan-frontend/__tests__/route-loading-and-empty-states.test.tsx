@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import AdminLoading from '@/app/admin/loading';
 import AlertsLoading from '@/app/alerts/loading';

@@ -4,7 +4,8 @@
 
 Accepted
 
-This ADR records an architecture decision that was already implemented in SoroScan. It was migrated from the former `docs/architecture/adr_001_django_backend.md` during the ADR consolidation (see issue #1685).
+This ADR records an architecture decision that was already implemented in SoroScan. It was migrated from the former
+`docs/architecture/adr_001_django_backend.md` during the ADR consolidation (see issue #1685).
 
 ## Context
 
@@ -20,7 +21,8 @@ SoroScan requires a backend capable of supporting several related responsibiliti
 - supporting PostgreSQL and Redis;
 - providing a foundation for monitoring, testing, and operational tooling.
 
-The backend therefore needs a mature application framework with strong database tooling and an ecosystem that supports the rest of SoroScan's architecture.
+The backend therefore needs a mature application framework with strong database tooling and an ecosystem that supports
+the rest of SoroScan's architecture.
 
 The existing backend is located in `django-backend/` and is implemented using Django.
 
@@ -28,27 +30,35 @@ The existing backend is located in `django-backend/` and is implemented using Dj
 
 SoroScan will use Django as the primary backend application framework.
 
-Django provides the application, persistence, routing, authentication, migration, and administrative foundation for the backend.
+Django provides the application, persistence, routing, authentication, migration, and administrative foundation for the
+backend.
 
-REST functionality is supported through Django REST Framework, while GraphQL functionality is integrated through Strawberry GraphQL (see [ADR 0007](0007-strawberry-graphql.md)).
+REST functionality is supported through Django REST Framework, while GraphQL functionality is integrated through
+Strawberry GraphQL (see [ADR 0007](0007-strawberry-graphql.md)).
 
-Asynchronous work such as event processing and webhook delivery is handled separately through Celery while remaining integrated with the Django application and models.
+Asynchronous work such as event processing and webhook delivery is handled separately through Celery while remaining
+integrated with the Django application and models.
 
 ## Rationale
 
-Django fits SoroScan's requirements because it provides a mature, convention-based framework for building data-intensive Python applications.
+Django fits SoroScan's requirements because it provides a mature, convention-based framework for building data-intensive
+Python applications.
 
 ### ORM and database migrations
 
-SoroScan maintains a significant relational data model for contracts, events, invocations, webhook subscriptions, delivery logs, organizations, teams, and other operational data.
+SoroScan maintains a significant relational data model for contracts, events, invocations, webhook subscriptions,
+delivery logs, organizations, teams, and other operational data.
 
-Django's ORM provides a consistent interface for these models, while Django migrations provide version-controlled schema evolution.
+Django's ORM provides a consistent interface for these models, while Django migrations provide version-controlled schema
+evolution.
 
 The migration files under `django-backend/soroscan/ingest/migrations/` act as the application's database schema history.
 
 ### PostgreSQL integration
 
-SoroScan uses PostgreSQL as its persistent data store (see [ADR 0003](0003-database-schema-rationale.md)). Django provides mature PostgreSQL support and allows the application to combine relational data with flexible JSON-based event payloads.
+SoroScan uses PostgreSQL as its persistent data store (see [ADR 0003](0003-database-schema-rationale.md)). Django
+provides mature PostgreSQL support and allows the application to combine relational data with flexible JSON-based event
+payloads.
 
 ### API integration
 
@@ -66,25 +76,36 @@ This allows both API styles to share the same application models and business lo
 
 SoroScan performs asynchronous work including event processing and webhook delivery.
 
-Django integrates cleanly with Celery, allowing background workers to operate against the same application configuration and data model.
+Django integrates cleanly with Celery, allowing background workers to operate against the same application configuration
+and data model.
 
 ### Maintainability
 
-Django provides established conventions for models, migrations, settings, routing, middleware, testing, authentication, and administration. Using these conventions reduces custom infrastructure code and makes the backend easier for Python contributors to navigate.
+Django provides established conventions for models, migrations, settings, routing, middleware, testing, authentication,
+and administration. Using these conventions reduces custom infrastructure code and makes the backend easier for Python
+contributors to navigate.
 
 ## Alternatives Considered
 
 ### FastAPI
 
-FastAPI provides a lightweight asynchronous API framework with strong Python type support. It could have been suitable for an API-focused service, but SoroScan also depends heavily on relational models, migrations, administration, authentication, and other application-framework functionality that Django provides as an integrated platform. Choosing FastAPI would require selecting and maintaining additional libraries for several capabilities already provided by the Django ecosystem.
+FastAPI provides a lightweight asynchronous API framework with strong Python type support. It could have been suitable
+for an API-focused service, but SoroScan also depends heavily on relational models, migrations, administration,
+authentication, and other application-framework functionality that Django provides as an integrated platform. Choosing
+FastAPI would require selecting and maintaining additional libraries for several capabilities already provided by the
+Django ecosystem.
 
 ### Flask
 
-Flask provides a minimal and flexible Python web framework. Its smaller core can be beneficial for simple services, but SoroScan requires substantial database, authentication, migration, API, and administrative functionality. Implementing those capabilities with Flask would require more framework assembly and project-specific conventions.
+Flask provides a minimal and flexible Python web framework. Its smaller core can be beneficial for simple services, but
+SoroScan requires substantial database, authentication, migration, API, and administrative functionality. Implementing
+those capabilities with Flask would require more framework assembly and project-specific conventions.
 
 ### Node.js backend framework
 
-A Node.js backend could provide a shared language with the React/Next.js frontend. However, the existing SoroScan backend, data model, ingestion logic, operational tooling, and tests are Python-based. Moving the backend to a Node.js framework would introduce significant migration cost without a clear benefit for the current architecture.
+A Node.js backend could provide a shared language with the React/Next.js frontend. However, the existing SoroScan
+backend, data model, ingestion logic, operational tooling, and tests are Python-based. Moving the backend to a Node.js
+framework would introduce significant migration cost without a clear benefit for the current architecture.
 
 ## Consequences
 

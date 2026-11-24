@@ -5,6 +5,7 @@ This directory contains the Apollo Client configuration for consuming the Django
 ## Overview
 
 Apollo Client is configured with:
+
 - **HTTP Link**: Connects to the backend GraphQL endpoint
 - **Auth Link**: Automatically adds JWT tokens to request headers
 - **Error Link**: Handles and logs GraphQL and network errors
@@ -23,6 +24,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 For production:
+
 ```env
 NEXT_PUBLIC_GRAPHQL_URL=https://api.soroscan.io/graphql/
 NEXT_PUBLIC_API_URL=https://api.soroscan.io
@@ -31,10 +33,11 @@ NEXT_PUBLIC_API_URL=https://api.soroscan.io
 ### Authentication
 
 The Apollo Client automatically:
+
 1. Reads JWT token from `localStorage.getItem('access_token')`
-2. Adds it to the `Authorization` header as `Bearer <token>`
-3. Handles token expiration by clearing invalid tokens
-4. Supports token refresh (to be implemented with backend Issue #2)
+1. Adds it to the `Authorization` header as `Bearer <token>`
+1. Handles token expiration by clearing invalid tokens
+1. Supports token refresh (to be implemented with backend Issue #2)
 
 ## Usage
 
@@ -135,6 +138,7 @@ function CreateWebhookForm() {
 ### Error Handling
 
 The client automatically:
+
 - Logs all GraphQL errors with location and path information
 - Logs network errors with status codes
 - Clears invalid authentication tokens
@@ -143,6 +147,7 @@ The client automatically:
 ### Retry Logic
 
 Failed requests are automatically retried:
+
 - Initial delay: 300ms
 - Maximum delay: 3000ms
 - Maximum attempts: 3
@@ -152,6 +157,7 @@ Failed requests are automatically retried:
 ### Caching
 
 InMemoryCache is configured with:
+
 - Type policies for pagination
 - Cache-and-network fetch policy for real-time data
 - Automatic cache updates on mutations
@@ -159,10 +165,13 @@ InMemoryCache is configured with:
 ### DevTools
 
 Apollo DevTools are enabled in development mode:
-1. Install [Apollo Client DevTools](https://chrome.google.com/webstore/detail/apollo-client-devtools/jdkknkkbebbapilgoeccciglkfbmbnfm) browser extension
-2. Open browser DevTools
-3. Navigate to "Apollo" tab
-4. Inspect queries, mutations, and cache
+
+1. Install
+   [Apollo Client DevTools](https://chrome.google.com/webstore/detail/apollo-client-devtools/jdkknkkbebbapilgoeccciglkfbmbnfm)
+   browser extension
+1. Open browser DevTools
+1. Navigate to "Apollo" tab
+1. Inspect queries, mutations, and cache
 
 ## CORS Configuration
 
@@ -182,34 +191,39 @@ CORS_ALLOW_CREDENTIALS = True
 To test the Apollo Client connection:
 
 1. Start the Django backend:
+
    ```bash
    cd django-backend
    python manage.py runserver
    ```
 
-2. Start the frontend:
+1. Start the frontend:
+
    ```bash
    cd soroscan-frontend
    npm run dev
    ```
 
-3. Open browser DevTools → Apollo tab
-4. Execute a test query
-5. Verify the request appears in Network tab
+1. Open browser DevTools → Apollo tab
+1. Execute a test query
+1. Verify the request appears in Network tab
 
 ## Troubleshooting
 
 ### "Network error: Failed to fetch"
+
 - Check that backend is running on `http://localhost:8000`
 - Verify CORS is configured correctly
 - Check browser console for CORS errors
 
 ### "Authentication token invalid"
+
 - Token may be expired
 - Check `localStorage.getItem('access_token')`
 - Implement token refresh logic
 
 ### Queries not updating
+
 - Check cache configuration
 - Use `refetchQueries` option in mutations
 - Consider using `fetchPolicy: 'network-only'`

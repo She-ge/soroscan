@@ -1,20 +1,25 @@
 # Webhook Tester & Contract Operations UI Specifications
 
-This document defines the interface design and component hierarchy for the SoroScan Admin Webhook Tester and Contract Detail surfaces.
+This document defines the interface design and component hierarchy for the SoroScan Admin Webhook Tester and Contract
+Detail surfaces.
 
 ## Webhook Tester Dashboard
 
-Located at `admin/app/webhook-tester/`, the webhook testing interface enables interactive inspection and verification of push notifications.
+Located at `admin/app/webhook-tester/`, the webhook testing interface enables interactive inspection and verification of
+push notifications.
 
 ### Component Structure
 
-- **WebhookSelector**: Dropdown list populated from registered webhook subscriptions. Displays active/paused status badges, destination URLs, and subscribed event types.
-- **PayloadEditor**: Monaco/Prism JSON editor allowing manual editing of event simulation payloads. Includes quick templates for common Soroban events (Transfer, Mint, Custom Event).
+- **WebhookSelector**: Dropdown list populated from registered webhook subscriptions. Displays active/paused status
+  badges, destination URLs, and subscribed event types.
+- **PayloadEditor**: Monaco/Prism JSON editor allowing manual editing of event simulation payloads. Includes quick
+  templates for common Soroban events (Transfer, Mint, Custom Event).
 - **ResponseViewer**: Two-tab layout showing:
-  - *Response*: Status badge (200 OK, 4xx, 5xx), response headers, latency duration, response body.
-  - *Request*: Dispatched headers, signature headers, payload size, timestamp.
+  - _Response_: Status badge (200 OK, 4xx, 5xx), response headers, latency duration, response body.
+  - _Request_: Dispatched headers, signature headers, payload size, timestamp.
 - **HistoryPanel**: Side drawer showing chronological test executions during the active session.
-- **DeliveryLogList**: Tabular display of recent delivery attempts, status indicators (success, failure, pending), and retry action triggers.
+- **DeliveryLogList**: Tabular display of recent delivery attempts, status indicators (success, failure, pending), and
+  retry action triggers.
 
 ### State Management
 
@@ -24,9 +29,11 @@ Located at `admin/app/webhook-tester/`, the webhook testing interface enables in
 
 ## Responsive & Theme Conventions
 
-- **Dark Theme Baseline**: Styled using Tailwind CSS dark mode palettes (`bg-zinc-950` surfaces, `zinc-400` neutral text).
+- **Dark Theme Baseline**: Styled using Tailwind CSS dark mode palettes (`bg-zinc-950` surfaces, `zinc-400` neutral
+  text).
 - **Terminal Aesthetics**: Monospace font integration for headers, hashes, and payload inspectors.
-- **Mobile Adaptations**: Single-column vertical stacks on viewports `< 768px`, collapsing sidebars into drawer overlays.
+- **Mobile Adaptations**: Single-column vertical stacks on viewports `< 768px`, collapsing sidebars into drawer
+  overlays.
 - **Accessibility**: ARIA labels on all icon-only buttons, accessible tablist controls, and high-contrast status badges.
 
 ## Related Documentation

@@ -19,6 +19,20 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
   ]),
+  {
+    // Ignore intentionally unused, underscore-prefixed names (e.g. `_, _props`).
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

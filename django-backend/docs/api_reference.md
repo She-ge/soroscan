@@ -60,6 +60,7 @@ curl -X GET \
 #### Examples
 
 **Response `200`:**
+
 ```json
 {
   "total_contracts": 5,
@@ -239,7 +240,7 @@ curl -X GET \
 
 ---
 
-### ViewSet for managing API keys with tiered rate limiting.
+### ViewSet for retrieving API key details.
 
 **Endpoint:** `/api/ingest/api-keys/`  
 **Methods:** `GET` · `POST`  
@@ -310,6 +311,7 @@ curl -X DELETE \
 #### Examples
 
 **Response `200`:**
+
 ```json
 [
   {
@@ -379,6 +381,7 @@ Allows clients to verify where events are coming from.
 #### Examples
 
 **Response `200`:**
+
 ```json
 {
   "contract_id": "CABC123...",
@@ -407,6 +410,7 @@ Allows clients to verify where events are coming from.
 #### Examples
 
 **Response `200`:**
+
 ```json
 {
   "count": 1,
@@ -425,7 +429,7 @@ Allows clients to verify where events are coming from.
 
 ---
 
-### ViewSet for managing tracked contracts.
+### ViewSet for retrieving contract completeness dashboard data.
 
 **Endpoint:** `/api/ingest/contracts/completeness_dashboard/`  
 **Methods:** `GET`  
@@ -611,7 +615,7 @@ curl -X GET \
 
 ---
 
-### ViewSet for managing tracked contracts.
+### ViewSet for retrieving contract details.
 
 **Endpoint:** `/api/ingest/contracts/{pk}/`  
 **Methods:** `DELETE` · `GET` · `PATCH` · `PUT`  
@@ -638,7 +642,7 @@ curl -X DELETE \
 
 ---
 
-### ViewSet for managing tracked contracts.
+### ViewSet for retrieving contract completeness details.
 
 **Endpoint:** `/api/ingest/contracts/{pk}/completeness/`  
 **Methods:** `GET`  
@@ -790,6 +794,7 @@ curl -X POST \
 #### Examples
 
 **Request body:**
+
 ```json
 {
   "subject_identifier": "user@example.com",
@@ -800,6 +805,7 @@ curl -X POST \
 ```
 
 **Response `201`:**
+
 ```json
 {
   "id": 1,
@@ -828,6 +834,7 @@ curl -X POST \
 #### Examples
 
 **Response `200`:**
+
 ```json
 {
   "count": 2,
@@ -900,7 +907,7 @@ curl -X POST \
 | `event_type` | — | filter by event type |
 | `payload_contains` | — | JSON containment sub-string (fast with GIN index) |
 | `payload_field` | — | dot-notation field path, e.g. decodedPayload.to |
-| `payload_op` | — | operator: eq|neq|gte|lte|gt|lt|contains|startswith|in |
+| `payload_op` | — | operator: `eq`, `neq`, `gte`, `lte`, `gt`, `lt`, `contains`, `startswith`, `in` |
 | `payload_value` | — | value for field comparison |
 | `page` | — | / page_size  — pagination (max 1000 per page) |
 
@@ -914,6 +921,7 @@ curl -X POST \
 #### Examples
 
 **Response `200`:**
+
 ```json
 {
   "count": 5,
@@ -933,7 +941,7 @@ curl -X POST \
 
 ---
 
-### ViewSet for querying indexed events.
+### ViewSet for retrieving indexed event details.
 
 **Endpoint:** `/api/ingest/events/{pk}/`  
 **Methods:** `GET`  
@@ -974,6 +982,7 @@ curl -X GET \
 #### Examples
 
 **Response `200`:**
+
 ```json
 {
   "status": "healthy",
@@ -1093,6 +1102,7 @@ curl -X GET \
 #### Examples
 
 **Request body:**
+
 ```json
 {
   "contract_id": "CABC123...",
@@ -1102,6 +1112,7 @@ curl -X GET \
 ```
 
 **Response `202`:**
+
 ```json
 {
   "status": "submitted",
@@ -1140,7 +1151,7 @@ curl -X GET \
 
 ---
 
-### Teams: multi-tenant organization of contracts and members.
+### Team details: multi-tenant organization of contracts and members.
 
 **Endpoint:** `/api/ingest/teams/{pk}/`  
 **Methods:** `DELETE` · `GET` · `PATCH` · `PUT`  
@@ -1167,7 +1178,7 @@ curl -X DELETE \
 
 ---
 
-### Teams: multi-tenant organization of contracts and members.
+### Team members: multi-tenant organization of contracts and members.
 
 **Endpoint:** `/api/ingest/teams/{pk}/members/`  
 **Methods:** `POST`  
@@ -1236,6 +1247,7 @@ curl -X GET \
 #### Examples
 
 **Response `200`:**
+
 ```json
 [
   {
@@ -1252,7 +1264,7 @@ curl -X GET \
 
 ---
 
-### ViewSet for managing webhook subscriptions.
+### ViewSet for retrieving webhook subscription details.
 
 **Endpoint:** `/api/ingest/webhooks/{pk}/`  
 **Methods:** `DELETE` · `GET` · `PATCH` · `PUT`  
@@ -1279,7 +1291,7 @@ curl -X DELETE \
 
 ---
 
-### ViewSet for managing webhook subscriptions.
+### ViewSet for testing webhook subscriptions.
 
 **Endpoint:** `/api/ingest/webhooks/{pk}/dry-run/`  
 **Methods:** `POST`  
@@ -1357,6 +1369,7 @@ for the actual outcome.
 #### Examples
 
 **Response `200`:**
+
 ```json
 {
   "status": "test_webhook_queued"
@@ -1375,12 +1388,13 @@ for the actual outcome.
 
 The caller must be an active staff/superuser (Django ``is_staff=True``).
 Regular authenticated users receive a 403 Forbidden.
-Response keys
--------------
-total      – total live DB connections for the current database
-active     – live connections currently executing queries
-idle       – live connections currently idle
-wait_queue – live connections waiting on a DB wait event
+
+#### Response Keys
+
+- `total` — total live DB connections for the current database
+- `active` — live connections currently executing queries
+- `idle` — live connections currently idle
+- `wait_queue` — live connections waiting on a DB wait event
 
 #### Response Codes
 

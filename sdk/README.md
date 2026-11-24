@@ -10,7 +10,7 @@ events = client.get_contract_recent_events(contract_id, limit=10)
 ```
 
 ```ts
-const events = await client.getContractRecentEvents({ contractId, limit: 10 });
+const events = await client.getContractRecentEvents(contractId, 10);
 ```
 
 CLI:
@@ -56,6 +56,7 @@ SDK uses mypy strict mode and requires annotations for every function.
 **Location**: `sdk/python/`
 
 **Features**:
+
 - Synchronous and asynchronous clients
 - Full REST API coverage (15 endpoints)
 - 100% type hint coverage with mypy strict
@@ -64,11 +65,13 @@ SDK uses mypy strict mode and requires annotations for every function.
 - Python 3.10+ support
 
 **Installation**:
+
 ```bash
 pip install soroscan-sdk
 ```
 
 **Quick Start**:
+
 ```python
 from soroscan import SoroScanClient
 
@@ -81,16 +84,19 @@ events = client.get_events(contract_id="CCAAA...", event_type="transfer")
 ## Future SDKs
 
 ### JavaScript/TypeScript SDK
+
 - Status: Planned
 - Target: Node.js and browser support
 - Features: TypeScript types, Promise-based API
 
 ### Rust SDK
+
 - Status: Planned
 - Target: Native Stellar/Soroban integration
 - Features: Zero-cost abstractions, async/await
 
 ### Go SDK
+
 - Status: Planned
 - Target: Backend services
 - Features: Goroutine support, context handling
@@ -101,9 +107,9 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines.
 
 ## Support
 
-- GitHub Issues: https://github.com/soroscan/soroscan/issues
-- Email: team@soroscan.io
-- Documentation: https://docs.soroscan.io
+- GitHub Issues: <https://github.com/soroscan/soroscan/issues>
+- Email: <team@soroscan.io>
+- Documentation: <https://docs.soroscan.io>
 
 ## License
 

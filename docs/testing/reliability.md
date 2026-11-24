@@ -17,5 +17,5 @@ See:
 
 - [Failover](failover.md)
 - [Migrations](migrations.md)
-- [Load testing](../load-testing.md) and `load-tests/README.md`
+- [Load testing](https://github.com/Emmzyemms/soroscan/blob/main/load-tests/README.md)
 - [Chaos engineering](chaos-engineering.md)

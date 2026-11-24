@@ -12,7 +12,6 @@ import {
 } from '@/components/cdc-monitoring';
 import type {
   CDCSyncSummary,
-  CDCSyncProgress,
   TableSyncMetric,
   SyncLogEntry,
   LatencyDataPoint,

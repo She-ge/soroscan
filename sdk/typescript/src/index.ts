@@ -52,6 +52,8 @@ export type {
   GetContractParams,
   // SC-16: Contract health
   ContractHealth,
+  // SC-42: Contract aggregate statistics
+  ContractStats,
   // Transactions
   TransactionStatus,
   Transaction,

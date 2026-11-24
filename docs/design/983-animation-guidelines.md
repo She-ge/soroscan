@@ -8,7 +8,8 @@
 
 ## Overview
 
-This document defines CSS transition durations, easing functions, button active states, and glow hover effects for the SoroScan terminal-inspired UI.
+This document defines CSS transition durations, easing functions, button active states, and glow hover effects for the
+SoroScan terminal-inspired UI.
 
 ---
 
@@ -26,10 +27,10 @@ This document defines CSS transition durations, easing functions, button active 
 ### Core Principles
 
 1. **Purposeful Motion**: Every animation must have a clear functional purpose
-2. **Performance First**: Use `transform` and `opacity` for GPU acceleration
-3. **Accessibility**: Respect `prefers-reduced-motion` media query
-4. **Consistency**: Reuse timing and easing across components
-5. **Feedback**: Immediate visual response to user interactions
+1. **Performance First**: Use `transform` and `opacity` for GPU acceleration
+1. **Accessibility**: Respect `prefers-reduced-motion` media query
+1. **Consistency**: Reuse timing and easing across components
+1. **Feedback**: Immediate visual response to user interactions
 
 ---
 
@@ -37,24 +38,24 @@ This document defines CSS transition durations, easing functions, button active 
 
 ```css
 /* Duration tokens (milliseconds) */
---duration-100: 100ms;   /* Quick feedback: microinteractions */
---duration-150: 150ms;   /* Fast: state changes */
---duration-200: 200ms;   /* Standard: hover, focus, toggle */
---duration-300: 300ms;   /* Medium: modal open/close */
---duration-500: 500ms;   /* Slow: page transitions */
---duration-700: 700ms;   /* Very slow: complex animations */
+--duration-100: 100ms; /* Quick feedback: microinteractions */
+--duration-150: 150ms; /* Fast: state changes */
+--duration-200: 200ms; /* Standard: hover, focus, toggle */
+--duration-300: 300ms; /* Medium: modal open/close */
+--duration-500: 500ms; /* Slow: page transitions */
+--duration-700: 700ms; /* Very slow: complex animations */
 ```
 
 ### Usage Guidelines
 
-| Duration | Use Case | Example |
-|----------|----------|---------|
-| 100ms | Icon rotation, checkbox check | Loading spinner |
-| 150ms | Fast state changes | Button press feedback |
-| 200ms | Standard hover/focus effects | Glow on link hover |
-| 300ms | Dialog/drawer animations | Filter drawer slide-up |
-| 500ms | Page-level transitions | Route change fade |
-| 700ms | Complex multi-step animations | Workflow transitions |
+| Duration | Use Case                      | Example                |
+| -------- | ----------------------------- | ---------------------- |
+| 100ms    | Icon rotation, checkbox check | Loading spinner        |
+| 150ms    | Fast state changes            | Button press feedback  |
+| 200ms    | Standard hover/focus effects  | Glow on link hover     |
+| 300ms    | Dialog/drawer animations      | Filter drawer slide-up |
+| 500ms    | Page-level transitions        | Route change fade      |
+| 700ms    | Complex multi-step animations | Workflow transitions   |
 
 ---
 
@@ -72,14 +73,14 @@ This document defines CSS transition durations, easing functions, button active 
 
 ### Easing Selection Guide
 
-| Easing | Perception | Use Case |
-|--------|-----------|----------|
-| `ease-linear` | Robotic, unnatural | Progress bars, loaders (use sparingly) |
-| `ease-in` | Accelerating | Objects entering view (rare) |
-| `ease-out` | Decelerating (natural) | Objects leaving, effects fading |
-| `ease-in-out` | Smooth, balanced | Standard transitions between states |
-| `ease-sharp` | Energetic, responsive | Button clicks, quick toggles |
-| `ease-smooth` | Elegant, soft | Emphasis animations, hover effects |
+| Easing        | Perception             | Use Case                               |
+| ------------- | ---------------------- | -------------------------------------- |
+| `ease-linear` | Robotic, unnatural     | Progress bars, loaders (use sparingly) |
+| `ease-in`     | Accelerating           | Objects entering view (rare)           |
+| `ease-out`    | Decelerating (natural) | Objects leaving, effects fading        |
+| `ease-in-out` | Smooth, balanced       | Standard transitions between states    |
+| `ease-sharp`  | Energetic, responsive  | Button clicks, quick toggles           |
+| `ease-smooth` | Elegant, soft          | Emphasis animations, hover effects     |
 
 ---
 
@@ -103,9 +104,10 @@ This document defines CSS transition durations, easing functions, button active 
 
 /* Property-specific transitions */
 .transition-colors {
-  transition: color 200ms var(--ease-in-out),
-              background-color 200ms var(--ease-in-out),
-              border-color 200ms var(--ease-in-out);
+  transition:
+    color 200ms var(--ease-in-out),
+    background-color 200ms var(--ease-in-out),
+    border-color 200ms var(--ease-in-out);
 }
 
 .transition-transform {
@@ -126,14 +128,14 @@ This document defines CSS transition durations, easing functions, button active 
 ```css
 /* Button with all transitions */
 .button-animated {
-  transition: 
+  transition:
     all 200ms cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 200ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 /* Link hover animation */
 .link-animated {
-  transition: 
+  transition:
     color 200ms var(--ease-in-out),
     text-decoration-color 200ms var(--ease-in-out),
     text-shadow 200ms var(--ease-in-out);
@@ -147,6 +149,7 @@ This document defines CSS transition durations, easing functions, button active 
 ### Primary Button States
 
 **Default State**
+
 ```css
 .button-primary {
   background: linear-gradient(135deg, #1a1f3a 0%, #0f1428 100%);
@@ -158,16 +161,19 @@ This document defines CSS transition durations, easing functions, button active 
 ```
 
 **Hover State**
+
 ```css
 .button-primary:hover {
-  box-shadow: 0 0 24px rgba(0, 255, 65, 0.4),
-              inset 0 0 10px rgba(0, 255, 65, 0.1);
+  box-shadow:
+    0 0 24px rgba(0, 255, 65, 0.4),
+    inset 0 0 10px rgba(0, 255, 65, 0.1);
   background: linear-gradient(135deg, #242a45 0%, #1a1f3a 100%);
   transform: translateY(-2px);
 }
 ```
 
 **Focus State**
+
 ```css
 .button-primary:focus {
   outline: 2px solid #00ff41;
@@ -177,16 +183,19 @@ This document defines CSS transition durations, easing functions, button active 
 ```
 
 **Active/Pressed State**
+
 ```css
 .button-primary:active {
   transform: translateY(0);
-  box-shadow: 0 0 15px rgba(0, 255, 65, 0.3),
-              inset 0 0 8px rgba(0, 255, 65, 0.2);
+  box-shadow:
+    0 0 15px rgba(0, 255, 65, 0.3),
+    inset 0 0 8px rgba(0, 255, 65, 0.2);
   background: linear-gradient(135deg, #0f1428 0%, #1a1f3a 100%);
 }
 ```
 
 **Disabled State**
+
 ```css
 .button-primary:disabled {
   opacity: 0.5;
@@ -203,6 +212,7 @@ This document defines CSS transition durations, easing functions, button active 
 ### Secondary/Cyan Button States
 
 **Default**
+
 ```css
 .button-secondary {
   border: 1px solid #00d4ff;
@@ -212,16 +222,19 @@ This document defines CSS transition durations, easing functions, button active 
 ```
 
 **Hover**
+
 ```css
 .button-secondary:hover {
-  box-shadow: 0 0 24px rgba(0, 212, 255, 0.4),
-              inset 0 0 10px rgba(0, 212, 255, 0.1);
+  box-shadow:
+    0 0 24px rgba(0, 212, 255, 0.4),
+    inset 0 0 10px rgba(0, 212, 255, 0.1);
 }
 ```
 
 ### Danger Button States
 
 **Default**
+
 ```css
 .button-danger {
   border: 1px solid #ff3366;
@@ -231,10 +244,12 @@ This document defines CSS transition durations, easing functions, button active 
 ```
 
 **Hover**
+
 ```css
 .button-danger:hover {
-  box-shadow: 0 0 24px rgba(255, 51, 102, 0.4),
-              inset 0 0 10px rgba(255, 51, 102, 0.1);
+  box-shadow:
+    0 0 24px rgba(255, 51, 102, 0.4),
+    inset 0 0 10px rgba(255, 51, 102, 0.1);
 }
 ```
 
@@ -246,7 +261,7 @@ This document defines CSS transition durations, easing functions, button active 
 
 ```css
 .glow-green {
-  box-shadow: 
+  box-shadow:
     0 0 8px rgba(0, 255, 65, 0.2),
     0 0 16px rgba(0, 255, 65, 0.15),
     0 0 24px rgba(0, 255, 65, 0.1),
@@ -254,7 +269,7 @@ This document defines CSS transition durations, easing functions, button active 
 }
 
 .glow-green-hover {
-  box-shadow: 
+  box-shadow:
     0 0 12px rgba(0, 255, 65, 0.4),
     0 0 24px rgba(0, 255, 65, 0.3),
     0 0 40px rgba(0, 255, 65, 0.2),
@@ -267,14 +282,14 @@ This document defines CSS transition durations, easing functions, button active 
 
 ```css
 .glow-cyan {
-  box-shadow: 
+  box-shadow:
     0 0 8px rgba(0, 212, 255, 0.2),
     0 0 16px rgba(0, 212, 255, 0.15),
     0 0 24px rgba(0, 212, 255, 0.1);
 }
 
 .glow-cyan-hover {
-  box-shadow: 
+  box-shadow:
     0 0 12px rgba(0, 212, 255, 0.4),
     0 0 24px rgba(0, 212, 255, 0.3),
     0 0 40px rgba(0, 212, 255, 0.2);
@@ -286,14 +301,14 @@ This document defines CSS transition durations, easing functions, button active 
 
 ```css
 .glow-red {
-  box-shadow: 
+  box-shadow:
     0 0 8px rgba(255, 51, 102, 0.2),
     0 0 16px rgba(255, 51, 102, 0.15),
     0 0 24px rgba(255, 51, 102, 0.1);
 }
 
 .glow-red-hover {
-  box-shadow: 
+  box-shadow:
     0 0 12px rgba(255, 51, 102, 0.4),
     0 0 24px rgba(255, 51, 102, 0.3),
     0 0 40px rgba(255, 51, 102, 0.2);
@@ -305,13 +320,14 @@ This document defines CSS transition durations, easing functions, button active 
 
 ```css
 @keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 
+  0%,
+  100% {
+    box-shadow:
       0 0 12px rgba(0, 255, 65, 0.4),
       0 0 24px rgba(0, 255, 65, 0.2);
   }
   50% {
-    box-shadow: 
+    box-shadow:
       0 0 20px rgba(0, 255, 65, 0.6),
       0 0 40px rgba(0, 255, 65, 0.3);
   }
@@ -348,7 +364,7 @@ This document defines CSS transition durations, easing functions, button active 
 
 /* Underline animation */
 .link-terminal::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -2px;
   left: 0;
@@ -388,7 +404,8 @@ This document defines CSS transition durations, easing functions, button active 
 
 ```css
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -465,7 +482,7 @@ This document defines CSS transition durations, easing functions, button active 
 
 /* CSS */
 .button-primary {
-  transition: 
+  transition:
     all 200ms var(--ease-in-out),
     box-shadow 200ms var(--ease-out);
 }
@@ -488,8 +505,8 @@ This document defines CSS transition durations, easing functions, button active 
 
 ## Design Resources
 
-- **Figma Prototype Link:** [SoroScan UI Design - Animations & Effects](#figma-placeholder)
-- **Node ID:** [Animation Guidelines & States](#)
+- **Figma Prototype Link:** SoroScan UI Design - Animations & Effects (not available)
+- **Node ID:** Animation Guidelines & States (not assigned)
 - **Last Sync:** 2026-08-28
 
 ---
@@ -502,21 +519,21 @@ module.exports = {
   theme: {
     extend: {
       transitionDuration: {
-        100: '100ms',
-        150: '150ms',
-        200: '200ms',
-        300: '300ms',
-        500: '500ms',
-        700: '700ms',
+        100: "100ms",
+        150: "150ms",
+        200: "200ms",
+        300: "300ms",
+        500: "500ms",
+        700: "700ms",
       },
       transitionTimingFunction: {
-        'ease-sharp': 'cubic-bezier(0.6, 0.04, 0.98, 0.34)',
-        'ease-smooth': 'cubic-bezier(0.42, 0, 0.58, 1)',
+        "ease-sharp": "cubic-bezier(0.6, 0.04, 0.98, 0.34)",
+        "ease-smooth": "cubic-bezier(0.42, 0, 0.58, 1)",
       },
       keyframes: {
-        'pulse-glow': {
-          '0%, 100%': { boxShadow: '0 0 12px rgba(0, 255, 65, 0.4), 0 0 24px rgba(0, 255, 65, 0.2)' },
-          '50%': { boxShadow: '0 0 20px rgba(0, 255, 65, 0.6), 0 0 40px rgba(0, 255, 65, 0.3)' },
+        "pulse-glow": {
+          "0%, 100%": { boxShadow: "0 0 12px rgba(0, 255, 65, 0.4), 0 0 24px rgba(0, 255, 65, 0.2)" },
+          "50%": { boxShadow: "0 0 20px rgba(0, 255, 65, 0.6), 0 0 40px rgba(0, 255, 65, 0.3)" },
         },
       },
     },
@@ -529,5 +546,5 @@ module.exports = {
 ## Approval
 
 - **Design Status:** Pending
-- **Figma Review:** [Link to Figma prototype](#figma-placeholder)
+- **Figma Review:** Link not available
 - **Developer Handoff:** Ready for implementation

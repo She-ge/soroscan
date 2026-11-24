@@ -85,7 +85,6 @@ export function DeliveryLog({ logs }: DeliveryLogProps) {
     if (sortField === "responseTimeMs") cmp = a.responseTimeMs - b.responseTimeMs
     if (sortField === "attempt")       cmp = a.attempt - b.attempt
     return sortDir === "asc" ? cmp : -cmp
-    void cmp
   })
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))

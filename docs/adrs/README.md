@@ -21,12 +21,12 @@ is built the way it is.
 ## Creating a new ADR
 
 1. Copy [`template.md`](template.md).
-2. Assign the next available four-digit ADR number (e.g. `0009`).
-3. Name the file `NNNN-short-topic-name.md`.
-4. Document the context, decision, rationale, alternatives, and consequences.
-5. Set the initial status to `Proposed`.
-6. Add a row to the index table above.
-7. Open a PR for review.
+1. Assign the next available four-digit ADR number (e.g. `0009`).
+1. Name the file `NNNN-short-topic-name.md`.
+1. Document the context, decision, rationale, alternatives, and consequences.
+1. Set the initial status to `Proposed`.
+1. Add a row to the index table above.
+1. Open a PR for review.
 
 An ADR should focus on a significant architectural decision rather than
 routine implementation details.
@@ -50,7 +50,7 @@ Previously, architecture decisions were recorded in **two** parallel schemes
 and neither was authoritative:
 
 1. This `docs/adrs/` directory (numbered `0001`–`0005` + `README.md`).
-2. A separate set in `docs/architecture/` — a single `adr.md` file containing six
+1. A separate set in `docs/architecture/` — a single `adr.md` file containing six
    inline decisions ("ADR 001"–"ADR 006"), plus standalone `adr_001_django_backend.md`,
    `adr_002_strawberry_graphql.md`, an `adr_index.md`, and an `adr_template.md`.
 

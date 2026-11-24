@@ -22,8 +22,8 @@ pip install soroscan-sdk
 
 ### CLI
 
-Installing the package exposes the `soroscan` command for local developer use.
-Commands print a table by default; pass `--output json` for machine-readable results.
+Installing the package exposes the `soroscan` command for local developer use. Commands print a table by default; pass
+`--output json` for machine-readable results.
 
 ```bash
 pip install soroscan-sdk
@@ -111,11 +111,11 @@ page5 = paginator.go_to_page(5)
 page4 = paginator.previous_page()
 ```
 
-Both helpers expose `has_next_page()`, `next_page()`, `previous_page()`, and
-`go_to_page(n)` for Python and TypeScript SDKs.
+Both helpers expose `has_next_page()`, `next_page()`, `previous_page()`, and `go_to_page(n)` for Python and TypeScript
+SDKs.
 
-See [`examples/pagination.py`](examples/pagination.py) for a runnable walkthrough
-that paginates events with both the sync and async helpers.
+See [`examples/pagination.py`](examples/pagination.py) for a runnable walkthrough that paginates events with both the
+sync and async helpers.
 
 ### Async Client
 
@@ -131,14 +131,14 @@ async def main():
             event_type="swap",
             page_size=100
         )
-        
+
         # Create webhook subscription
         webhook = await client.create_webhook(
             contract_id=1,
             target_url="https://myapp.com/webhook",
             event_type="transfer"
         )
-        
+
         print(f"Webhook created: {webhook.id}")
 
 asyncio.run(main())
@@ -168,6 +168,7 @@ SoroScanClient(
 ### Contracts
 
 #### List Contracts
+
 ```python
 client.get_contracts(
     is_active: bool | None = None,
@@ -178,11 +179,13 @@ client.get_contracts(
 ```
 
 #### Get Contract
+
 ```python
 client.get_contract(contract_id: str) -> TrackedContract
 ```
 
 #### Create Contract
+
 ```python
 client.create_contract(
     contract_id: str,
@@ -193,6 +196,7 @@ client.create_contract(
 ```
 
 #### Update Contract
+
 ```python
 client.update_contract(
     contract_id: str,
@@ -203,16 +207,19 @@ client.update_contract(
 ```
 
 #### Delete Contract
+
 ```python
 client.delete_contract(contract_id: str) -> None
 ```
 
 #### Get Contract Stats
+
 ```python
 client.get_contract_stats(contract_id: str) -> ContractStats
 ```
 
 #### Get Contract Events (SC-16)
+
 ```python
 client.get_contract_events(
     contract_id: str,
@@ -221,6 +228,7 @@ client.get_contract_events(
 ```
 
 #### Get Contract Health (SC-16)
+
 ```python
 client.get_contract_health(
     contract_id: str
@@ -231,8 +239,8 @@ client.get_contract_health(
 
 #### Query Events Across Contracts (SC-23)
 
-Use one request when a service needs a unified, ledger-ordered event stream from
-several related contracts. A query can include up to ten contract addresses.
+Use one request when a service needs a unified, ledger-ordered event stream from several related contracts. A query can
+include up to ten contract addresses.
 
 ```python
 events = client.get_events_by_contracts(
@@ -249,6 +257,7 @@ for event in events.results:
 `AsyncSoroScanClient.get_events_by_contracts()` accepts the same arguments.
 
 #### Query Events
+
 ```python
 client.get_events(
     contract_id: str | None = None,
@@ -264,11 +273,13 @@ client.get_events(
 ```
 
 #### Get Event
+
 ```python
 client.get_event(event_id: int) -> ContractEvent
 ```
 
 #### Record Event
+
 ```python
 client.record_event(
     contract_id: str,
@@ -280,6 +291,7 @@ client.record_event(
 ### Webhooks
 
 #### List Webhooks
+
 ```python
 client.get_webhooks(
     page: int = 1,
@@ -288,11 +300,13 @@ client.get_webhooks(
 ```
 
 #### Get Webhook
+
 ```python
 client.get_webhook(webhook_id: int) -> WebhookSubscription
 ```
 
 #### Create Webhook
+
 ```python
 client.create_webhook(
     contract_id: int,
@@ -302,6 +316,7 @@ client.create_webhook(
 ```
 
 #### Update Webhook
+
 ```python
 client.update_webhook(
     webhook_id: int,
@@ -312,11 +327,13 @@ client.update_webhook(
 ```
 
 #### Delete Webhook
+
 ```python
 client.delete_webhook(webhook_id: int) -> None
 ```
 
 #### Test Webhook
+
 ```python
 client.test_webhook(webhook_id: int) -> dict[str, str]
 ```
@@ -335,7 +352,8 @@ All response models are Pydantic v2 models with full type safety:
 
 ## Error Handling
 
-The SDK provides a typed error hierarchy for handling different error scenarios. You can catch specific error types to handle them appropriately.
+The SDK provides a typed error hierarchy for handling different error scenarios. You can catch specific error types to
+handle them appropriately.
 
 ```python
 from soroscan import (
@@ -383,32 +401,32 @@ except SoroScanError as e:
 
 ### Error Types
 
-| Error Type | Status Code | Use Case | Additional Properties |
-|---|---|---|---|
-| `SoroScanRateLimitError` | 429 | Rate limit exceeded | `retry_after`, `limit`, `remaining` |
-| `SoroScanValidationError` | 400 | Request validation failed | `field`, `value`, `errors` |
-| `SoroScanAuthError` | 401/403 | Authentication/authorization failed | - |
-| `SoroScanNotFoundError` | 404 | Resource not found | `resource_type`, `resource_id` |
-| `SoroScanServerError` | 5xx | Server error | - |
-| `SoroScanTimeoutError` | - | Request timed out | `url`, `timeout` |
-| `SoroScanConnectionError` | - | Connection failed | `url` |
-| `SoroScanAPIError` | Other | Generic API error | - |
+| Error Type                | Status Code | Use Case                            | Additional Properties               |
+| ------------------------- | ----------- | ----------------------------------- | ----------------------------------- |
+| `SoroScanRateLimitError`  | 429         | Rate limit exceeded                 | `retry_after`, `limit`, `remaining` |
+| `SoroScanValidationError` | 400         | Request validation failed           | `field`, `value`, `errors`          |
+| `SoroScanAuthError`       | 401/403     | Authentication/authorization failed | -                                   |
+| `SoroScanNotFoundError`   | 404         | Resource not found                  | `resource_type`, `resource_id`      |
+| `SoroScanServerError`     | 5xx         | Server error                        | -                                   |
+| `SoroScanTimeoutError`    | -           | Request timed out                   | `url`, `timeout`                    |
+| `SoroScanConnectionError` | -           | Connection failed                   | `url`                               |
+| `SoroScanAPIError`        | Other       | Generic API error                   | -                                   |
 
 ### Base Error Properties
 
 All error types inherit from `SoroScanError` and include:
 
-| Property | Type | Description |
-|---|---|---|
-| `message` | `str` | Human-readable error message |
-| `status_code` | `int` | HTTP status code (for API errors) |
-| `code` | `str` | Machine-readable error code from the API |
+| Property        | Type   | Description                              |
+| --------------- | ------ | ---------------------------------------- |
+| `message`       | `str`  | Human-readable error message             |
+| `status_code`   | `int`  | HTTP status code (for API errors)        |
+| `code`          | `str`  | Machine-readable error code from the API |
 | `response_data` | `dict` | Optional additional context from the API |
 
 ## Webhook Signature Verification
 
-SoroScan signs webhook deliveries with Ed25519. Verify the raw request body
-against the `X-Signature` header before parsing or acting on a delivery:
+SoroScan signs webhook deliveries with Ed25519. Verify the raw request body against the `X-Signature` header before
+parsing or acting on a delivery:
 
 ```python
 import os
@@ -423,10 +441,9 @@ if not verify_webhook_signature(raw_body, signature_header, public_key_b64):
     return "invalid signature", 401
 ```
 
-The public key is available from the `/webhooks/signing-public-key/` endpoint
-and should be cached rather than fetched on every request. See
-[`examples/webhook_verification.py`](examples/webhook_verification.py) for a
-runnable signed-payload verification example.
+The public key is available from the `/webhooks/signing-public-key/` endpoint and should be cached rather than fetched
+on every request. See [`examples/webhook_verification.py`](examples/webhook_verification.py) for a runnable
+signed-payload verification example.
 
 ## Advanced Usage
 
@@ -437,10 +454,10 @@ runnable signed-payload verification example.
 page = 1
 while True:
     response = client.get_events(page=page, page_size=100)
-    
+
     for event in response.results:
         process_event(event)
-    
+
     if not response.next:
         break
     page += 1
@@ -463,7 +480,8 @@ events = client.get_events(
 
 ### Fluent Builder Pattern (issue #1281)
 
-The SDK provides a fluent builder for constructing complex queries with chainable, type-hinted methods. The builder supports `filter_by_*`, `paginate`/`page`, `order_by`, `build()` (inspect params without executing), and `execute()`.
+The SDK provides a fluent builder for constructing complex queries with chainable, type-hinted methods. The builder
+supports `filter_by_*`, `paginate`/`page`, `order_by`, `build()` (inspect params without executing), and `execute()`.
 
 ```python
 from soroscan import SoroScanClient
@@ -526,7 +544,8 @@ async def main():
 asyncio.run(main())
 ```
 
-Every builder method is fully type-hinted and returns `Self` for chaining, verified by `mypy --strict` and `tests/test_builder.py`.
+Every builder method is fully type-hinted and returns `Self` for chaining, verified by `mypy --strict` and
+`tests/test_builder.py`.
 
 ### Async Batch Operations
 
@@ -590,5 +609,6 @@ MIT License - see LICENSE file for details
 ## Support
 
 For questions and support:
-- GitHub Issues: https://github.com/soroscan/soroscan/issues
-- Email: team@soroscan.io
+
+- GitHub Issues: <https://github.com/soroscan/soroscan/issues>
+- Email: <team@soroscan.io>

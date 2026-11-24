@@ -7,6 +7,7 @@ Apollo Client is now integrated and ready to use!
 ### 1. Environment Setup
 
 Create `.env.local`:
+
 ```env
 NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8000/graphql/
 NEXT_PUBLIC_API_URL=http://localhost:8000
@@ -90,18 +91,20 @@ const { data, isLoading, isError } = useGraphQLQuery(MY_QUERY);
 ## 🎯 Next Steps
 
 1. Create your GraphQL queries in `src/queries/`
-2. Use `useQuery` and `useMutation` hooks
-3. Check Apollo DevTools in browser
-4. See full docs for advanced usage
+1. Use `useQuery` and `useMutation` hooks
+1. Check Apollo DevTools in browser
+1. See full docs for advanced usage
 
 ## 🐛 Troubleshooting
 
 **Connection Error?**
+
 - Check backend is running: `http://localhost:8000/graphql/`
 - Verify CORS in Django settings
 - Check `.env.local` configuration
 
 **Auth Error?**
+
 - Verify token: `localStorage.getItem('access_token')`
 - Check token format (should be JWT)
 

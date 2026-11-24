@@ -1,6 +1,7 @@
 # Deployment: Cloud Platforms
 
-SoroScan is built with cloud-neutrality in mind. You can deploy it to any major cloud provider (AWS, GCP, Azure, DigitalOcean) using either standard VMs or managed Kubernetes services.
+SoroScan is built with cloud-neutrality in mind. You can deploy it to any major cloud provider (AWS, GCP, Azure,
+DigitalOcean) using either standard VMs or managed Kubernetes services.
 
 ## Recommended Cloud Stack
 
@@ -14,23 +15,28 @@ SoroScan is built with cloud-neutrality in mind. You can deploy it to any major 
 If you prefer using virtual machines (ECE, Droplets), we recommend the following process:
 
 ### 1. Environment Setup
+
 - Provision a VM with at least **4GB RAM** and **2 CPUs**.
 - Install Docker and Docker Compose.
 
 ### 2. CI/CD Pipeline
+
 - Set up a GitHub Action or Gitlab CI to:
   1. Build Docker images from the `django-backend` and `soroscan-frontend` folders.
-  2. Push images to your registry.
-  3. Deploy using `docker-compose.prod.yml` (recommended to create a production-specific compose file for your environment).
+  1. Push images to your registry.
+  1. Deploy using `docker-compose.prod.yml` (recommended to create a production-specific compose file for your
+     environment).
 
 ## Specific Cloud Tips
 
 ### AWS (Amazon Web Services)
+
 - Deploy to **EKS** for Kubernetes or **ECS (Fargate)** for serverless containers.
 - Use **ALB** (Application Load Balancer) for ingress.
 - Store secrets in **Secrets Manager**.
 
 ### DigitalOcean
+
 - Use **DigitalOcean Kubernetes (DOKS)** for the easiest K8s experience.
 - Leverage **Managed Databases** to offload DB maintenance.
 

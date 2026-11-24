@@ -35,16 +35,19 @@ components/ingest/
 The following GraphQL operations need to be implemented in the backend:
 
 ### Queries
+
 - `contracts` - List all tracked contracts
 - `contract(id: String!)` - Get single contract by ID
 
 ### Mutations
+
 - `registerContract(input: ContractInput!)` - Register new contract
 - `updateContract(id: String!, input: ContractInput!)` - Update contract details
 - `deleteContract(id: String!)` - Delete contract
 - `triggerBackfill(contractId: String!)` - Trigger backfill task
 
 ### Types
+
 ```graphql
 type Contract {
   id: String!
@@ -78,38 +81,45 @@ type BackfillTask {
 ## Usage
 
 ### Navigate to Contract List
+
 ```
 http://localhost:3000/contracts
 ```
 
 ### Register a New Contract
+
 1. Click "Register Contract" button
-2. Fill in Contract ID (required)
-3. Fill in Name (required)
-4. Optionally add Description, Tags, and set Status
-5. Click "REGISTER"
+1. Fill in Contract ID (required)
+1. Fill in Name (required)
+1. Optionally add Description, Tags, and set Status
+1. Click "REGISTER"
 
 ### View Contract Details
+
 Click on any row in the contract table to view details.
 
 ### Edit Contract
+
 1. Navigate to contract detail page
-2. Click "Edit Contract"
-3. Modify fields
-4. Click "SAVE CHANGES"
+1. Click "Edit Contract"
+1. Modify fields
+1. Click "SAVE CHANGES"
 
 ### Trigger Backfill
+
 1. Navigate to contract detail page
-2. Click "Trigger Backfill"
-3. View task status in modal
+1. Click "Trigger Backfill"
+1. View task status in modal
 
 ### Delete Contract
+
 1. Click "Delete" button in contract table
-2. Confirm deletion in modal
+1. Confirm deletion in modal
 
 ## Styling
 
 All components use the terminal UI system with:
+
 - Terminal green (`#00ff41`) for primary actions
 - Terminal cyan (`#00d4ff`) for labels and accents
 - Terminal danger (`#ff3366`) for delete actions

@@ -1,9 +1,7 @@
-import React from "react";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import {
   ContractHealthBadge,
-  STATUS_BACKGROUND_CLASSES,
   type ContractHealthStatus,
 } from "@/components/ui/ContractHealthBadge";
 

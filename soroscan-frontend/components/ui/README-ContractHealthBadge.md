@@ -1,13 +1,14 @@
 # Contract Health Badge System
 
-A comprehensive status indicator system for SoroScan contract health monitoring, featuring animated pulse dots, contextual tooltips, and full accessibility support.
+A comprehensive status indicator system for SoroScan contract health monitoring, featuring animated pulse dots,
+contextual tooltips, and full accessibility support.
 
 ## Overview
 
 The Contract Health Badge system provides visual indicators for four distinct contract health states:
 
 - **Healthy** (`#00e5ff`) - Contract operating normally
-- **Degraded** (`#ffaa00`) - Performance issues or reduced functionality  
+- **Degraded** (`#ffaa00`) - Performance issues or reduced functionality
 - **Paused** (`#38bdf8`) - Temporarily suspended operations
 - **Error** (`#ff3366`) - Critical failures, non-functional
 
@@ -27,36 +28,36 @@ import { ContractHealthBadge } from '@/components/ui/ContractHealthBadge';
 
 ### Core Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `status` | `ContractHealthStatus` | Required | Health status: `healthy`, `degraded`, `paused`, `error` |
-| `label` | `string` | Auto-generated | Custom status label |
-| `variant` | `default \| compact \| pill \| square` | `default` | Visual style variant |
-| `size` | `sm \| md \| lg` | `md` | Badge size |
-| `glow` | `none \| subtle \| moderate \| intense` | `subtle` | Glow effect intensity |
+| Prop      | Type                                    | Default        | Description                                             |
+| --------- | --------------------------------------- | -------------- | ------------------------------------------------------- |
+| `status`  | `ContractHealthStatus`                  | Required       | Health status: `healthy`, `degraded`, `paused`, `error` |
+| `label`   | `string`                                | Auto-generated | Custom status label                                     |
+| `variant` | `default \| compact \| pill \| square`  | `default`      | Visual style variant                                    |
+| `size`    | `sm \| md \| lg`                        | `md`           | Badge size                                              |
+| `glow`    | `none \| subtle \| moderate \| intense` | `subtle`       | Glow effect intensity                                   |
 
 ### Display Options
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `dotOnly` | `boolean` | `false` | Show only status dot without text |
-| `showIcon` | `boolean` | `false` | Use status icon instead of dot |
-| `metrics` | `BadgeMetrics` | `undefined` | Additional metrics to display |
+| Prop       | Type           | Default     | Description                       |
+| ---------- | -------------- | ----------- | --------------------------------- |
+| `dotOnly`  | `boolean`      | `false`     | Show only status dot without text |
+| `showIcon` | `boolean`      | `false`     | Use status icon instead of dot    |
+| `metrics`  | `BadgeMetrics` | `undefined` | Additional metrics to display     |
 
 ### Animation & Interaction
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `disableAnimation` | `boolean` | `false` | Disable pulse animations |
+| Prop               | Type               | Default     | Description                     |
+| ------------------ | ------------------ | ----------- | ------------------------------- |
+| `disableAnimation` | `boolean`          | `false`     | Disable pulse animations        |
 | `animationContext` | `AnimationContext` | `dashboard` | Context for animation intensity |
-| `disableTooltip` | `boolean` | `false` | Disable tooltip completely |
+| `disableTooltip`   | `boolean`          | `false`     | Disable tooltip completely      |
 
 ### Degraded Status Context
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `degradationContext` | `DegradationContext` | `undefined` | Detailed degradation information |
-| `tooltipContent` | `string` | Auto-generated | Custom tooltip content |
+| Prop                 | Type                 | Default        | Description                      |
+| -------------------- | -------------------- | -------------- | -------------------------------- |
+| `degradationContext` | `DegradationContext` | `undefined`    | Detailed degradation information |
+| `tooltipContent`     | `string`             | Auto-generated | Custom tooltip content           |
 
 ## Usage Examples
 
@@ -67,15 +68,15 @@ import { ContractHealthBadge } from '@/components/ui/ContractHealthBadge';
 <ContractHealthBadge status="healthy" />
 
 // With custom label
-<ContractHealthBadge 
-  status="degraded" 
+<ContractHealthBadge
+  status="degraded"
   label="Performance Issues"
 />
 
 // Dot only for compact displays
-<ContractHealthBadge 
-  status="error" 
-  dotOnly 
+<ContractHealthBadge
+  status="error"
+  dotOnly
   size="sm"
 />
 ```
@@ -100,12 +101,12 @@ import { ContractHealthBadge } from '@/components/ui/ContractHealthBadge';
 ### With Metrics
 
 ```tsx
-<ContractHealthBadge 
+<ContractHealthBadge
   status="healthy"
   metrics={{
     eventCount: 15420,
-    uptime: "99.9%",
-    lastActivity: "2 min ago"
+    uptime: '99.9%',
+    lastActivity: '2 min ago',
   }}
   variant="pill"
   size="lg"
@@ -117,14 +118,14 @@ import { ContractHealthBadge } from '@/components/ui/ContractHealthBadge';
 ```tsx
 import { COMMON_DEGRADATION_SCENARIOS } from '@/lib/tooltip-content-guidelines';
 
-<ContractHealthBadge 
+<ContractHealthBadge
   status="degraded"
   degradationContext={COMMON_DEGRADATION_SCENARIOS.highLatency}
   variant="pill"
 />
 
 // Custom degradation context
-<ContractHealthBadge 
+<ContractHealthBadge
   status="degraded"
   degradationContext={{
     type: "performance",
@@ -147,26 +148,26 @@ Use predefined configurations for common contexts:
 import { HealthBadgePresets } from '@/components/ui/ContractHealthBadge';
 
 // Contract list context
-<ContractHealthBadge 
-  status="healthy" 
+<ContractHealthBadge
+  status="healthy"
   {...HealthBadgePresets.contractList}
 />
 
 // Dashboard widget
-<ContractHealthBadge 
-  status="degraded" 
+<ContractHealthBadge
+  status="degraded"
   {...HealthBadgePresets.dashboard}
 />
 
 // Contract detail page
-<ContractHealthBadge 
-  status="error" 
+<ContractHealthBadge
+  status="error"
   {...HealthBadgePresets.contractDetail}
 />
 
 // Compact view (mobile)
-<ContractHealthBadge 
-  status="paused" 
+<ContractHealthBadge
+  status="paused"
   {...HealthBadgePresets.compactView}
 />
 ```
@@ -180,7 +181,7 @@ function ContractListItem({ contract }) {
   return (
     <div className="flex items-center justify-between p-3 rounded border">
       <div className="flex items-center gap-3">
-        <ContractHealthBadge 
+        <ContractHealthBadge
           status={contract.health.status}
           degradationContext={contract.health.context}
           animationContext="contract-list"
@@ -190,9 +191,7 @@ function ContractListItem({ contract }) {
           {contract.id.substring(0, 8)}...{contract.id.slice(-8)}
         </code>
       </div>
-      <span className="text-sm text-gray-500">
-        {contract.eventCount.toLocaleString()} events
-      </span>
+      <span className="text-sm text-gray-500">{contract.eventCount.toLocaleString()} events</span>
     </div>
   );
 }
@@ -202,23 +201,21 @@ function ContractListItem({ contract }) {
 
 ```tsx
 function HealthOverviewWidget({ contracts }) {
-  const healthCounts = contracts.reduce((acc, contract) => {
-    acc[contract.health.status]++;
-    return acc;
-  }, { healthy: 0, degraded: 0, paused: 0, error: 0 });
+  const healthCounts = contracts.reduce(
+    (acc, contract) => {
+      acc[contract.health.status]++;
+      return acc;
+    },
+    { healthy: 0, degraded: 0, paused: 0, error: 0 },
+  );
 
   return (
     <div className="grid grid-cols-2 gap-3">
       {Object.entries(healthCounts).map(([status, count]) => (
         <div key={status} className="p-4 text-center border rounded">
-          <ContractHealthBadge 
-            status={status}
-            {...HealthBadgePresets.dashboard}
-          />
+          <ContractHealthBadge status={status} {...HealthBadgePresets.dashboard} />
           <div className="mt-2 text-2xl font-bold">{count}</div>
-          <div className="text-sm text-gray-500 capitalize">
-            {status} Contracts
-          </div>
+          <div className="text-sm text-gray-500 capitalize">{status} Contracts</div>
         </div>
       ))}
     </div>
@@ -233,26 +230,20 @@ function ContractDetailHeader({ contract }) {
   return (
     <div className="flex items-start justify-between">
       <div>
-        <h1 className="text-2xl font-bold font-terminal-mono">
-          {contract.name}
-        </h1>
-        <code className="text-sm text-gray-500">
-          {contract.id}
-        </code>
+        <h1 className="text-2xl font-bold font-terminal-mono">{contract.name}</h1>
+        <code className="text-sm text-gray-500">{contract.id}</code>
       </div>
       <div className="text-right">
-        <ContractHealthBadge 
+        <ContractHealthBadge
           status={contract.health.status}
           degradationContext={contract.health.context}
           metrics={{
             eventCount: contract.totalEvents,
-            uptime: contract.uptime
+            uptime: contract.uptime,
           }}
           {...HealthBadgePresets.contractDetail}
         />
-        <div className="mt-2 text-sm text-gray-500">
-          Last updated: {contract.lastUpdate}
-        </div>
+        <div className="mt-2 text-sm text-gray-500">Last updated: {contract.lastUpdate}</div>
       </div>
     </div>
   );
@@ -273,19 +264,19 @@ Different contexts apply appropriate animation intensity:
 
 ```tsx
 // Subtle animations for lists
-<ContractHealthBadge 
+<ContractHealthBadge
   status="healthy"
   animationContext="contract-list"
 />
 
-// Standard animations for dashboards  
-<ContractHealthBadge 
+// Standard animations for dashboards
+<ContractHealthBadge
   status="degraded"
   animationContext="dashboard"
 />
 
 // Enhanced animations for detail views
-<ContractHealthBadge 
+<ContractHealthBadge
   status="healthy"
   animationContext="detail-view"
 />
@@ -309,7 +300,7 @@ The system automatically generates contextual tooltips:
 // Tooltip: "Contract is operating normally with all systems functional"
 
 // Degraded status with detailed context
-<ContractHealthBadge 
+<ContractHealthBadge
   status="degraded"
   degradationContext={{
     type: "performance",
@@ -324,10 +315,7 @@ The system automatically generates contextual tooltips:
 ### Custom Tooltip Content
 
 ```tsx
-<ContractHealthBadge 
-  status="paused"
-  tooltipContent="Contract paused for scheduled maintenance until 2PM UTC"
-/>
+<ContractHealthBadge status="paused" tooltipContent="Contract paused for scheduled maintenance until 2PM UTC" />
 ```
 
 ### Tooltip Formatting by Context
@@ -335,7 +323,7 @@ The system automatically generates contextual tooltips:
 Tooltips automatically adjust content based on UI context:
 
 - **Contract List**: Brief, non-intrusive (≤120 chars)
-- **Dashboard**: Informative with key metrics (≤200 chars)  
+- **Dashboard**: Informative with key metrics (≤200 chars)
 - **Detail View**: Comprehensive information (≤400 chars)
 - **Mobile**: Essential information only (≤80 chars)
 
@@ -344,55 +332,52 @@ Tooltips automatically adjust content based on UI context:
 ### Degradation Types
 
 ```tsx
-type DegradationType = 
-  | "performance"      // High latency, slow responses
-  | "connectivity"     // Network issues, timeouts
-  | "data_quality"     // Schema validation, corruption
-  | "sync_lag"         // Blockchain synchronization delays
-  | "partial_failure"  // Some features unavailable
-  | "resource_limit"   // Memory, CPU, or storage constraints
-  | "configuration"    // Misconfiguration issues
-  | "network_issues";  // Infrastructure problems
+type DegradationType =
+  | 'performance' // High latency, slow responses
+  | 'connectivity' // Network issues, timeouts
+  | 'data_quality' // Schema validation, corruption
+  | 'sync_lag' // Blockchain synchronization delays
+  | 'partial_failure' // Some features unavailable
+  | 'resource_limit' // Memory, CPU, or storage constraints
+  | 'configuration' // Misconfiguration issues
+  | 'network_issues'; // Infrastructure problems
 ```
 
 ### Severity Levels
 
 ```tsx
-type DegradationSeverity = "minor" | "moderate" | "severe";
+type DegradationSeverity = 'minor' | 'moderate' | 'severe';
 ```
 
 ### Complete Example
 
 ```tsx
 const degradationContext = {
-  type: "performance",
-  severity: "moderate",
+  type: 'performance',
+  severity: 'moderate',
   details: {
     responseTime: 2500,
     errorRate: 8,
-    lastSuccess: "3 minutes ago",
-    affectedOps: 15
+    lastSuccess: '3 minutes ago',
+    affectedOps: 15,
   },
   autoRecoveryActive: true,
-  estimatedResolution: "10-15 minutes"
+  estimatedResolution: '10-15 minutes',
 };
 
-<ContractHealthBadge 
-  status="degraded"
-  degradationContext={degradationContext}
-/>
+<ContractHealthBadge status="degraded" degradationContext={degradationContext} />;
 ```
 
 ## Color Specifications
 
 Exact hex values used in the terminal theme:
 
-| Status | Primary Color | Background | Border | Usage |
-|--------|---------------|------------|--------|-------|
-| Healthy | `#00e5ff` | `rgba(0, 229, 255, 0.1)` | `rgba(0, 229, 255, 0.3)` | Normal operations |
-| Degraded | `#ffaa00` | `rgba(255, 170, 0, 0.1)` | `rgba(255, 170, 0, 0.3)` | Performance issues |
-| Paused | `#38bdf8` | `rgba(56, 189, 248, 0.1)` | `rgba(56, 189, 248, 0.3)` | Suspended operations |
-| Error | `#ff3366` | `rgba(255, 51, 102, 0.1)` | `rgba(255, 51, 102, 0.3)` | Critical failures |
+| Status   | Primary Color | Background                | Border                    | Usage                |
+| -------- | ------------- | ------------------------- | ------------------------- | -------------------- |
+| Healthy  | `#00e5ff`     | `rgba(0, 229, 255, 0.1)`  | `rgba(0, 229, 255, 0.3)`  | Normal operations    |
+| Degraded | `#ffaa00`     | `rgba(255, 170, 0, 0.1)`  | `rgba(255, 170, 0, 0.3)`  | Performance issues   |
+| Paused   | `#38bdf8`     | `rgba(56, 189, 248, 0.1)` | `rgba(56, 189, 248, 0.3)` | Suspended operations |
+| Error    | `#ff3366`     | `rgba(255, 51, 102, 0.1)` | `rgba(255, 51, 102, 0.3)` | Critical failures    |
 
 ## Testing
 
@@ -441,21 +426,25 @@ npm test ContractHealthBadge -- --testNamePattern="accessibility"
 ### Common Issues
 
 **Animations not working**
+
 - Check that `prefers-reduced-motion` is not set to `reduce`
 - Verify CSS animations are loaded
 - Ensure `disableAnimation` prop is not set to `true`
 
 **Tooltips not appearing**
+
 - Confirm `disableTooltip` is not set to `true`
 - Check that tooltip provider is available in component tree
 - Verify tooltip content is not empty
 
 **Colors not displaying correctly**
+
 - Ensure terminal theme CSS variables are loaded
 - Check for CSS specificity conflicts
 - Verify dark/light theme context
 
 **Performance issues**
+
 - Limit the number of animated badges on screen
 - Use `dotOnly` variant for large lists
 - Consider virtualization for very long lists
@@ -465,10 +454,10 @@ npm test ContractHealthBadge -- --testNamePattern="accessibility"
 When contributing to the badge system:
 
 1. **Maintain consistency** with the terminal theme
-2. **Test accessibility** with screen readers
-3. **Verify performance** with multiple instances
-4. **Document new features** in this README
-5. **Add tests** for new functionality
+1. **Test accessibility** with screen readers
+1. **Verify performance** with multiple instances
+1. **Document new features** in this README
+1. **Add tests** for new functionality
 
 ## Related Components
 

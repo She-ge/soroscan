@@ -436,6 +436,28 @@ export interface ContractHealth {
   checkedAt: string | null;
 }
 
+/**
+ * Aggregate statistics for a contract (SC-42).
+ *
+ * Mirrors the Python SDK `ContractStats` model and the response of
+ * `GET /api/ingest/contracts/{id}/stats/`. The `{id}` in that path is the
+ * contract's database id, while `contractId` below is its Stellar address.
+ */
+export interface ContractStats {
+  /** Stellar contract address */
+  contractId: string;
+  /** Human-readable contract name */
+  name: string;
+  /** Total number of indexed events */
+  totalEvents: number;
+  /** Number of distinct event types */
+  uniqueEventTypes: number;
+  /** Highest indexed ledger number, or null when no events exist */
+  latestLedger: number | null;
+  /** Timestamp of the most recent event, or null when no events exist */
+  lastActivity: ISODateString | null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SC-29: Batch event recording
 // ─────────────────────────────────────────────────────────────────────────────

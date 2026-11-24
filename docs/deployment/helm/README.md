@@ -7,7 +7,7 @@ sidebar_label: Helm Chart
 hide_title: false
 ---
 
-The Helm chart in [`helm-chart/`](../../../helm-chart) packages the SoroScan
+The Helm chart in [`helm-chart/`](https://github.com/SoroScan/soroscan/tree/main/helm-chart) packages the SoroScan
 backend, Celery workers and beat scheduler, services, ingress, configuration,
 backup CronJob, and optional autoscaling/monitoring resources.
 

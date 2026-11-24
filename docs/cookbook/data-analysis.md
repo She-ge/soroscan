@@ -1,6 +1,7 @@
 # Data Analysis Examples
 
-SoroScan is an excellent source of data for analyzing smart contract activity, user behavior, and tokenomics. Below are examples of how to analyze event data using Python and Pandas.
+SoroScan is an excellent source of data for analyzing smart contract activity, user behavior, and tokenomics. Below are
+examples of how to analyze event data using Python and Pandas.
 
 ## 1. Time Series Analysis with Pandas
 

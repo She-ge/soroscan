@@ -1,21 +1,25 @@
 # Monitor Contract Activity
 
 ## Goal
+
 Get aggregated statistics about a contract, such as total events, unique event types, and last activity ledger.
 
 ## Prerequisites
+
 - The contract must be actively tracked by SoroScan.
 
 ## Code
-```typescript
-import { SoroScanClient } from '@soroscan/sdk';
 
-const client = new SoroScanClient({ apiKey: 'your_api_key' });
-const stats = await client.getContractStats('CCAAA...');
+```typescript
+import { SoroScanClient } from "@soroscan/sdk";
+
+const client = new SoroScanClient({ apiKey: "your_api_key" });
+const stats = await client.getContractStats("CCAAA...");
 console.log(`Total Events: ${stats.total_events}, Last Ledger: ${stats.latest_ledger}`);
 ```
 
 ## Expected Output
+
 ```json
 {
   "total_events": 45000,
@@ -26,4 +30,6 @@ console.log(`Total Events: ${stats.total_events}, Last Ledger: ${stats.latest_le
 ```
 
 ## Error Handling
-If the contract has no events yet, the stats might return `0` for counts and `null` for the latest ledger. Check for nullability in your app logic.
+
+If the contract has no events yet, the stats might return `0` for counts and `null` for the latest ledger. Check for
+nullability in your app logic.

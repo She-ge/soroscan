@@ -126,16 +126,19 @@ def fetch_all_pages(start_url):
 Quick commands for terminal testing.
 
 **Get latest 5 events for a contract:**
+
 ```bash
 curl -X GET "https://api.soroscan.com/api/v1/events/?contract_id=CC_YOUR_CONTRACT&limit=5" -H "Accept: application/json"
 ```
 
 **Filter by specific ledger range:**
+
 ```bash
 curl -X GET "https://api.soroscan.com/api/v1/events/?min_ledger=100000&max_ledger=100500" -H "Accept: application/json"
 ```
 
 **GraphQL POST via cURL:**
+
 ```bash
 curl -X POST "https://api.soroscan.com/graphql" \
 -H "Content-Type: application/json" \

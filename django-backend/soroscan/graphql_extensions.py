@@ -292,7 +292,17 @@ class GraphQLRateLimitExtension(SchemaExtension):
             yield
             return
 
-        client_ip = request.META.get("REMOTE_ADDR")
+        if hasattr(request, "META"):
+            client_ip = request.META.get("REMOTE_ADDR")
+        else:
+            scope = getattr(request, "scope", {})
+            headers = dict(scope.get("headers", []))
+            forwarded_for = headers.get(b"x-forwarded-for", b"").decode("utf-8")
+            if forwarded_for:
+                client_ip = forwarded_for.split(",", 1)[0].strip()
+            else:
+                client = scope.get("client")
+                client_ip = client[0] if client else None
         if not client_ip:
             yield
             return

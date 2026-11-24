@@ -26,6 +26,7 @@ __pycache__/
 .tox/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 
 # Local environment files (commit .env.example only)

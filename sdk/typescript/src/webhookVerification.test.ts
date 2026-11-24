@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { verifyWebhookSignature } from "./webhookVerification";
+import { verifyWebhookSignature } from "./webhookVerification.js";
 
 // Helper to generate a test Ed25519 key pair for testing
 // In real usage, these would come from the SoroScan dashboard

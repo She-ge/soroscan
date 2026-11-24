@@ -397,6 +397,7 @@ await paginator.previousPage();
   const page2 = await paginator.nextPage();
 }
 const page5 = await paginator.goToPage(5);
+
 ```
 
 See also [`docs/react-hooks.md`](./docs/react-hooks.md) for Apollo-integrated React hooks.

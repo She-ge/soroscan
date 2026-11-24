@@ -5,8 +5,8 @@ This directory contains GraphQL query and mutation definitions.
 ## Usage
 
 1. Create `.graphql` files with your queries/mutations
-2. Run `pnpm run codegen` to generate TypeScript types
-3. Import generated types from `src/generated/graphql.ts`
+1. Run `pnpm run codegen` to generate TypeScript types
+1. Import generated types from `src/generated/graphql.ts`
 
 ## Example
 
@@ -26,6 +26,7 @@ query GetEvents($contractId: String!, $first: Int!) {
 ```
 
 Generated types will be available in `src/generated/graphql.ts`:
+
 - `GetEventsQuery` - Query result type
 - `GetEventsQueryVariables` - Query variables type
 

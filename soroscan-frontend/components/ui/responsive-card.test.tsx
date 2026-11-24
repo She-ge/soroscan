@@ -2,7 +2,6 @@
  * Jest/React Testing Library tests for ResponsiveCard component (FE-152)
  */
 
-import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 

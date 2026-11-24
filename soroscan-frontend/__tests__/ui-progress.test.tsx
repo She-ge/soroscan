@@ -96,7 +96,7 @@ describe("Progress Component", () => {
   })
 
   it("applies correct width percentage to inner bar", () => {
-    const { container } = render(<Progress value={42} data-testid="progress" />)
+    render(<Progress value={42} data-testid="progress" />)
     const track = screen.getByTestId("progress")
     const bar = track.firstChild as HTMLElement
     expect(bar).toHaveStyle({ width: "42%" })

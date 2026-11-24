@@ -1,12 +1,15 @@
 # Manage API Keys
 
 ## Goal
+
 Create, list, and revoke API keys for programmatic access to the SoroScan API.
 
 ## Prerequisites
+
 - You must be authenticated as a registered user (via UI or an admin token).
 
 ## Code
+
 ```python
 from soroscan import SoroScanClient
 
@@ -22,6 +25,7 @@ client.revoke_api_key(key_id=new_key['id'])
 ```
 
 ## Expected Output
+
 ```json
 {
   "id": 42,
@@ -32,4 +36,6 @@ client.revoke_api_key(key_id=new_key['id'])
 ```
 
 ## Error Handling
-Attempting to retrieve the actual key string later is not possible. If you lose the key, you must create a new one. Ensure you store the key securely upon creation.
+
+Attempting to retrieve the actual key string later is not possible. If you lose the key, you must create a new one.
+Ensure you store the key securely upon creation.

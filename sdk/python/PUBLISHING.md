@@ -5,13 +5,15 @@ Instructions for publishing the SoroScan SDK to PyPI.
 ## Prerequisites
 
 1. Install build tools:
+
 ```bash
 pip install build twine
 ```
 
-2. Create PyPI account at https://pypi.org
+1. Create PyPI account at <https://pypi.org>
 
-3. Configure PyPI credentials:
+1. Configure PyPI credentials:
+
 ```bash
 # Create ~/.pypirc
 [pypi]
@@ -40,6 +42,7 @@ make build
 ```
 
 This creates:
+
 - `dist/soroscan_sdk-X.Y.Z-py3-none-any.whl`
 - `dist/soroscan-sdk-X.Y.Z.tar.gz`
 
@@ -86,8 +89,8 @@ python -c "import soroscan; print(soroscan.__version__)"
 ## Post-Release
 
 1. Create GitHub release with tag `v{version}`
-2. Update documentation site
-3. Announce on community channels
+1. Update documentation site
+1. Announce on community channels
 
 ## Version Numbering
 
@@ -98,6 +101,7 @@ Follow semantic versioning (MAJOR.MINOR.PATCH):
 - PATCH: Bug fixes, backward compatible
 
 Examples:
+
 - `0.1.0` - Initial release
 - `0.1.1` - Bug fix
 - `0.2.0` - New features

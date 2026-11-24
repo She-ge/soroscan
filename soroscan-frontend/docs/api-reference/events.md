@@ -23,6 +23,7 @@ Returns indexed Soroban contract events with filtering support.
 | `offset` | integer | Pagination offset |
 
 **Response:**
+
 ```json
 {
   "count": 15234,
@@ -53,6 +54,7 @@ GET /api/events/{id}/
 ```
 
 **Response:**
+
 ```json
 {
   "id": "evt_xyz789",
@@ -89,6 +91,7 @@ query GetEvents($contractId: String!, $limit: Int) {
 ```
 
 **Variables:**
+
 ```json
 {
   "contractId": "CABC...9X4Z",

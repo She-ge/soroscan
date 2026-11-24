@@ -27,11 +27,9 @@ User = get_user_model()
 # path for the endpoint added in `soroscan/v1/urls.py`.
 REPLAY_URL = "/v1/webhooks/dlq/replay/"
 
-# Deterministic event timestamp. `ContractEventFactory` otherwise uses
-# `Faker("date_time")`, which yields random (often pre-2026) dates, and
-# `ContractEvent` is range-partitioned on timestamp with hard-coded
-# 2026-08/2026-09 partitions. A fixed recent date keeps these fixtures
-# deterministic and independent of that partitioning.
+# Deterministic event timestamp. `ContractEvent` is range-partitioned on
+# timestamp with hard-coded 2026-08/2026-09 partitions, so pin fixtures inside
+# that window instead of relying on the factory's `timezone.now()` default.
 EVENT_TIMESTAMP = datetime(2026, 9, 15, 12, 0, 0, tzinfo=timezone.utc)
 
 

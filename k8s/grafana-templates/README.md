@@ -20,6 +20,6 @@ This folder contains reusable Grafana dashboard JSON templates for common monito
 ## Usage
 
 1. Open Grafana and navigate to **Dashboards -> New -> Import**.
-2. Upload one of the JSON files in this folder.
-3. Select your Prometheus datasource when prompted.
-4. Adjust variable defaults (`namespace`, `job`, `instance`) for your environment.
+1. Upload one of the JSON files in this folder.
+1. Select your Prometheus datasource when prompted.
+1. Adjust variable defaults (`namespace`, `job`, `instance`) for your environment.

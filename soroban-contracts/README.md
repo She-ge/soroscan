@@ -10,9 +10,8 @@ soroban-contracts/
 └── soroscan_macros/  # Procedural macros used by soroscan_core
 ```
 
-`soroscan_core` is the only deployable contract in this repository. The
-uppercase `lib.RS` prototype and the un-manifested `src/` feature snippets were
-removed because they were never part of a Cargo package or CI build. Their
+`soroscan_core` is the only deployable contract in this repository. The uppercase `lib.RS` prototype and the
+un-manifested `src/` feature snippets were removed because they were never part of a Cargo package or CI build. Their
 supported behavior lives in `soroscan_core` and the off-chain indexer.
 
 ## Contracts
@@ -27,7 +26,8 @@ The core contract that:
 
 ### Emitting Custom Events
 
-To emit custom indexed events for off-chain consumption, use `env.events().publish(...)` in your contract functions. The first argument is a tuple of up to 4 topics (keys), and the second argument is the event data payload.
+To emit custom indexed events for off-chain consumption, use `env.events().publish(...)` in your contract functions. The
+first argument is a tuple of up to 4 topics (keys), and the second argument is the event data payload.
 
 ```rust
 #![no_std]
@@ -60,8 +60,8 @@ cargo build --target wasm32-unknown-unknown --release
 
 ## Testing
 
-Unit tests live in `soroscan_core/src/lib.rs` under `#[cfg(test)]` and use
-`soroban_sdk::testutils` (`Env::default()`, `register_contract`, `mock_all_auths`).
+Unit tests live in `soroscan_core/src/lib.rs` under `#[cfg(test)]` and use `soroban_sdk::testutils` (`Env::default()`,
+`register_contract`, `mock_all_auths`).
 
 | Test                                          | Scenario                                  | Expected                             |
 | --------------------------------------------- | ----------------------------------------- | ------------------------------------ |
@@ -104,30 +104,26 @@ Expected output: all tests passing with no warnings.
 
 ## SC-38 structured events
 
-`record_structured_event` adds an opt-in, backward-compatible event format. It
-accepts the existing contract ID, event type, and SHA-256 payload hash plus a
-non-zero `schema_version` and a 32-byte `correlation_id`. The correlation ID is
+`record_structured_event` adds an opt-in, backward-compatible event format. It accepts the existing contract ID, event
+type, and SHA-256 payload hash plus a non-zero `schema_version` and a 32-byte `correlation_id`. The correlation ID is
 stored and rejects retries that would otherwise publish a duplicate event.
 
-The Python and TypeScript SDKs expose this as `record_structured_event` and
-`recordStructuredEvent`; both submit to `POST /api/record/structured/`.
+The Python and TypeScript SDKs expose this as `record_structured_event` and `recordStructuredEvent`; both submit to
+`POST /api/record/structured/`.
 
 ## SC-30 recent events per contract
 
-`recent_events(contract_id, limit)` returns the most recently recorded events
-for a specific contract, newest first. The contract keeps a bounded, per-contract
-FIFO buffer (`MAX_RECENT_EVENTS_PER_CONTRACT`, currently 20 entries) that is
-updated by both `record_event` and `record_events_batch`; older entries are
-evicted automatically once the cap is reached.
+`recent_events(contract_id, limit)` returns the most recently recorded events for a specific contract, newest first. The
+contract keeps a bounded, per-contract FIFO buffer (`MAX_RECENT_EVENTS_PER_CONTRACT`, currently 20 entries) that is
+updated by both `record_event` and `record_events_batch`; older entries are evicted automatically once the cap is
+reached.
 
 - `limit == 0` returns everything currently retained (up to the cap).
 - `limit` greater than the cap returns `ContractError::InvalidLimit`.
 
-The Python and TypeScript SDKs expose this as `get_contract_recent_events` and
-`getContractRecentEvents`, backed by `GET /api/contracts/<contract_id>/recent-events/`
-(Python) and `GET /v1/contracts/<contract_id>/recent-events` (TypeScript), which
-query the richer off-chain indexed event history rather than calling the
-contract directly.
+The Python and TypeScript SDKs expose this as `get_contract_recent_events` and `getContractRecentEvents`, backed by
+`GET /api/contracts/<contract_id>/recent-events/` (Python) and `GET /v1/contracts/<contract_id>/recent-events`
+(TypeScript), which query the richer off-chain indexed event history rather than calling the contract directly.
 
 ## Deploying to Testnet
 

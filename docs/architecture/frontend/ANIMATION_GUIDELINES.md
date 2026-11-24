@@ -49,10 +49,10 @@ import { motionStyle, durations } from "@/lib/animations";
 ## Performance (60fps)
 
 1. Animate only GPU-composited properties: `transform`, `opacity`, `filter`.
-2. Prefer CSS classes over JS RAF loops for micro-interactions.
-3. Use `.gpu-accelerate` sparingly (`will-change`) on active motion only.
-4. Honor `prefers-reduced-motion` (global base rule disables non-essential animation).
-5. Keep modal/page transitions ≤ 400ms (`normal` = 300ms).
+1. Prefer CSS classes over JS RAF loops for micro-interactions.
+1. Use `.gpu-accelerate` sparingly (`will-change`) on active motion only.
+1. Honor `prefers-reduced-motion` (global base rule disables non-essential animation).
+1. Keep modal/page transitions ≤ 400ms (`normal` = 300ms).
 
 ## Hand-off checklist
 

@@ -1,6 +1,8 @@
 # API Keys and Rate Limits
 
-SoroScan uses API keys for authentication and tiered rate limiting. Every key belongs to one of three tiers — Free, Pro, or Enterprise — each with a different hourly request quota. Per-contract quota overrides are also supported for fine-grained control.
+SoroScan uses API keys for authentication and tiered rate limiting. Every key belongs to one of three tiers — Free, Pro,
+or Enterprise — each with a different hourly request quota. Per-contract quota overrides are also supported for
+fine-grained control.
 
 ---
 
@@ -22,7 +24,9 @@ GET /api/events/?contract_id=C...&api_key=<your-key>
 
 The header form is preferred. Query parameter usage is accepted but logged separately.
 
-When a valid key is presented, the request is authenticated as the key's owner user and the `APIKey` object is attached to the request for downstream use by the throttle layer. If the key does not exist or `is_active` is `false`, the API returns:
+When a valid key is presented, the request is authenticated as the key's owner user and the `APIKey` object is attached
+to the request for downstream use by the throttle layer. If the key does not exist or `is_active` is `false`, the API
+returns:
 
 ```http
 HTTP/1.1 401 Unauthorized
@@ -31,25 +35,29 @@ HTTP/1.1 401 Unauthorized
 
 ### Key format
 
-Keys are URL-safe random tokens, at least 48 bytes of entropy, truncated to 64 characters. They are generated automatically on key creation using `secrets.token_urlsafe(48)`.
+Keys are URL-safe random tokens, at least 48 bytes of entropy, truncated to 64 characters. They are generated
+automatically on key creation using `secrets.token_urlsafe(48)`.
 
 ---
 
 ## Rate Limit Tiers
 
-Quotas are enforced per calendar hour. Each tier has a default `quota_per_hour` that is set automatically when a key is created.
+Quotas are enforced per calendar hour. Each tier has a default `quota_per_hour` that is set automatically when a key is
+created.
 
-| Tier | Requests per hour | Notes |
-|---|---|---|
-| **Free** | 50 | Default tier for new keys |
-| **Pro** | 5,000 | |
-| **Enterprise** | Unlimited | Stored internally as 10,000,000 |
+| Tier           | Requests per hour | Notes                           |
+| -------------- | ----------------- | ------------------------------- |
+| **Free**       | 50                | Default tier for new keys       |
+| **Pro**        | 5,000             |                                 |
+| **Enterprise** | Unlimited         | Stored internally as 10,000,000 |
 
-The quota is stored on the `APIKey.quota_per_hour` field. It is initialised from `TIER_QUOTAS` at creation time and can be adjusted independently of the tier afterward (e.g. to grant a temporary increase to a Pro customer).
+The quota is stored on the `APIKey.quota_per_hour` field. It is initialised from `TIER_QUOTAS` at creation time and can
+be adjusted independently of the tier afterward (e.g. to grant a temporary increase to a Pro customer).
 
 ### Per-contract quota overrides
 
-A `ContractQuota` record lets you set a tighter limit for a specific `(APIKey, TrackedContract)` pair. The effective quota for a request is:
+A `ContractQuota` record lets you set a tighter limit for a specific `(APIKey, TrackedContract)` pair. The effective
+quota for a request is:
 
 ```
 effective_quota = min(api_key.quota_per_hour, contract_quota.quota_per_hour)
@@ -63,11 +71,11 @@ Contract quotas cannot exceed the key's tier limit unless the key is Enterprise 
 
 Every response to an authenticated API-key request includes three headers that tell you your current quota state.
 
-| Header | Type | Description |
-|---|---|---|
-| `RateLimit-Limit` | integer | Total requests allowed in the current hour |
-| `RateLimit-Remaining` | integer | Requests remaining before the quota resets |
-| `RateLimit-Reset` | Unix timestamp | When the current 1-hour bucket resets |
+| Header                | Type           | Description                                |
+| --------------------- | -------------- | ------------------------------------------ |
+| `RateLimit-Limit`     | integer        | Total requests allowed in the current hour |
+| `RateLimit-Remaining` | integer        | Requests remaining before the quota resets |
+| `RateLimit-Reset`     | Unix timestamp | When the current 1-hour bucket resets      |
 
 Example response headers:
 
@@ -77,9 +85,11 @@ RateLimit-Remaining: 4987
 RateLimit-Reset: 1725055200
 ```
 
-The bucket resets at the start of each calendar hour (not a rolling window). `RateLimit-Reset` is always the Unix timestamp of the top of the next hour.
+The bucket resets at the start of each calendar hour (not a rolling window). `RateLimit-Reset` is always the Unix
+timestamp of the top of the next hour.
 
-These headers are injected by `APIKeyThrottle` into `request._api_key_throttle_headers` and forwarded to the response by `SlowQueryMiddleware`.
+These headers are injected by `APIKeyThrottle` into `request._api_key_throttle_headers` and forwarded to the response by
+`SlowQueryMiddleware`.
 
 ---
 
@@ -114,7 +124,8 @@ print(f"Retry in {wait_seconds}s")
 
 ### Ingest endpoint rate limit
 
-The `POST /api/ingest/record/` endpoint has an additional stricter rate limit (`IngestRateThrottle`) applied on top of the per-key quota. This is scoped separately and uses the standard DRF throttle response. The same 429 format applies.
+The `POST /api/ingest/record/` endpoint has an additional stricter rate limit (`IngestRateThrottle`) applied on top of
+the per-key quota. This is scoped separately and uses the standard DRF throttle response. The same 429 format applies.
 
 ---
 
@@ -148,8 +159,8 @@ Store the `key` value immediately — it is not shown again after creation.
 ### Via the Django admin
 
 1. Log in to `/admin/`.
-2. Navigate to **Ingest → API Keys → Add API Key**.
-3. Select the user, choose a tier, and save. The key is generated automatically.
+1. Navigate to **Ingest → API Keys → Add API Key**.
+1. Select the user, choose a tier, and save. The key is generated automatically.
 
 ### Via the Django shell
 
@@ -196,7 +207,8 @@ Or via the Django shell:
 APIKey.objects.filter(pk=6).update(is_active=False)
 ```
 
-Deactivated keys are rejected immediately (`is_active=False` causes a 401). Historical `last_used_at` timestamps are preserved for audit purposes.
+Deactivated keys are rejected immediately (`is_active=False` causes a 401). Historical `last_used_at` timestamps are
+preserved for audit purposes.
 
 ### Step 4 — Verify
 
@@ -222,4 +234,5 @@ print(f"Used this hour: {current_count}/{key.quota_per_hour}")
 print(f"Last used: {key.last_used_at}")
 ```
 
-Hourly usage history is also maintained in Redis for up to 8 days under keys of the form `soroscan_api_key_quota_history:<key_id>:<bucket_hour>`, which feeds the analytics dashboard.
+Hourly usage history is also maintained in Redis for up to 8 days under keys of the form
+`soroscan_api_key_quota_history:<key_id>:<bucket_hour>`, which feeds the analytics dashboard.

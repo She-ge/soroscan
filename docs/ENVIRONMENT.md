@@ -16,7 +16,8 @@ Never commit a real `.env` file or production secrets.
 
 ## Required variables
 
-The following six variables are validated before every non-test Django startup. The application raises `ImproperlyConfigured` when any of them is missing, even where a fallback value exists later in `settings.py`.
+The following six variables are validated before every non-test Django startup. The application raises
+`ImproperlyConfigured` when any of them is missing, even where a fallback value exists later in `settings.py`.
 
 | Variable                     | Type         | Required | Code fallback                                                         | Description                                                                                                       |
 | ---------------------------- | ------------ | -------: | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -27,7 +28,8 @@ The following six variables are validated before every non-test Django startup. 
 | `STELLAR_NETWORK_PASSPHRASE` | String       |      Yes | `Test SDF Network ; September 2015`                                   | Stellar network passphrase associated with the primary Soroban RPC endpoint.                                      |
 | `SOROSCAN_CONTRACT_ID`       | String       |      Yes | Empty string                                                          | Deployed SoroScan contract identifier.                                                                            |
 
-Tests using `soroscan.settings_test` do not require these variables because the test settings use in-memory SQLite, cache, Channels, and Celery services.
+Tests using `soroscan.settings_test` do not require these variables because the test settings use in-memory SQLite,
+cache, Channels, and Celery services.
 
 ## Core Django configuration
 
@@ -39,6 +41,7 @@ Tests using `soroscan.settings_test` do not require these variables because the 
 | `FRONTEND_BASE_URL`      | URL                  |       No | `http://localhost:3000`                    | Public frontend URL used by backend integrations.                                                         |
 | `SOFTWARE_VERSION`       | String               |       No | Value from `VERSION.md`, otherwise `1.0.0` | Version exposed through API and platform metadata.                                                        |
 | `ENABLE_SILK`            | Boolean              |       No | `False`                                    | Enables the Django Silk profiler and middleware.                                                          |
+| `ADMIN_SECRET_KEY`       | Secret string        |       No | Value of `INDEXER_SECRET_KEY`              | Signing key for admin-level operations; set it separately when admin credentials need an independent key. |
 
 Accepted Boolean values include `True`/`False`, `true`/`false`, `1`/`0`, and `yes`/`no`.
 
@@ -49,6 +52,7 @@ Accepted Boolean values include `True`/`False`, `true`/`false`, `1`/`0`, and `ye
 | `DB_CONN_MAX_AGE`           | Integer seconds |       No | `300`              | Maximum lifetime of a persistent Django database connection.                        |
 | `DB_CONNECT_TIMEOUT`        | Integer seconds |       No | `5`                | PostgreSQL connection timeout. Applied only when PostgreSQL is used.                |
 | `DB_APPLICATION_NAME`       | String          |       No | `soroscan-backend` | PostgreSQL application name shown in database monitoring tools.                     |
+| `DATABASE_STATEMENT_TIMEOUT`| Integer milliseconds |       No | `5000`         | PostgreSQL statement timeout applied to each connection; ignored by SQLite.         |
 | `WEB_CONCURRENCY`           | Integer         |       No | `4`                | Expected number of web worker processes used when calculating database pool limits. |
 | `DB_CONNECTIONS_PER_WORKER` | Integer         |       No | `4`                | Target number of database connections per worker.                                   |
 | `DB_POOL_MIN_SIZE`          | Integer         |       No | `2`                | Minimum database connection-pool target.                                            |
@@ -62,6 +66,9 @@ The calculated pool maximum is bounded by `DB_POOL_HARD_LIMIT`.
 | -------------------------- | --------------- | -------: | ------- | --------------------------------------------------------------------------- |
 | `QUERY_CACHE_TTL_SECONDS`  | Integer seconds |       No | `60`    | Cache lifetime for REST, GraphQL, statistics, search, and timeline results. |
 | `SHUTDOWN_TIMEOUT_SECONDS` | Integer seconds |       No | `30`    | Graceful-shutdown timeout for active application work.                      |
+| `CONTRACTS_LIST_CACHE_TTL_SECONDS` | Integer seconds | No | `30` | Cache lifetime for the REST contracts-list endpoint. |
+| `CELERY_TASK_TIME_LIMIT`   | Integer seconds |       No | `600`   | Hard time limit for a Celery task; the worker terminates tasks that exceed it. |
+| `CELERY_TASK_SOFT_TIME_LIMIT` | Integer seconds | No | `540` | Soft time limit for a Celery task; the task receives a timeout before the hard limit. |
 
 `REDIS_URL` is also used as the Celery broker, Celery result backend, Channels backend, and Django Redis cache.
 
@@ -77,12 +84,15 @@ Rate values follow the `<requests>/<period>` format, such as `60/minute` or `100
 | `RATE_LIMIT_GRAPHQL`         | Rate string |       No | `60/minute`  | GraphQL endpoint rate.                        |
 | `ENDPOINT_RATE_LIMIT_SEARCH` | Rate string |       No | `30/minute`  | Event-search endpoint rate.                   |
 | `ENDPOINT_RATE_LIMIT_STATS`  | Rate string |       No | `100/minute` | Contract-statistics endpoint rate.            |
+| `ENDPOINT_RATE_LIMIT_DB_EXPLAIN` | Rate string | No | `10/minute` | Database-explain endpoint rate. |
+| `RATE_LIMIT_UNAUTHENTICATED_IP` | Rate string | No | `30/minute` | Rate for unauthenticated requests grouped by client IP. |
 
 ## CORS configuration
 
 | Variable          | Type                     | Required | Default | Description                                                                                                              |
 | ----------------- | ------------------------ | -------: | ------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `ALLOWED_ORIGINS` | Comma-separated URL list |       No | Empty   | Frontend origins permitted to make cross-origin requests. When empty, all origins are permitted only while `DEBUG=True`. |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated URL list | No | Empty | Explicit origins permitted by `django-cors-headers`; set this in production instead of relying on debug-only allow-all behavior. |
 
 Example:
 
@@ -92,13 +102,39 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
 ## Data retention and deduplication
 
-| Variable                         | Type            | Required | Default | Description                                                          |
-| -------------------------------- | --------------- | -------: | ------- | -------------------------------------------------------------------- |
-| `DEDUP_LOG_RETENTION_DAYS`       | Integer days    |       No | `90`    | Number of days to retain event-deduplication logs.                   |
-| `EVENT_RETENTION_DAYS`           | Integer days    |       No | `30`    | Number of days to retain contract events before archival or pruning. |
-| `ALERT_DEDUP_WINDOW_SECONDS`     | Integer seconds |       No | `300`   | General alert deduplication window.                                  |
-| `WEBHOOK_DEDUP_WINDOW_SECONDS`   | Integer seconds |       No | `300`   | Webhook delivery deduplication window.                               |
-| `DOWNSTREAM_ALERT_DEDUP_SECONDS` | Integer seconds |       No | `3600`  | Deduplication window for downstream dependency alerts.               |
+| Variable                          | Type            | Required | Default | Description                                                                                         |
+| --------------------------------- | --------------- | -------: | ------- | --------------------------------------------------------------------------------------------------- |
+| `DEDUP_LOG_RETENTION_DAYS`        | Integer days    |       No | `90`    | Number of days to retain event-deduplication logs.                                                  |
+| `EVENT_RETENTION_DAYS`            | Integer days    |       No | `30`    | Number of days to retain contract events before archival or pruning.                                |
+| `ALERT_DEDUP_WINDOW_SECONDS`      | Integer seconds |       No | `300`   | General alert deduplication window.                                                                 |
+| `WEBHOOK_DEDUP_WINDOW_SECONDS`    | Integer seconds |       No | `300`   | Webhook delivery deduplication window.                                                              |
+| `DOWNSTREAM_ALERT_DEDUP_SECONDS`  | Integer seconds |       No | `3600`  | Deduplication window for downstream dependency alerts.                                              |
+| `SOROSCAN_EVENT_RETENTION_DAYS`   | Integer days    |       No | `90`    | Age at which PostgreSQL `ContractEvent` partitions are detached for archiving; a no-op on other backends. |
+| `WEBHOOK_DELIVERY_RETENTION_DAYS` | Integer days    |       No | `30`    | Number of days to retain `WebhookDeliveryLog` entries before the cleanup task prunes them.           |
+
+## Contract health checks
+
+The health-check task evaluates active tracked contracts. A contract is marked `degraded` when no
+new event has been indexed for longer than `HEALTH_DEGRADED_MINUTES` or when ABI decode errors reach
+`HEALTH_ABI_ERROR_THRESHOLD` within the last hour. A contract is marked `failed` when no new event
+has been indexed for longer than `HEALTH_FAILED_MINUTES`.
+
+| Variable                     | Type            | Required | Default | Description                                                                                        |
+| ---------------------------- | --------------- | -------: | ------- | -------------------------------------------------------------------------------------------------- |
+| `HEALTH_DEGRADED_MINUTES`    | Integer minutes |       No | `30`    | Minutes without a new event before a tracked contract is marked `degraded` (first warning stage).   |
+| `HEALTH_FAILED_MINUTES`      | Integer minutes |       No | `120`   | Minutes without a new event before a tracked contract is marked `failed` (more severe later stage). |
+| `HEALTH_ABI_ERROR_THRESHOLD` | Integer count   |       No | `5`     | Number of ABI decode errors in the last hour at which a tracked contract is marked `degraded`.      |
+
+## Analytics anomaly detection
+
+The hourly event-aggregation task compares each bucket with the seven-day rolling average for the
+same hour of day. A drop is reported as an anomaly only when it exceeds
+`ANALYTICS_ANOMALY_DROP_PCT` and the baseline is at least `ANALYTICS_ANOMALY_MIN_BASELINE` events.
+
+| Variable                         | Type            | Required | Default | Description                                                                                  |
+| -------------------------------- | --------------- | -------: | ------- | -------------------------------------------------------------------------------------------- |
+| `ANALYTICS_ANOMALY_DROP_PCT`     | Integer percent |       No | `50`    | Percentage drop from the rolling hourly average that flags an event-volume anomaly.          |
+| `ANALYTICS_ANOMALY_MIN_BASELINE` | Integer events  |       No | `10`    | Minimum rolling-average event count before a drop is reported (suppresses low-volume noise). |
 
 ## Webhook escalation and signing
 
@@ -130,7 +166,8 @@ Values are decimal amounts in U.S. dollars.
 | `MAINNET_RPC_URL`    | URL           |       No | `https://mainnet.stellar.validationcloud.io/v1/public` | RPC URL exposed for the configured mainnet network.                 |
 | `FUTURENET_RPC_URL`  | URL           |       No | `https://soroban-futurenet.stellar.org`                | RPC URL exposed for the configured futurenet network.               |
 
-The required primary variables `SOROBAN_RPC_URL` and `STELLAR_NETWORK_PASSPHRASE` select the backend’s main active network. The three network-specific URL variables configure the network list returned by the API.
+The required primary variables `SOROBAN_RPC_URL` and `STELLAR_NETWORK_PASSPHRASE` select the backend’s main active
+network. The three network-specific URL variables configure the network list returned by the API.
 
 ## GraphQL configuration
 
@@ -139,6 +176,9 @@ The required primary variables `SOROBAN_RPC_URL` and `STELLAR_NETWORK_PASSPHRASE
 | `GRAPHQL_INTROSPECTION_ENABLED` | Boolean          |       No | Same value as `DEBUG` | Enables GraphQL schema introspection. Disable it in production unless explicitly needed. |
 | `GRAPHQL_MAX_COMPLEXITY`        | Integer          |       No | `1000`                | Maximum permitted GraphQL query-complexity score.                                        |
 | `GRAPHQL_N1_DETECTION_ENABLED`  | Boolean          |       No | Same value as `DEBUG` | Enables development-time detection of possible N+1 resolver queries.                     |
+| `GRAPHQL_CACHE_ENABLED`         | Boolean          |       No | `True`                | Enables GraphQL query result caching.                                                     |
+| `GRAPHQL_CACHE_TTL_SECONDS`     | Integer seconds  |       No | `60`                  | Cache lifetime for GraphQL query results.                                                  |
+| `GRAPHQL_N1_DETECTION_THRESHOLD`| Integer queries  |       No | `5`                   | Number of resolver database queries that triggers an N+1 warning.                          |
 | `GRAPHQL_RESOLVER_LOG_LEVEL`    | Log-level string |       No | `INFO`                | Logging level for GraphQL resolver activity.                                             |
 
 ## Contract snapshots
@@ -155,6 +195,7 @@ The required primary variables `SOROBAN_RPC_URL` and `STELLAR_NETWORK_PASSPHRASE
 | `LOG_FORMAT`                    | String               |       No | Empty                          | Set to `json` to enable structured JSON console logs. Any other value uses text logs. |
 | `SLOW_QUERY_THRESHOLD_MS`       | Integer milliseconds |       No | `100`                          | Application slow-query logging threshold.                                             |
 | `DATABASE_SLOW_QUERY_THRESHOLD` | Float seconds        |       No | `1.0`                          | Database-level slow-query threshold.                                                  |
+| `REQUEST_LATENCY_LOG_THRESHOLD_MS` | Integer milliseconds | No | `100` | Requests at or above this duration log a JSON database/CPU timing breakdown. |
 | `SILK_PROFILER_LOG_DIR`         | Filesystem path      |       No | `django-backend/logs/profiler` | Output directory used by the Silk profiler.                                           |
 
 ## Email and alert delivery
@@ -317,17 +358,18 @@ SENTRY_TRACES_SAMPLE_RATE=0.1
 
 Treat the following values as secrets:
 
-* `SECRET_KEY`
-* `DATABASE_URL` when it contains credentials
-* `REDIS_URL` when it contains credentials
-* `INDEXER_SECRET_KEY`
-* `WEBHOOK_ED25519_SIGNING_SEED`
-* `EMAIL_HOST_PASSWORD`
-* `AWS_ACCESS_KEY_ID`
-* `AWS_SECRET_ACCESS_KEY`
-* `SENTRY_DSN`
+- `SECRET_KEY`
+- `DATABASE_URL` when it contains credentials
+- `REDIS_URL` when it contains credentials
+- `INDEXER_SECRET_KEY`
+- `WEBHOOK_ED25519_SIGNING_SEED`
+- `EMAIL_HOST_PASSWORD`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `SENTRY_DSN`
 
-For production, store secrets in a managed secret store or Kubernetes Secret rather than committing them to source control.
+For production, store secrets in a managed secret store or Kubernetes Secret rather than committing them to source
+control.
 
 ## Validation
 

@@ -7,9 +7,11 @@ sidebar_label: Security
 hide_title: false
 ---
 
-Use this checklist before every production deployment. Every item includes what to verify and how to automate it in CI/CD where possible.
+Use this checklist before every production deployment. Every item includes what to verify and how to automate it in
+CI/CD where possible.
 
-> **Related guides:** `docs/security/index.md` (hardening concepts) · `docs/deployment/kubernetes.md` · `docs/deployment/runbooks.md`
+> **Related guides:** `docs/security/index.md` (hardening concepts) · `docs/deployment/kubernetes.md` ·
+> `docs/deployment/runbooks.md`
 
 ---
 
@@ -17,7 +19,8 @@ Use this checklist before every production deployment. Every item includes what 
 
 ### What to verify
 
-- Required variables are present: `SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `SOROBAN_RPC_URL`, `STELLAR_NETWORK_PASSPHRASE`, `ALLOWED_HOSTS`.
+- Required variables are present: `SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `SOROBAN_RPC_URL`,
+  `STELLAR_NETWORK_PASSPHRASE`, `ALLOWED_HOSTS`.
 - No development defaults leak into production: `DEBUG=False`, no `localhost` URLs, no placeholder secret keys.
 - `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS` are explicit and minimal.
 - `ADMIN_URL_PATH` is set to a non-default path.
@@ -43,7 +46,8 @@ kubectl exec -it deploy/soroscan-backend -- \
 
 ### Automation
 
-- Add a `check_env` management command that fails fast on startup if required vars are missing or default values are detected.
+- Add a `check_env` management command that fails fast on startup if required vars are missing or default values are
+  detected.
 - Add a CI step that lints `.env.example` for unsafe defaults and rejects `DEBUG=True` in production manifests.
 - Use `python-decouple` or `django-environ` `env()` calls with `required=True` for critical settings.
 
@@ -147,7 +151,8 @@ curl -w "%{http_code}" \
 
 ### Automation
 
-- Add permission-focused integration tests for each sensitive endpoint covering: anonymous, non-owner authenticated, owner authenticated, and staff roles.
+- Add permission-focused integration tests for each sensitive endpoint covering: anonymous, non-owner authenticated,
+  owner authenticated, and staff roles.
 - Run these as part of the regression suite on every PR.
 
 ---
@@ -186,9 +191,11 @@ aws rds describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier,Stor
 
 ### What to verify
 
-- All secrets are stored in a secrets manager (AWS Secrets Manager, HashiCorp Vault, Kubernetes Sealed Secrets) — not in plain text in ConfigMaps, Dockerfiles, or source control.
+- All secrets are stored in a secrets manager (AWS Secrets Manager, HashiCorp Vault, Kubernetes Sealed Secrets) — not in
+  plain text in ConfigMaps, Dockerfiles, or source control.
 - No secrets appear in container environment variables in plain text in the Kubernetes manifest — use `secretKeyRef`.
-- A rotation runbook exists for: `SECRET_KEY`, `DATABASE_URL` credentials, `INDEXER_SECRET_KEY`, API key signing material.
+- A rotation runbook exists for: `SECRET_KEY`, `DATABASE_URL` credentials, `INDEXER_SECRET_KEY`, API key signing
+  material.
 - Git history does not contain leaked secrets (scan with `trufflehog` or `gitleaks`).
 
 ### Verification steps
@@ -213,7 +220,8 @@ grep -rn "SECRET_KEY\|password\|token" k8s/ | grep -v 'secretKeyRef\|#'
 
 ### What to verify
 
-- `DEFAULT_THROTTLE_CLASSES` includes `DynamicEndpointThrottle`, `APIKeyThrottle`, `AnonRateThrottle`, and `UserRateThrottle`.
+- `DEFAULT_THROTTLE_CLASSES` includes `DynamicEndpointThrottle`, `APIKeyThrottle`, `AnonRateThrottle`, and
+  `UserRateThrottle`.
 - Every API response includes `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers.
 - `RATE_LIMIT_ANON` is set to a conservative value (default: `60/minute`).
 - WAF and DDoS protection (AWS Shield, Cloudflare) are enabled at the edge.
@@ -244,10 +252,10 @@ done
 
 Before deploying to production, require sign-off from:
 
-| Role | Responsibility |
-|------|---------------|
-| Platform owner | Infrastructure, networking, TLS, WAF |
-| Security owner | Secrets, credentials, controls |
+| Role              | Responsibility                          |
+| ----------------- | --------------------------------------- |
+| Platform owner    | Infrastructure, networking, TLS, WAF    |
+| Security owner    | Secrets, credentials, controls          |
 | Application owner | Auth/authz, API behavior, rate limiting |
 
 **Release gate output:**

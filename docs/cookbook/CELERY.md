@@ -8,21 +8,23 @@ SoroScan uses [Celery](https://docs.celeryq.dev/) with Redis as the broker for b
 
 Tasks are routed to four queues based on priority and workload type:
 
-| Queue | Purpose | Example tasks |
-|---|---|---|
-| `high_priority` | Real-time event ingestion — must stay low-latency | `ingest_latest_events` |
-| `default` | General background work | `dispatch_webhook`, `evaluate_remediation_rules` |
-| `low_priority` | Non-urgent analytics aggregation | `aggregate_event_statistics` |
-| `backfill` | Long-running historical re-indexing — isolated to avoid starving real-time queues | `backfill_contract_events` |
+| Queue           | Purpose                                                                           | Example tasks                                    |
+| --------------- | --------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `high_priority` | Real-time event ingestion — must stay low-latency                                 | `ingest_latest_events`                           |
+| `default`       | General background work                                                           | `dispatch_webhook`, `evaluate_remediation_rules` |
+| `low_priority`  | Non-urgent analytics aggregation                                                  | `aggregate_event_statistics`                     |
+| `backfill`      | Long-running historical re-indexing — isolated to avoid starving real-time queues | `backfill_contract_events`                       |
 
 **Why separate `backfill`?**  
-Backfill jobs can run for hours and consume significant CPU/DB resources. Keeping them on a dedicated queue (with dedicated workers) ensures they never delay real-time ingestion.
+Backfill jobs can run for hours and consume significant CPU/DB resources. Keeping them on a dedicated queue (with
+dedicated workers) ensures they never delay real-time ingestion.
 
 ---
 
 ## Starting Workers
 
-Each worker process must declare which queues it consumes with `-Q`. Always start at least one worker for `high_priority` and `default`.
+Each worker process must declare which queues it consumes with `-Q`. Always start at least one worker for
+`high_priority` and `default`.
 
 ```bash
 # Real-time ingestion worker (high_priority + default)
@@ -71,9 +73,8 @@ celery -A soroscan worker -Q backfill --concurrency=4 --loglevel=info
 - **CPU-bound tasks** (event decoding, aggregation): concurrency = CPU count.
 - Use `--max-tasks-per-child=500` to reclaim memory from long-running workers.
 - Monitor queue depths via `celery -A soroscan inspect active_queues` or the `/api/health/workers/` endpoint.
-- Prometheus metrics are emitted for active/completed/failed tasks, duration,
-  worker status, and Redis queue depth. Import
-  `k8s/grafana-templates/celery-task-queue.json` for the status dashboard.
+- Prometheus metrics are emitted for active/completed/failed tasks, duration, worker status, and Redis queue depth.
+  Import `k8s/grafana-templates/celery-task-queue.json` for the status dashboard.
 
 ---
 

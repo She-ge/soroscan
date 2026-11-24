@@ -4,20 +4,22 @@ This tutorial explains how to test SoroScan webhook deliveries during developmen
 
 Two approaches are covered:
 
-* **Webhook.site** — the quickest way to receive and inspect a SoroScan webhook without running a local receiver.
-* **ngrok** — exposes a receiver running on your computer through a temporary public URL, allowing you to test the complete webhook delivery flow.
+- **Webhook.site** — the quickest way to receive and inspect a SoroScan webhook without running a local receiver.
+- **ngrok** — exposes a receiver running on your computer through a temporary public URL, allowing you to test the
+  complete webhook delivery flow.
 
-Webhook.site is useful when you only need to inspect what SoroScan sends. Use ngrok when you also need to test how your own application processes and acknowledges webhook requests.
+Webhook.site is useful when you only need to inspect what SoroScan sends. Use ngrok when you also need to test how your
+own application processes and acknowledges webhook requests.
 
 ## Prerequisites
 
 Before starting, make sure you have:
 
-* access to a running SoroScan backend;
-* a valid authenticated SoroScan session, JWT, or API key;
-* at least one tracked contract when creating a webhook subscription;
-* `curl` or another HTTP client;
-* Node.js if you want to follow the local ngrok receiver example.
+- access to a running SoroScan backend;
+- a valid authenticated SoroScan session, JWT, or API key;
+- at least one tracked contract when creating a webhook subscription;
+- `curl` or another HTTP client;
+- Node.js if you want to follow the local ngrok receiver example.
 
 The examples below assume that the SoroScan backend is running locally at:
 
@@ -35,12 +37,12 @@ Webhook.site gives you a temporary public URL and displays requests sent to that
 
 This is the easiest option when you want to inspect:
 
-* the HTTP method;
-* request headers;
-* the JSON payload;
-* SoroScan signature headers;
-* timestamps;
-* repeated deliveries.
+- the HTTP method;
+- request headers;
+- the JSON payload;
+- SoroScan signature headers;
+- timestamps;
+- repeated deliveries.
 
 You do not need to run a web server on your computer for this method.
 
@@ -60,7 +62,8 @@ Do not copy the browser application's `#!/view/...` address. Use the unique webh
 
 Keep the Webhook.site page open so incoming requests appear immediately.
 
-> **Privacy note:** Do not send secrets, authentication tokens, private user information, or production-sensitive data to a public testing URL. Free Webhook.site URLs should be treated as temporary development tools.
+> **Privacy note:** Do not send secrets, authentication tokens, private user information, or production-sensitive data
+> to a public testing URL. Free Webhook.site URLs should be treated as temporary development tools.
 
 ### Step 2: Confirm the URL Works
 
@@ -139,9 +142,9 @@ curl -X POST "http://localhost:8000/api/ingest/webhooks/" \
 
 Replace:
 
-* `12` with the numeric ID of your tracked contract;
-* `<your-token>` with your Webhook.site token;
-* `transfer` with an event type used by your contract.
+- `12` with the numeric ID of your tracked contract;
+- `<your-token>` with your Webhook.site token;
+- `transfer` with an event type used by your contract.
 
 If you want the subscription to receive all event types for the selected contract, omit `event_type`:
 
@@ -229,12 +232,12 @@ The timestamp and contract ID will differ in your request.
 Confirm that:
 
 1. the request method is `POST`;
-2. the request body is valid JSON;
-3. `event_type` is `test`;
-4. `contract_id` matches the subscription's tracked contract;
-5. the payload contains the test message;
-6. the request contains a `Content-Type: application/json` header;
-7. the request contains SoroScan signing headers.
+1. the request body is valid JSON;
+1. `event_type` is `test`;
+1. `contract_id` matches the subscription's tracked contract;
+1. the payload contains the test message;
+1. the request contains a `Content-Type: application/json` header;
+1. the request contains SoroScan signing headers.
 
 A test delivery can include headers similar to:
 
@@ -249,22 +252,24 @@ X-Signature: ed25519=<base64-signature>
 
 When SoroScan's Ed25519 signing key is configured, the request can also contain `X-Signature`.
 
-Do not compare signatures by copying an example value from this guide. Signatures depend on the exact raw request body and configured signing credentials.
+Do not compare signatures by copying an example value from this guide. Signatures depend on the exact raw request body
+and configured signing credentials.
 
 ---
 
 ## Webhook.site Delivery Log
 
-After sending the test webhook, the Webhook.site request inspector should show the received request, headers, and JSON body.
+After sending the test webhook, the Webhook.site request inspector should show the received request, headers, and JSON
+body.
 
 ![Webhook.site showing a received SoroScan webhook request](./images/webhook-site-delivery-log.png)
 
 When capturing this screenshot for documentation:
 
-* show the received `POST` request;
-* show enough of the headers or request body to make the delivery clear;
-* remove or hide sensitive values;
-* do not include real access tokens, API keys, webhook secrets, or production data.
+- show the received `POST` request;
+- show enough of the headers or request body to make the delivery clear;
+- remove or hide sensitive values;
+- do not include real access tokens, API keys, webhook secrets, or production data.
 
 ---
 
@@ -309,7 +314,8 @@ The ping request includes:
 X-SoroScan-Event: ping
 ```
 
-Use the test action when you want to inspect the standard SoroScan signing headers. Use ping when you only need a basic reachability check.
+Use the test action when you want to inspect the standard SoroScan signing headers. Use ping when you only need a basic
+reachability check.
 
 ### Contract Event Payload
 
@@ -336,9 +342,10 @@ The contents of `payload` depend on the contract and event being indexed.
 
 ---
 
-# Option 2: Test a Local Receiver with ngrok
+## Option 2: Test a Local Receiver with ngrok
 
-Webhook.site proves that SoroScan is sending requests correctly, but eventually you will normally want to test your own webhook handler.
+Webhook.site proves that SoroScan is sending requests correctly, but eventually you will normally want to test your own
+webhook handler.
 
 A service running on:
 
@@ -375,43 +382,43 @@ webhook_receiver.js
 Add:
 
 ```javascript
-const http = require('http');
+const http = require("http");
 
 const PORT = 3000;
 
 const server = http.createServer((req, res) => {
-  if (req.method !== 'POST' || req.url !== '/webhooks/soroscan') {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not found');
+  if (req.method !== "POST" || req.url !== "/webhooks/soroscan") {
+    res.writeHead(404, { "Content-Type": "text/plain" });
+    res.end("Not found");
     return;
   }
 
-  let body = '';
+  let body = "";
 
-  req.on('data', chunk => {
+  req.on("data", (chunk) => {
     body += chunk;
   });
 
-  req.on('end', () => {
-    console.log('\nReceived SoroScan webhook');
-    console.log('Headers:', req.headers);
+  req.on("end", () => {
+    console.log("\nReceived SoroScan webhook");
+    console.log("Headers:", req.headers);
 
     try {
       const payload = JSON.parse(body);
-      console.log('Payload:', JSON.stringify(payload, null, 2));
+      console.log("Payload:", JSON.stringify(payload, null, 2));
     } catch {
-      console.log('Raw body:', body);
+      console.log("Raw body:", body);
     }
 
     res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'X-SoroScan-Ack': 'ok',
+      "Content-Type": "application/json",
+      "X-SoroScan-Ack": "ok",
     });
 
     res.end(
       JSON.stringify({
         received: true,
-      })
+      }),
     );
   });
 });
@@ -439,7 +446,8 @@ The receiver returns:
 X-SoroScan-Ack: ok
 ```
 
-This matters for normal SoroScan event delivery because SoroScan checks the configured acknowledgement header before considering an event delivery successful.
+This matters for normal SoroScan event delivery because SoroScan checks the configured acknowledgement header before
+considering an event delivery successful.
 
 ---
 
@@ -500,9 +508,9 @@ curl -X POST "http://localhost:8000/api/ingest/webhooks/" \
 
 Replace:
 
-* `12` with your tracked contract's numeric ID;
-* the example ngrok domain with the URL assigned to your tunnel;
-* `transfer` with the event type you want to test.
+- `12` with your tracked contract's numeric ID;
+- the example ngrok domain with the URL assigned to your tunnel;
+- `transfer` with the event type you want to test.
 
 Note the new webhook subscription ID returned by SoroScan.
 
@@ -545,16 +553,16 @@ You can also inspect the request in ngrok's traffic inspector.
 
 The ngrok request inspector is useful for checking:
 
-* request headers;
-* request bodies;
-* response status;
-* response headers;
-* request timing;
-* whether traffic reached the local application.
+- request headers;
+- request bodies;
+- response status;
+- response headers;
+- request timing;
+- whether traffic reached the local application.
 
 ---
 
-# Verifying a Real Delivery
+## Verifying a Real Delivery
 
 The `/test/` action is useful for validating connectivity and inspecting signing headers.
 
@@ -563,9 +571,9 @@ A real contract event delivery follows a stricter success flow.
 For a normal SoroScan event dispatch to be treated as successful:
 
 1. SoroScan sends an HTTP `POST` request.
-2. The receiver returns a `2xx` response.
-3. The receiver includes the configured acknowledgement header.
-4. By default, the expected response header is:
+1. The receiver returns a `2xx` response.
+1. The receiver includes the configured acknowledgement header.
+1. By default, the expected response header is:
 
 ```http
 X-SoroScan-Ack: ok
@@ -619,7 +627,7 @@ These fields confirm that SoroScan successfully delivered the event and received
 
 ---
 
-# Important Difference Between Webhook.site and ngrok
+## Important Difference Between Webhook.site and ngrok
 
 Webhook.site is excellent for confirming that a request was sent and inspecting its contents.
 
@@ -629,7 +637,8 @@ However, a default Webhook.site URL does not necessarily return SoroScan's confi
 X-SoroScan-Ack: ok
 ```
 
-As a result, a normal SoroScan event may reach Webhook.site successfully while SoroScan records the delivery as unacknowledged.
+As a result, a normal SoroScan event may reach Webhook.site successfully while SoroScan records the delivery as
+unacknowledged.
 
 This does **not** mean Webhook.site failed to receive the request.
 
@@ -647,7 +656,7 @@ X-SoroScan-Ack: ok
 
 ---
 
-# Inspecting Signatures
+## Inspecting Signatures
 
 Normal SoroScan event deliveries can include two signature mechanisms.
 
@@ -663,7 +672,8 @@ The exact algorithm is controlled by the webhook subscription's signature config
 
 The signature is calculated from the raw request body and the webhook secret.
 
-When implementing verification, calculate the expected signature from the **raw request bytes** before parsing or modifying the JSON body.
+When implementing verification, calculate the expected signature from the **raw request bytes** before parsing or
+modifying the JSON body.
 
 ## Ed25519 Signature
 
@@ -681,7 +691,7 @@ Do not store real webhook secrets or private signing keys in tutorial screenshot
 
 ---
 
-# Testing Failure Scenarios
+## Testing Failure Scenarios
 
 Once successful delivery works, deliberately test failures so you know how your application behaves.
 
@@ -691,8 +701,8 @@ Temporarily change the local receiver from:
 
 ```javascript
 res.writeHead(200, {
-  'Content-Type': 'application/json',
-  'X-SoroScan-Ack': 'ok',
+  "Content-Type": "application/json",
+  "X-SoroScan-Ack": "ok",
 });
 ```
 
@@ -700,7 +710,7 @@ to:
 
 ```javascript
 res.writeHead(500, {
-  'Content-Type': 'application/json',
+  "Content-Type": "application/json",
 });
 ```
 
@@ -732,16 +742,16 @@ Do not leave intentional failure behavior enabled after completing your test.
 
 ---
 
-# Troubleshooting
+## Troubleshooting
 
 ## Nothing Appears in Webhook.site
 
 Check that:
 
-* you copied the unique webhook URL rather than the browser view URL;
-* the SoroScan test endpoint was called for the correct subscription;
-* the subscription's `target_url` matches your Webhook.site URL;
-* your computer and SoroScan backend have internet access.
+- you copied the unique webhook URL rather than the browser view URL;
+- the SoroScan test endpoint was called for the correct subscription;
+- the subscription's `target_url` matches your Webhook.site URL;
+- your computer and SoroScan backend have internet access.
 
 Test the URL directly with `curl` before troubleshooting SoroScan.
 
@@ -749,11 +759,11 @@ Test the URL directly with `curl` before troubleshooting SoroScan.
 
 Check that:
 
-* your receiver is still running;
-* the local application is listening on port `3000`;
-* ngrok was started with `ngrok http 3000`;
-* the target URL includes `/webhooks/soroscan`;
-* no local firewall is blocking the receiver.
+- your receiver is still running;
+- the local application is listening on port `3000`;
+- ngrok was started with `ngrok http 3000`;
+- the target URL includes `/webhooks/soroscan`;
+- no local firewall is blocking the receiver.
 
 ## The Local Receiver Returns 404
 
@@ -774,63 +784,64 @@ HTTP 200
 X-SoroScan-Ack: ok
 ```
 
-A successful HTTP status without the expected acknowledgement header is not sufficient for the normal SoroScan delivery path.
+A successful HTTP status without the expected acknowledgement header is not sufficient for the normal SoroScan delivery
+path.
 
 ## Signature Verification Fails
 
 Make sure you:
 
-* verify the original raw request bytes;
-* use the correct webhook secret for `X-SoroScan-Signature`;
-* use the correct SoroScan public key for `X-Signature`;
-* do not reformat the JSON before calculating the signature;
-* use the algorithm indicated by the signature prefix.
+- verify the original raw request bytes;
+- use the correct webhook secret for `X-SoroScan-Signature`;
+- use the correct SoroScan public key for `X-Signature`;
+- do not reformat the JSON before calculating the signature;
+- use the algorithm indicated by the signature prefix.
 
 ---
 
-# Cleanup
+## Cleanup
 
 After testing:
 
 1. stop ngrok with `Ctrl+C`;
-2. stop the local webhook receiver with `Ctrl+C`;
-3. delete temporary webhook subscriptions that are no longer required;
-4. close or discard temporary Webhook.site URLs;
-5. remove temporary test files created outside the repository;
-6. make sure screenshots contain no secrets before committing them.
+1. stop the local webhook receiver with `Ctrl+C`;
+1. delete temporary webhook subscriptions that are no longer required;
+1. close or discard temporary Webhook.site URLs;
+1. remove temporary test files created outside the repository;
+1. make sure screenshots contain no secrets before committing them.
 
 Do not commit:
 
-* access tokens;
-* API keys;
-* webhook secrets;
-* ngrok authentication tokens;
-* production payloads containing sensitive data.
+- access tokens;
+- API keys;
+- webhook secrets;
+- ngrok authentication tokens;
+- production payloads containing sensitive data.
 
 ---
 
-# Verification Checklist
+## Verification Checklist
 
 Before considering local webhook testing complete, verify that:
 
-* [ ] Webhook.site receives a SoroScan test request.
-* [ ] The request method is `POST`.
-* [ ] The JSON payload is visible and valid.
-* [ ] `X-SoroScan-Signature` is visible on the signed test request.
-* [ ] `X-Signature` is inspected when Ed25519 signing is configured.
-* [ ] The ngrok HTTPS URL forwards requests to the local receiver.
-* [ ] The local receiver logs the webhook payload.
-* [ ] The local receiver returns a `2xx` response.
-* [ ] The local receiver returns `X-SoroScan-Ack: ok`.
-* [ ] A real delivery can be inspected through the SoroScan delivery-log endpoint.
-* [ ] Screenshots contain no authentication credentials or secrets.
+- [ ] Webhook.site receives a SoroScan test request.
+- [ ] The request method is `POST`.
+- [ ] The JSON payload is visible and valid.
+- [ ] `X-SoroScan-Signature` is visible on the signed test request.
+- [ ] `X-Signature` is inspected when Ed25519 signing is configured.
+- [ ] The ngrok HTTPS URL forwards requests to the local receiver.
+- [ ] The local receiver logs the webhook payload.
+- [ ] The local receiver returns a `2xx` response.
+- [ ] The local receiver returns `X-SoroScan-Ack: ok`.
+- [ ] A real delivery can be inspected through the SoroScan delivery-log endpoint.
+- [ ] Screenshots contain no authentication credentials or secrets.
 
 ## Related Documentation
 
 For more information, see:
 
-* `docs/cookbook/setup-webhook.md`
-* `docs/cookbook/webhooks.md`
-* `django-backend/soroscan/ingest/views.py`
-* `django-backend/soroscan/ingest/tasks.py`
-* `django-backend/soroscan/webhook_signing.py`
+- `docs/cookbook/setup-webhook.md`
+- `docs/cookbook/webhooks.md`
+- `django-backend/soroscan/ingest/views.py`
+- `django-backend/soroscan/ingest/tasks.py`
+- `django-backend/soroscan/webhook_signing.py`

@@ -9,19 +9,19 @@ once the situation is resolved.
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [How Pausing Works](#how-pausing-works)
-3. [Pausing a Contract](#pausing-a-contract)
+1. [How Pausing Works](#how-pausing-works)
+1. [Pausing a Contract](#pausing-a-contract)
    - [Django Admin](#django-admin)
    - [REST API](#rest-api)
    - [GraphQL API](#graphql-api)
    - [Automated Pause via Remediation Rules](#automated-pause-via-remediation-rules)
-4. [Resuming a Contract](#resuming-a-contract)
+1. [Resuming a Contract](#resuming-a-contract)
    - [Manual Resume](#manual-resume)
    - [Scheduled Auto-Resume](#scheduled-auto-resume)
-5. [Webhook Behaviour During Pause](#webhook-behaviour-during-pause)
-6. [In-App Notifications](#in-app-notifications)
-7. [Audit and Observability](#audit-and-observability)
-8. [Common Scenarios](#common-scenarios)
+1. [Webhook Behaviour During Pause](#webhook-behaviour-during-pause)
+1. [In-App Notifications](#in-app-notifications)
+1. [Audit and Observability](#audit-and-observability)
+1. [Common Scenarios](#common-scenarios)
 
 ---
 
@@ -60,8 +60,8 @@ is run afterwards (see [reconciliation docs](DATA_RETENTION.md)).
 ### Django Admin
 
 1. Navigate to **Ingest → Tracked Contracts**.
-2. Find the contract by `contract_id` or name.
-3. Uncheck **Is active** and click **Save**.
+1. Find the contract by `contract_id` or name.
+1. Uncheck **Is active** and click **Save**.
 
 Bulk pause: select multiple contracts, choose **Mark selected contracts as
 inactive** from the **Action** dropdown, and click **Go**.
@@ -146,11 +146,11 @@ is detected. The `evaluate_remediation_rules` Celery task runs every **5 minutes
 **Create a remediation rule via the Django admin:**
 
 1. Navigate to **Ingest → Remediation Rules → Add**.
-2. Set **Name**, **Condition**, and **Actions**.
-3. Set **Grace period minutes** — the rule waits this long after first detection
+1. Set **Name**, **Condition**, and **Actions**.
+1. Set **Grace period minutes** — the rule waits this long after first detection
    before executing actions (default: 10 minutes).
-4. Set **Alert type** and **Alert target** for the ops notification.
-5. Enable **Dry run** to test the rule without executing actions.
+1. Set **Alert type** and **Alert target** for the ops notification.
+1. Enable **Dry run** to test the rule without executing actions.
 
 **Example rule (Python / data migration):**
 
@@ -371,9 +371,9 @@ After resuming, trigger a backfill to recover events missed during the pause.
 ### Contract upgrade — planned maintenance window
 
 1. Pause the contract before deploying the new contract version.
-2. Deploy and verify the upgrade on-chain.
-3. Update the `contract_id` in the registry if the address changed.
-4. Resume indexing.
+1. Deploy and verify the upgrade on-chain.
+1. Update the `contract_id` in the registry if the address changed.
+1. Resume indexing.
 
 ### Automated pause on silence
 

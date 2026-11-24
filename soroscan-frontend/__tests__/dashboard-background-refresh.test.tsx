@@ -1,5 +1,4 @@
-import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { EventExplorerDashboard } from "@/app/dashboard/components/EventExplorerDashboard";
 
 const showToastMock = jest.fn();

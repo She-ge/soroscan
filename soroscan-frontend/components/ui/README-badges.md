@@ -1,10 +1,12 @@
 # Badge and StatusIndicator Components
 
-This document describes the reusable Badge and StatusIndicator components that provide consistent status visualization across the SoroScan application.
+This document describes the reusable Badge and StatusIndicator components that provide consistent status visualization
+across the SoroScan application.
 
 ## Overview
 
-Both components are designed to work together to provide clear, scannable visual representation of status fields (active, failed, pending) and other categorization needs throughout the application.
+Both components are designed to work together to provide clear, scannable visual representation of status fields
+(active, failed, pending) and other categorization needs throughout the application.
 
 ## Components
 
@@ -13,6 +15,7 @@ Both components are designed to work together to provide clear, scannable visual
 A static label with background, border, and optional icon support.
 
 **Features:**
+
 - Size variants: `sm`, `md`, `lg`
 - Color variants: `default`, `primary`, `secondary`, `success`, `warning`, `danger`, `outline`
 - Icon support with automatic sizing
@@ -20,6 +23,7 @@ A static label with background, border, and optional icon support.
 - Full accessibility support
 
 **Usage:**
+
 ```tsx
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle } from "lucide-react";
@@ -43,6 +47,7 @@ import { CheckCircle } from "lucide-react";
 An animated status indicator with color-coded dots and labels.
 
 **Features:**
+
 - Status types: `active`, `failed`, `pending`, `inactive`
 - Animated pulsing dots for active/pending states
 - Color coding: green (active), red (failed), yellow (pending), gray (inactive)
@@ -51,6 +56,7 @@ An animated status indicator with color-coded dots and labels.
 - Dot-only mode for minimal display
 
 **Usage:**
+
 ```tsx
 import { StatusIndicator } from "@/components/ui/status-indicator";
 
@@ -72,7 +78,7 @@ import { StatusIndicator } from "@/components/ui/status-indicator";
 The components follow consistent color coding throughout the application:
 
 - **Green (`terminal-green`)**: Active, Success, Healthy states
-- **Red (`terminal-danger`)**: Failed, Error, Critical states  
+- **Red (`terminal-danger`)**: Failed, Error, Critical states
 - **Yellow (`terminal-warning`)**: Pending, Processing, Warning states
 - **Gray (`terminal-gray`)**: Inactive, Neutral, Default states
 - **Cyan (`terminal-cyan`)**: Secondary, Information states
@@ -110,8 +116,12 @@ Used for event status and categorization:
 <div className="flex items-center gap-4">
   <StatusIndicator status="active" size="sm" dotOnly />
   <span>Transfer Event</span>
-  <Badge variant="primary" size="sm">High Priority</Badge>
-  <Badge variant="secondary" size="sm" icon={Zap}>Real-time</Badge>
+  <Badge variant="primary" size="sm">
+    High Priority
+  </Badge>
+  <Badge variant="secondary" size="sm" icon={Zap}>
+    Real-time
+  </Badge>
 </div>
 ```
 
@@ -130,7 +140,9 @@ Used for delivery status and timing information:
     <Badge variant="success" icon={CheckCircle} size="sm">
       Delivered
     </Badge>
-    <Badge variant="outline" size="sm">2min ago</Badge>
+    <Badge variant="outline" size="sm">
+      2min ago
+    </Badge>
   </div>
 </div>
 ```
@@ -171,6 +183,7 @@ Comprehensive test suites are included for both components:
 - **Visual regression tests**: Ensure consistent styling
 
 Test files:
+
 - `components/ui/badge.test.tsx`
 - `components/ui/status-indicator.test.tsx`
 - `components/ui/badge-status-examples.test.tsx`

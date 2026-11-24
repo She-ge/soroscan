@@ -9,6 +9,7 @@ GET /api/webhooks/
 ```
 
 **Response:**
+
 ```json
 {
   "count": 3,
@@ -34,6 +35,7 @@ POST /api/webhooks/
 ```
 
 **Request Body:**
+
 ```json
 {
   "url": "https://your-app.com/webhook",
@@ -44,6 +46,7 @@ POST /api/webhooks/
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "wh_abc123",
@@ -68,6 +71,7 @@ PATCH /api/webhooks/{id}/
 ```
 
 **Request Body (partial):**
+
 ```json
 {
   "active": false
@@ -89,6 +93,7 @@ GET /api/webhooks/{id}/deliveries/
 ```
 
 **Response:**
+
 ```json
 {
   "count": 150,

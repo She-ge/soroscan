@@ -11,10 +11,10 @@
 Make the Event Explorer and Admin Dashboard scannable with clear hierarchy:
 
 1. Filter controls live in a dedicated sidebar (desktop) / drawer (mobile).
-2. Primary content (tables, charts, logs) occupies the main column.
-3. Navigation uses icon + label with visible hover/active states.
-4. Cards/panels share one spacing, border, and elevation system.
-5. Data tables use consistent column widths and row height.
+1. Primary content (tables, charts, logs) occupies the main column.
+1. Navigation uses icon + label with visible hover/active states.
+1. Cards/panels share one spacing, border, and elevation system.
+1. Data tables use consistent column widths and row height.
 
 ---
 
@@ -119,9 +119,9 @@ Import these into Figma as SVG frames if a Figma file is required for design rev
 ## Responsive rules
 
 1. `<640px`: hide desktop nav sidebar; hamburger + drawer. Filters → toggle + right drawer. Content stacks.
-2. `≥640px`: show nav sidebar (240px) and filter sidebar (280px).
-3. `≥1024px`: admin charts/logs use 3-column split.
-4. Touch targets ≥44×44px on all interactive chrome.
+1. `≥640px`: show nav sidebar (240px) and filter sidebar (280px).
+1. `≥1024px`: admin charts/logs use 3-column split.
+1. Touch targets ≥44×44px on all interactive chrome.
 
 ---
 

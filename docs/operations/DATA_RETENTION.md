@@ -9,26 +9,26 @@ archival process, and how to restore archived events back into PostgreSQL.
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Retention Policy Model](#retention-policy-model)
-3. [Configuring Retention](#configuring-retention)
+1. [Retention Policy Model](#retention-policy-model)
+1. [Configuring Retention](#configuring-retention)
    - [Global Default (Environment Variable)](#global-default-environment-variable)
    - [Global Default (Database Policy)](#global-default-database-policy)
    - [Per-Contract Override](#per-contract-override)
-4. [Automated S3 Batch Archival](#automated-s3-batch-archival)
+1. [Automated S3 Batch Archival](#automated-s3-batch-archival)
    - [How It Works](#how-it-works)
    - [S3 Object Layout](#s3-object-layout)
    - [Batch Size and Limits](#batch-size-and-limits)
    - [Required AWS Configuration](#required-aws-configuration)
-5. [Pruning Without Archival](#pruning-without-archival)
-6. [Restore Endpoint](#restore-endpoint)
+1. [Pruning Without Archival](#pruning-without-archival)
+1. [Restore Endpoint](#restore-endpoint)
    - [Authentication](#authentication)
    - [Request](#request)
    - [Response](#response)
    - [Idempotency](#idempotency)
    - [Audit Log](#audit-log)
-7. [Archival Audit Log](#archival-audit-log)
-8. [Monitoring](#monitoring)
-9. [Frequently Asked Questions](#frequently-asked-questions)
+1. [Archival Audit Log](#archival-audit-log)
+1. [Monitoring](#monitoring)
+1. [Frequently Asked Questions](#frequently-asked-questions)
 
 ---
 
@@ -38,9 +38,9 @@ SoroScan stores every indexed `ContractEvent` in PostgreSQL. For long-running
 deployments, this table grows continuously. The retention system:
 
 1. Identifies events older than a configured threshold.
-2. Serialises them to gzip-compressed JSON and uploads to S3 (cold storage).
-3. Deletes the source rows from PostgreSQL.
-4. Records every action in an `ArchivalAuditLog`.
+1. Serialises them to gzip-compressed JSON and uploads to S3 (cold storage).
+1. Deletes the source rows from PostgreSQL.
+1. Records every action in an `ArchivalAuditLog`.
 
 Events can be restored from S3 at any time via the REST API.
 
@@ -126,8 +126,8 @@ DataRetentionPolicy.objects.create(
 **Policy resolution order:**
 
 1. If a `DataRetentionPolicy` exists for the specific contract → use it.
-2. Otherwise fall back to the global policy (`contract=null`).
-3. If no database policy exists at all, `prune_events` uses `EVENT_RETENTION_DAYS`.
+1. Otherwise fall back to the global policy (`contract=null`).
+1. If no database policy exists at all, `prune_events` uses `EVENT_RETENTION_DAYS`.
 
 ---
 
@@ -139,13 +139,13 @@ The `archive_old_events` Celery task runs **daily** via Celery Beat (schedule:
 `86400` seconds). For each `DataRetentionPolicy` where `archive_enabled=True`:
 
 1. Compute the cutoff: `now() - retention_days`.
-2. Select up to **10 000 events** ordered by `timestamp` that predate the cutoff
+1. Select up to **10 000 events** ordered by `timestamp` that predate the cutoff
    (scoped to the policy's contract, or all contracts for the global policy).
-3. Serialise the rows to JSON and compress with gzip.
-4. Upload the compressed object to S3.
-5. Create an `ArchivedEventBatch` record pointing to the S3 key.
-6. Delete the archived rows from PostgreSQL.
-7. Repeat steps 2–6 until no events remain before the cutoff.
+1. Serialise the rows to JSON and compress with gzip.
+1. Upload the compressed object to S3.
+1. Create an `ArchivedEventBatch` record pointing to the S3 key.
+1. Delete the archived rows from PostgreSQL.
+1. Repeat steps 2–6 until no events remain before the cutoff.
 
 Each iteration is processed in a tight loop so that a single task run drains the
 full backlog, even if many batches are required.

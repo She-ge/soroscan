@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { SoroScanClient, SoroScanError } from "../src/client.js";
+import {
+  SoroScanClient,
+  SoroScanError,
+  SoroScanAuthenticationError,
+} from "../src/client.js";
 import type { IndexerStats } from "../src/types.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,11 +84,15 @@ describe("getIndexerStats() — SC-13", () => {
     expect(result.eventsRecorded).toBe(0);
   });
 
-  it("throws SoroScanError on 401 unauthorized", async () => {
+  it("throws SoroScanAuthenticationError on 401 unauthorized", async () => {
     mockFetch({ code: "UNAUTHORIZED", message: "Invalid API key" }, 401);
-    await expect(
-      makeClient().getIndexerStats(INDEXER_ADDRESS)
-    ).rejects.toMatchObject({ name: "SoroScanError", statusCode: 401 });
+    const error = await makeClient()
+      .getIndexerStats(INDEXER_ADDRESS)
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(SoroScanError);
+    expect(error).toBeInstanceOf(SoroScanAuthenticationError);
+    expect(error).toMatchObject({ statusCode: 401, code: "UNAUTHORIZED" });
   });
 
   it("throws SoroScanError on 404 not found", async () => {

@@ -342,9 +342,10 @@ export async function clearAuth(page: Page) {
 /**
  * Visual regression helper.
  * - Chromium only (Firefox still runs functional coverage).
- * - Locally compares against committed baselines.
- * - In CI, attaches a full-page screenshot without failing on missing
- *   linux baselines (win32 baselines are committed for local runs).
+ * - Compares against the committed baseline for the current platform
+ *   (`*-chromium-linux.png` in CI, `*-chromium-win32.png` locally on Windows).
+ * - Regenerate baselines with `pnpm run test:e2e:update-snapshots` in the same
+ *   environment as the target baselines (see tests/README.md).
  */
 export async function expectVisualSnapshot(
   page: Page,
@@ -352,12 +353,6 @@ export async function expectVisualSnapshot(
   testInfo: import("@playwright/test").TestInfo,
 ) {
   testInfo.skip(testInfo.project.name !== "chromium", "Visual baselines are Chromium-only");
-
-  if (process.env.CI) {
-    const shot = await page.screenshot({ fullPage: true, animations: "disabled" });
-    await testInfo.attach(name, { body: shot, contentType: "image/png" });
-    return;
-  }
 
   await expect(page).toHaveScreenshot(name, { fullPage: true });
 }

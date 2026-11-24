@@ -15,22 +15,26 @@ cd django-backend
 ```
 
 Full seed with default fixture:
+
 ```bash
 python manage.py seed_database
 ```
 
 Use a custom fixture file:
+
 ```bash
 python manage.py seed_database --fixture=fixtures/custom.json
 ```
 
 Use a predefined scenario:
+
 ```bash
 python manage.py seed_database --scenario=minimal
 python manage.py seed_database --scenario=webhook
 ```
 
 Clear all seeded data before re-seeding:
+
 ```bash
 python manage.py seed_database --clear
 ```
@@ -83,56 +87,67 @@ cd django-backend
 ```
 
 Basic replay (dispatches to all active webhooks):
+
 ```bash
 python manage.py replay_events --contract=CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2KZ --limit=10
 ```
 
 Dry run preview (no HTTP calls):
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --dry-run
 ```
 
 Replay against remote workers while preserving original timestamps:
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --environment=remote --limit=25
 ```
 
 Re-run full event processing (webhooks + alerts + CDC) instead of webhook-only:
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --target=processing --limit=10
 ```
 
 Filter by event type:
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --event-type=swap
 ```
 
 Filter by ledger range:
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --from-ledger=100 --to-ledger=1000
 ```
 
 Filter by original event timestamp range:
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --from-date=2025-01-01 --to-date=2025-01-31
 ```
 
 Replay a single stored event:
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --event-id=42
 ```
 
 Replay to a single webhook:
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --webhook-id=3
 ```
 
 Sleep between events using the original timestamp gaps (capped by `--max-delay`):
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --realtime --max-delay=5 --limit=20
 ```
 
 Write delivery-status report to JSON:
+
 ```bash
 python manage.py replay_events --contract=CAAAA... --output-json=replay_report.json
 ```
@@ -152,26 +167,31 @@ cd django-backend
 ```
 
 CSV import:
+
 ```bash
 python manage.py bulk_import_metadata --input=contracts.csv --format=csv
 ```
 
 JSON import:
+
 ```bash
 python manage.py bulk_import_metadata --input=contracts.json --format=json
 ```
 
 Dry run (validate without changing DB):
+
 ```bash
 python manage.py bulk_import_metadata --input=contracts.csv --dry-run
 ```
 
 Skip errors instead of rolling back:
+
 ```bash
 python manage.py bulk_import_metadata --input=contracts.csv --on-error=skip
 ```
 
 Write import report:
+
 ```bash
 python manage.py bulk_import_metadata --input=contracts.csv --report=import_report.json
 ```
@@ -212,11 +232,13 @@ cd scripts/backup
 ```
 
 Full test (verify + restore):
+
 ```bash
 python test_backup.py --bucket=soroscan-backups --prefix=pg-backups --db-url=postgresql://...
 ```
 
 Or use environment variables:
+
 ```bash
 export DATABASE_URL=postgresql://user:pass@host:5432/dbname
 export S3_BUCKET=soroscan-backups
@@ -225,26 +247,31 @@ python test_backup.py full-test
 ```
 
 Verify only (no restore):
+
 ```bash
 python test_backup.py verify-only
 ```
 
 Restore only:
+
 ```bash
 python test_backup.py restore-only --s3-key=pg-backups/20250101.dump.gz
 ```
 
 Print manual runbook:
+
 ```bash
 python test_backup.py --runbook
 ```
 
 Write test report to JSON:
+
 ```bash
 python test_backup.py full-test --output=backup_report.json
 ```
 
 Alerting:
+
 - Set `SLACK_WEBHOOK_URL` to receive alerts on test failure.
 - Results include RTO (restore duration) and RPO (time since backup) in seconds.
 

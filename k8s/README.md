@@ -30,18 +30,18 @@ storage settings, and hostnames to match your environment before applying.
 
 1. Install prerequisite operators and CRDs, configure external PostgreSQL and
    Redis, and prepare the image registry and credentials.
-2. Create the namespace:
+1. Create the namespace:
 
    ```bash
    kubectl apply -f k8s/namespace.yaml
    ```
 
-3. Create the application configuration and credentials. Apply
+1. Create the application configuration and credentials. Apply
    `configmap.yaml`; create the `soroscan-secrets` Secret directly or apply
    `secret-reference.yaml` after configuring its `SecretStore`. If using
    backups, also apply `backup-configmap.yaml` and provide the required storage
    credentials.
-4. Apply the application workloads and their services:
+1. Apply the application workloads and their services:
 
    ```bash
    kubectl apply -f k8s/serviceaccount.yaml
@@ -66,13 +66,13 @@ storage settings, and hostnames to match your environment before applying.
    | `soroscan-worker-low` | 1 | 4 | 75% |
    | `soroscan-worker-backfill` | 1 | 3 | 75% |
 
-5. Apply `ingress.yaml` after configuring its hostname, ingress class, and TLS
+1. Apply `ingress.yaml` after configuring its hostname, ingress class, and TLS
    Secret.
-6. Apply `backup-cronjob.yaml` only after configuring the backup image, bucket,
+1. Apply `backup-cronjob.yaml` only after configuring the backup image, bucket,
    credentials, and `backup-configmap.yaml`.
-7. Apply `servicemonitor.yaml` and `prometheus-rules.yaml` after the Prometheus
+1. Apply `servicemonitor.yaml` and `prometheus-rules.yaml` after the Prometheus
    Operator CRDs and selector labels are in place.
-8. Import `grafana-dashboard.json` into Grafana separately. Files in
+1. Import `grafana-dashboard.json` into Grafana separately. Files in
    `grafana-templates/` are dashboard templates, not Kubernetes resources.
 
 ## Manifest inventory

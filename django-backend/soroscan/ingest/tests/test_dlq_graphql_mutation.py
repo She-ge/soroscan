@@ -20,10 +20,10 @@ from .factories import (
 
 User = get_user_model()
 
-# `ContractEventFactory` otherwise uses `Faker("date_time")`, which yields
-# random (often pre-2026) dates, and `ContractEvent` is range-partitioned on
-# timestamp with hard-coded 2026-08/2026-09 partitions. A fixed recent date
-# keeps these fixtures deterministic and independent of that partitioning.
+# `ContractEvent` is range-partitioned on timestamp with hard-coded 2026-08 and
+# 2026-09 partitions. Pin these fixtures to a date inside that window so they
+# stay deterministic instead of depending on the factory's `timezone.now()`
+# default (which can fall outside the pre-created partitions).
 EVENT_TIMESTAMP = datetime(2026, 9, 15, 12, 0, 0, tzinfo=timezone.utc)
 
 REPLAY_MUTATION = """

@@ -54,12 +54,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect SDK code changes
+    runs-on: ubuntu-latest
+    outputs:
+      integration: ${{ steps.filter.outputs.integration }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "integration=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BASE_SHA="$BEFORE_SHA"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE_SHA="$PR_BASE_SHA"
+          fi
+
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+            echo "integration=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files=$(git diff --name-only "$BASE_SHA" "$CURRENT_SHA")
+          if printf '%s\n' "$changed_files" | grep -Eq \
+            '^(sdk/python/.*\.(py|pyi)|sdk/python/(pyproject\.toml|requirements[^/]*\.txt)|sdk/typescript/(src|test)/.*\.(ts|tsx)|sdk/typescript/(package(-lock)?\.json|tsconfig[^/]*\.json|vitest\.config\.ts)|django-backend/.*\.(py|pyi|toml|txt|cfg|ini|yaml|yml|json))'; then
+            echo "integration=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "integration=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # ──────────────────────────────────────────────────────────────────────────
   # Start the Django backend and wait for it to be healthy
   # ──────────────────────────────────────────────────────────────────────────
   backend:
     name: Launch test backend
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.integration == 'true' }}
     outputs:
       base-url: http://localhost:8000
     services:
@@ -186,8 +228,8 @@ jobs:
   python-sdk-integration:
     name: Python SDK integration
     runs-on: ubuntu-latest
-    needs: backend
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.python_sdk }}
+    needs: [backend, changes]
+    if: ${{ needs.changes.outputs.integration == 'true' && (github.event_name != 'workflow_dispatch' || inputs.python_sdk) }}
     services:
       postgres:
         image: postgres:15
@@ -286,8 +328,8 @@ jobs:
   typescript-sdk-integration:
     name: TypeScript SDK integration
     runs-on: ubuntu-latest
-    needs: backend
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.typescript_sdk }}
+    needs: [backend, changes]
+    if: ${{ needs.changes.outputs.integration == 'true' && (github.event_name != 'workflow_dispatch' || inputs.typescript_sdk) }}
     services:
       postgres:
         image: postgres:15

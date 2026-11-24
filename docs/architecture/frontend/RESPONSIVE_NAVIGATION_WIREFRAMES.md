@@ -2,35 +2,42 @@
 
 Issue: #966
 
-This document is the design handoff for SoroScan's responsive dashboard navigation at **375 px** and **768 px** viewports. It covers the application navigation drawer, responsive filter controls, and the transformation of event tables into cards.
+This document is the design handoff for SoroScan's responsive dashboard navigation at **375 px** and **768 px**
+viewports. It covers the application navigation drawer, responsive filter controls, and the transformation of event
+tables into cards.
 
 > Figma prototype: **(link to be added)**
 >
-> The repository SVG frames below are the source-of-truth wireframes and are ready to import into Figma. Replace the placeholder only after the imported frames are wired as a prototype and the share URL is available.
+> The repository SVG frames below are the source-of-truth wireframes and are ready to import into Figma. Replace the
+> placeholder only after the imported frames are wired as a prototype and the share URL is available.
 
 ## Wireframe frames
 
-| Viewport / state | Source |
-| --- | --- |
-| 375 px — dashboard | [`mockups/responsive-navigation-375.svg`](./mockups/responsive-navigation-375.svg) |
+| Viewport / state                | Source                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 375 px — dashboard              | [`mockups/responsive-navigation-375.svg`](./mockups/responsive-navigation-375.svg)               |
 | 375 px — navigation drawer open | [`mockups/responsive-navigation-375-drawer.svg`](./mockups/responsive-navigation-375-drawer.svg) |
-| 768 px — dashboard | [`mockups/responsive-navigation-768.svg`](./mockups/responsive-navigation-768.svg) |
+| 768 px — dashboard              | [`mockups/responsive-navigation-768.svg`](./mockups/responsive-navigation-768.svg)               |
 | 768 px — navigation drawer open | [`mockups/responsive-navigation-768-drawer.svg`](./mockups/responsive-navigation-768-drawer.svg) |
 
-The wireframes use the same dark, terminal-oriented visual language as the rest of the dashboard design documentation. They are intentionally low-fidelity: spacing, hierarchy, interaction, and responsive behavior are specified without locking implementation to a final visual treatment.
+The wireframes use the same dark, terminal-oriented visual language as the rest of the dashboard design documentation.
+They are intentionally low-fidelity: spacing, hierarchy, interaction, and responsive behavior are specified without
+locking implementation to a final visual treatment.
 
 ## Responsive behavior
 
-| Area | 375 px | 768 px | 1024 px and above |
-| --- | --- | --- | --- |
-| Application navigation | Hidden by default; opened from hamburger button into a left overlay drawer | Hidden by default; opened from hamburger button into a wider left overlay drawer | Persistent sidebar |
-| Drawer width | 320 px, capped at 85vw | 360 px, capped at 85vw | Not applicable |
-| Search | Full width | Full width | May share a toolbar row |
-| Filters | Primary `Filters (n)` button; detailed filters open in a secondary filter surface | Compact inline filter bar plus `More filters (n)` | Full filter controls/sidebar |
-| Event results | One-column cards | Two-column cards | Data table |
-| Primary actions | Full-width or icon + label | Compact controls | Desktop controls |
+| Area                   | 375 px                                                                            | 768 px                                                                           | 1024 px and above            |
+| ---------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------- |
+| Application navigation | Hidden by default; opened from hamburger button into a left overlay drawer        | Hidden by default; opened from hamburger button into a wider left overlay drawer | Persistent sidebar           |
+| Drawer width           | 320 px, capped at 85vw                                                            | 360 px, capped at 85vw                                                           | Not applicable               |
+| Search                 | Full width                                                                        | Full width                                                                       | May share a toolbar row      |
+| Filters                | Primary `Filters (n)` button; detailed filters open in a secondary filter surface | Compact inline filter bar plus `More filters (n)`                                | Full filter controls/sidebar |
+| Event results          | One-column cards                                                                  | Two-column cards                                                                 | Data table                   |
+| Primary actions        | Full-width or icon + label                                                        | Compact controls                                                                 | Desktop controls             |
 
-The recommended breakpoint keeps the persistent application sidebar out of the 768 px layout so the event content remains usable. The current implementation can treat this document as the target handoff for a later responsive-navigation implementation task; this issue changes design assets and documentation only.
+The recommended breakpoint keeps the persistent application sidebar out of the 768 px layout so the event content
+remains usable. The current implementation can treat this document as the target handoff for a later
+responsive-navigation implementation task; this issue changes design assets and documentation only.
 
 ## Navigation drawer interaction
 
@@ -46,16 +53,17 @@ The recommended breakpoint keeps the persistent application sidebar out of the 7
 - A dimmed backdrop covers the remaining viewport.
 - Width is 320 px at 375 px and 360 px at 768 px, with a maximum width of 85vw.
 - The current route is visually distinct from inactive routes.
-- Navigation grouping and labels follow the dashboard information architecture: Events, Performance, Multi-Region, Live Stream, Contracts, Webhooks, Organization, Admin, and Settings.
+- Navigation grouping and labels follow the dashboard information architecture: Events, Performance, Multi-Region, Live
+  Stream, Contracts, Webhooks, Organization, Admin, and Settings.
 
 ### Close behavior
 
 The drawer closes when the user:
 
 1. activates the close button,
-2. activates the backdrop,
-3. presses `Escape`, or
-4. chooses a destination that causes navigation.
+1. activates the backdrop,
+1. presses `Escape`, or
+1. chooses a destination that causes navigation.
 
 After closing, keyboard focus returns to the hamburger trigger.
 
@@ -83,12 +91,12 @@ The desktop event table becomes cards below 1024 px.
 Each event card preserves the most important table information in this order:
 
 1. event type and event/status icon,
-2. relative or absolute timestamp,
-3. contract ID,
-4. ledger sequence,
-5. transaction hash,
-6. event topics/tags,
-7. row-level actions where available.
+1. relative or absolute timestamp,
+1. contract ID,
+1. ledger sequence,
+1. transaction hash,
+1. event topics/tags,
+1. row-level actions where available.
 
 Long identifiers use the existing truncated presentation, while copy actions must retain the complete identifier.
 
@@ -104,12 +112,14 @@ Long identifiers use the existing truncated presentation, while copy actions mus
 
 - Two-column card grid when enough usable content width remains.
 - Gap: 20–24 px.
-- If localization, zoom, or container width makes the cards too narrow, fall back to a single column instead of truncating labels aggressively.
+- If localization, zoom, or container width makes the cards too narrow, fall back to a single column instead of
+  truncating labels aggressively.
 
 ### Card activation
 
 - Selecting a card opens the same event detail destination as selecting a desktop table row.
-- Nested controls such as copy buttons, selection checkboxes, menus, and external links must not also trigger card navigation.
+- Nested controls such as copy buttons, selection checkboxes, menus, and external links must not also trigger card
+  navigation.
 
 ## Filter bars
 
@@ -121,7 +131,8 @@ The compact filter toolbar contains:
 - sort control,
 - active-filter count.
 
-The detailed filter surface should present the existing contract, event type, date/time, ledger, and topic controls in a single vertical column. `Apply filters` and `Clear` remain easy to reach without scrolling back to the top.
+The detailed filter surface should present the existing contract, event type, date/time, ledger, and topic controls in a
+single vertical column. `Apply filters` and `Clear` remain easy to reach without scrolling back to the top.
 
 ### 768 px
 
@@ -147,7 +158,9 @@ The `More filters` control opens the remaining filters without reducing the resu
 - Preserve strong contrast on the dark dashboard surface.
 - Avoid relying on color alone for event or health state.
 - Pair state icons with text or an accessible label.
-- Use the icon set in [`../../design-specs/assets/soroban-event-status-icons/README.md`](../../design-specs/assets/soroban-event-status-icons/README.md) where a semantic event/status icon is needed.
+- Use the icon set in
+  [`../../design-specs/assets/soroban-event-status-icons/README.md`](../../design-specs/assets/soroban-event-status-icons/README.md)
+  where a semantic event/status icon is needed.
 
 ## Figma prototype setup
 
@@ -167,11 +180,15 @@ Wire the prototype as follows:
 - backdrop → corresponding `Dashboard` frame,
 - use a smart-animate or move-in transition from the left when motion is enabled.
 
-Set `375 / Dashboard` as the mobile flow starting point and `768 / Dashboard` as the tablet flow starting point. Publish/share the prototype and replace the placeholder at the top of this file with the Figma prototype URL.
+Set `375 / Dashboard` as the mobile flow starting point and `768 / Dashboard` as the tablet flow starting point.
+Publish/share the prototype and replace the placeholder at the top of this file with the Figma prototype URL.
 
 ## Developer handoff boundaries
 
-This contribution is a **design specification**. It intentionally does not change application breakpoints, React components, table rendering code, or filter logic. The implementation task can use the source wireframes and rules here to update the existing application shell, drawer, filters, and event-result components without mixing implementation changes into issue #966.
+This contribution is a **design specification**. It intentionally does not change application breakpoints, React
+components, table rendering code, or filter logic. The implementation task can use the source wireframes and rules here
+to update the existing application shell, drawer, filters, and event-result components without mixing implementation
+changes into issue #966.
 
 ## Related documentation
 

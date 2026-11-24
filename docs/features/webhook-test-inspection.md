@@ -1,10 +1,13 @@
 # Webhook Test UI & Request/Response Inspection
 
-This document describes the architecture and capabilities of the Webhook Testing interface in the SoroScan Admin Dashboard (`admin/app/webhook-tester/`).
+This document describes the architecture and capabilities of the Webhook Testing interface in the SoroScan Admin
+Dashboard (`admin/app/webhook-tester/`).
 
 ## Overview
 
-The Webhook Tester interface provides administrators and developers with real-time tooling to test, inspect, and troubleshoot webhook endpoints. It supports payload editing, live execution, detailed request/response header inspection, latency timing breakdowns, and one-click replay.
+The Webhook Tester interface provides administrators and developers with real-time tooling to test, inspect, and
+troubleshoot webhook endpoints. It supports payload editing, live execution, detailed request/response header
+inspection, latency timing breakdowns, and one-click replay.
 
 ## Key Capabilities
 
@@ -18,8 +21,10 @@ The Webhook Tester interface provides administrators and developers with real-ti
 
 The response viewer provides tabbed inspection:
 
-- **Response Tab**: Displays the HTTP response status code, status text, response headers, and formatted JSON response body.
-- **Request Tab**: Displays the exact HTTP request headers transmitted (e.g., `Content-Type`, `X-SoroScan-Signature`, `X-SoroScan-Event-ID`) and request metadata.
+- **Response Tab**: Displays the HTTP response status code, status text, response headers, and formatted JSON response
+  body.
+- **Request Tab**: Displays the exact HTTP request headers transmitted (e.g., `Content-Type`, `X-SoroScan-Signature`,
+  `X-SoroScan-Event-ID`) and request metadata.
 
 ### 3. Timing & Latency Breakdown
 
@@ -36,7 +41,8 @@ The inspection panel surfaces timing metrics:
 When testing or debugging intermittent subscriber failures:
 
 - The `retryLastRequest()` function retains the last-sent webhook configuration and payload in state.
-- A dedicated **Retry** button is available in the payload editor footer, the response viewer header, and error notification banners.
+- A dedicated **Retry** button is available in the payload editor footer, the response viewer header, and error
+  notification banners.
 - Clicking Retry re-executes the exact payload without requiring manual re-entry or copy-pasting.
 
 ## Component Architecture

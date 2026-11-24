@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState, useEffect, useRef, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Play,

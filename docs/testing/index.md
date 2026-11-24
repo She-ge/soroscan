@@ -4,10 +4,12 @@ This guide documents SoroScan's testing strategy across the backend, frontend, c
 
 ## Testing Strategy Overview
 
-- Testing pyramid: unit tests for fast validation, integration tests for subsystem behavior, end-to-end tests for full workflows.
+- Testing pyramid: unit tests for fast validation, integration tests for subsystem behavior, end-to-end tests for full
+  workflows.
 - Coverage goals: use targeted coverage metrics for critical business logic and key API surfaces.
 - Test data management: prefer fixtures, factories, and isolated database state.
-- Mocking and stubbing: mock external services and blockchain RPC responses while keeping contract and integration tests realistic.
+- Mocking and stubbing: mock external services and blockchain RPC responses while keeping contract and integration tests
+  realistic.
 
 ## Backend Testing Guide (Django)
 
@@ -57,15 +59,15 @@ def api_client(client, django_user_model):
 Example component test:
 
 ```tsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import EventCard from '@/components/EventCard';
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import EventCard from "@/components/EventCard";
 
-it('renders event fields and responds to click', async () => {
-  render(<EventCard event={{ id: '1', name: 'Transfer', block: 123 }} />);
+it("renders event fields and responds to click", async () => {
+  render(<EventCard event={{ id: "1", name: "Transfer", block: 123 }} />);
 
-  expect(screen.getByText('Transfer')).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: /details/i }));
+  expect(screen.getByText("Transfer")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /details/i }));
   expect(screen.getByText(/block 123/i)).toBeVisible();
 });
 ```
@@ -118,11 +120,9 @@ pnpm exec playwright test
 ## Pact Contract Testing
 
 - Consumer-driven contracts keep the SDKs and the Django API in sync.
-- Consumer tests in `sdk/typescript` and `sdk/python` generate `pacts/*.json`;
-  the Django provider verifies them in CI.
-- See [pact-contract-testing.md](pact-contract-testing.md) for the full
-  consumer/provider guide, local and CI commands, and mismatch debugging.
-
+- Consumer tests in `sdk/typescript` and `sdk/python` generate `pacts/*.json`; the Django provider verifies them in CI.
+- See [pact-contract-testing.md](pact-contract-testing.md) for the full consumer/provider guide, local and CI commands,
+  and mismatch debugging.
 
 ## Cross-Team Notes
 

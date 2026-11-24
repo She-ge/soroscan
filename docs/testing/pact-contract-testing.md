@@ -12,13 +12,13 @@ locally and in CI, and how to debug contract mismatches.
 1. **Consumer tests generate contracts.** Each SDK runs Pact consumer tests
    against a mock provider local to the test process. Passing interactions are
    written as JSON pact files into `pacts/` at the repo root.
-2. **Contracts are committed.** Generated pact files live in `pacts/` and are
+1. **Contracts are committed.** Generated pact files live in `pacts/` and are
    reviewed like code. SoroScan does not use a Pact Broker; the committed files
    are the source of truth.
-3. **The provider verifies contracts.** The Django API replays every recorded
+1. **The provider verifies contracts.** The Django API replays every recorded
    interaction against a real test server (Django `live_server`) with real
    database state seeded through the provider-states endpoint.
-4. **CI wires it together.** The consumer jobs run first, upload the generated
+1. **CI wires it together.** The consumer jobs run first, upload the generated
    pacts as artifacts, and the provider job downloads them and verifies them.
 
 ## Repo layout
@@ -93,8 +93,8 @@ Adding a new provider state:
 
 1. Register the state name in `pact_provider.py` and have it create/delete the
    fixtures the interaction needs.
-2. Reference the same state name in the consumer tests with `given(...)`.
-3. Update both SDKs if the interaction is shared; states must match exactly.
+1. Reference the same state name in the consumer tests with `given(...)`.
+1. Update both SDKs if the interaction is shared; states must match exactly.
 
 ## Running locally
 
@@ -139,10 +139,10 @@ This requires reachable PostgreSQL and Redis (see the env vars in
 
 1. **consumer-typescript** — installs the TS SDK, runs `npm run test:pact`,
    uploads generated pacts as the `pact-contracts-typescript` artifact.
-2. **consumer-python** — installs the Python SDK with extras, runs
+1. **consumer-python** — installs the Python SDK with extras, runs
    `pytest tests/test_pact_consumer.py`, uploads the
    `pact-contracts-python` artifact.
-3. **provider-verification** — needs both consumer jobs, spins up
+1. **provider-verification** — needs both consumer jobs, spins up
    Postgres 15 + Redis 7 service containers, downloads the pact artifacts,
    installs backend requirements, and runs the provider verification with
    `PACT_PROVIDER_STATES_ENABLED=1` and

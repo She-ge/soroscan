@@ -34,7 +34,7 @@ KAFKA_SCHEMA_REGISTRY_URL=http://schema-registry:8081
 ## Snowflake via Kafka connector
 
 1. Configure SoroScan with Kafka backend (`EVENT_STREAMING_BACKEND=kafka`).
-2. Create Snowflake table and Kafka connector:
+1. Create Snowflake table and Kafka connector:
 
 ```sql
 CREATE TABLE SOROSCAN_EVENTS_RAW (

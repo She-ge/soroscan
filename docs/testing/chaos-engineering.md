@@ -10,9 +10,9 @@ chaos-toolkit are not required.
 By default the harness is dry-run only. Disruptive actions require **all** of:
 
 1. `--execute`
-2. `SOROSCAN_CHAOS_RUN=1`
-3. `SOROSCAN_ENVIRONMENT` not `production`/`prod`
-4. Target namespace on the allow-list (`chaos-testing`, `soroscan-chaos`,
+1. `SOROSCAN_CHAOS_RUN=1`
+1. `SOROSCAN_ENVIRONMENT` not `production`/`prod`
+1. Target namespace on the allow-list (`chaos-testing`, `soroscan-chaos`,
    `soroscan` for staging). Override with `SOROSCAN_CHAOS_ALLOWED_NAMESPACES`.
 
 The default scenario namespace is `chaos-testing`, not the production
@@ -81,8 +81,8 @@ is missing, skip `network_latency` rather than claiming it ran.
 1. Add a scenario to `tests/chaos/scenarios.yaml` with `action.type` in
    `{pod_termination, network_latency, memory_exhaustion, cpu_throttling}`,
    `expected.behavior`, `expected.cleanup`, and a recovery URL.
-2. Extend `build_kubernetes_commands` / `build_compose_commands` if needed.
-3. Add an assertion in `tests/chaos/tests/test_run_chaos.py`.
+1. Extend `build_kubernetes_commands` / `build_compose_commands` if needed.
+1. Add an assertion in `tests/chaos/tests/test_run_chaos.py`.
 
 ## CI
 

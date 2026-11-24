@@ -70,11 +70,11 @@ captured.
 Every `ERROR` log must be actionable without reproducing locally:
 
 1. Include the exception traceback (`logger.exception` or `exc_info=True`).
-2. Include the state that produced it — at minimum the `contract_id` /
+1. Include the state that produced it — at minimum the `contract_id` /
    `tx_hash` / `webhook_id` in scope.
-3. Use stable error categories in a `error_type` field when helpful
+1. Use stable error categories in a `error_type` field when helpful
    (e.g. `rpc_error`, `db_timeout`, `signature_invalid`).
-4. Never swallow exceptions silently.
+1. Never swallow exceptions silently.
 
 ```python
 try:
@@ -116,6 +116,7 @@ Logs MUST never contain secrets or PII.
 ## 7. Examples
 
 ### INFO
+
 ```json
 {
   "timestamp": "2026-08-29T12:00:00Z",
@@ -132,6 +133,7 @@ Logs MUST never contain secrets or PII.
 ```
 
 ### ERROR
+
 ```json
 {
   "timestamp": "2026-08-29T12:05:12Z",

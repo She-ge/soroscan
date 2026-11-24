@@ -1,6 +1,7 @@
 # Performance Tuning Playbook
 
-This playbook gives SoroScan operators a systematic process for diagnosing and resolving performance issues across the full stack — API, database, cache, workers, and blockchain ingestion.
+This playbook gives SoroScan operators a systematic process for diagnosing and resolving performance issues across the
+full stack — API, database, cache, workers, and blockchain ingestion.
 
 ---
 
@@ -55,75 +56,76 @@ graph TD
 
 ### Database (PostgreSQL)
 
-| Symptom | Root Cause | Fix |
-|---------|-----------|-----|
-| Slow `/api/ingest/events/` queries | Missing index on `contract_id` + `ledger_seq` | `CREATE INDEX CONCURRENTLY idx_event_contract_ledger ON ingest_eventrecord(contract_id, ledger_seq DESC)` |
-| High I/O on stats queries | Unoptimized `COUNT(*)` without partial index | Add partial indexes for `is_active=True` filters |
-| Connection exhaustion | Too many Django / Celery processes opening connections | Configure PgBouncer; tune `DB_POOL_MAX_SIZE` |
-| Slow search endpoint | Full table scan on payload JSON | Ensure GIN index on `payload` jsonb column |
+| Symptom                            | Root Cause                                             | Fix                                                                                                       |
+| ---------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Slow `/api/ingest/events/` queries | Missing index on `contract_id` + `ledger_seq`          | `CREATE INDEX CONCURRENTLY idx_event_contract_ledger ON ingest_eventrecord(contract_id, ledger_seq DESC)` |
+| High I/O on stats queries          | Unoptimized `COUNT(*)` without partial index           | Add partial indexes for `is_active=True` filters                                                          |
+| Connection exhaustion              | Too many Django / Celery processes opening connections | Configure PgBouncer; tune `DB_POOL_MAX_SIZE`                                                              |
+| Slow search endpoint               | Full table scan on payload JSON                        | Ensure GIN index on `payload` jsonb column                                                                |
 
 ### Application (Django / Celery)
 
-| Symptom | Root Cause | Fix |
-|---------|-----------|-----|
-| Slow contract detail view | N+1 ORM queries | Use `select_related('transaction')` / `prefetch_related('events')` |
-| Worker crash / OOM | Unbounded queryset in task | Add `.iterator()` or paginate with `ledger_seq` cursor |
-| RPC timeout in request | Blocking `SorobanClient` call | Offload to Celery task; return `202 Accepted` |
-| High GC pauses | Large in-memory event list | Stream results with Django's `StreamingHttpResponse` |
+| Symptom                   | Root Cause                    | Fix                                                                |
+| ------------------------- | ----------------------------- | ------------------------------------------------------------------ |
+| Slow contract detail view | N+1 ORM queries               | Use `select_related('transaction')` / `prefetch_related('events')` |
+| Worker crash / OOM        | Unbounded queryset in task    | Add `.iterator()` or paginate with `ledger_seq` cursor             |
+| RPC timeout in request    | Blocking `SorobanClient` call | Offload to Celery task; return `202 Accepted`                      |
+| High GC pauses            | Large in-memory event list    | Stream results with Django's `StreamingHttpResponse`               |
 
 ### Cache (Redis)
 
-| Symptom | Root Cause | Fix |
-|---------|-----------|-----|
-| `cache_misses_total` spike after deploy | Cold cache after restart | Run cache warming task before cutover (see §5) |
-| Eviction storm | `maxmemory` policy set to `allkeys-lru` with insufficient RAM | Increase Redis memory or reduce `QUERY_CACHE_TTL_SECONDS` |
-| Inconsistent reads | Stale cache after contract update | Bust cache key on `TrackedContract.save()` signal |
+| Symptom                                 | Root Cause                                                    | Fix                                                       |
+| --------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
+| `cache_misses_total` spike after deploy | Cold cache after restart                                      | Run cache warming task before cutover (see §5)            |
+| Eviction storm                          | `maxmemory` policy set to `allkeys-lru` with insufficient RAM | Increase Redis memory or reduce `QUERY_CACHE_TTL_SECONDS` |
+| Inconsistent reads                      | Stale cache after contract update                             | Bust cache key on `TrackedContract.save()` signal         |
 
 ### Soroban RPC / Ingest
 
-| Symptom | Root Cause | Fix |
-|---------|-----------|-----|
-| `circuit_breaker_trips_total` rising | RPC provider instability | Review `SOROBAN_RPC_URL`; switch to backup RPC |
-| Ledger gaps detected | Polling skipped ledgers under load | Decrease `INGEST_POLL_INTERVAL_SECONDS` or add parallel ingest workers |
-| `events_rate_limited_total` rising | Contract `max_events_per_minute` too low | Increase limit via `PUT /api/ingest/contracts/{pk}/` |
+| Symptom                              | Root Cause                               | Fix                                                                    |
+| ------------------------------------ | ---------------------------------------- | ---------------------------------------------------------------------- |
+| `circuit_breaker_trips_total` rising | RPC provider instability                 | Review `SOROBAN_RPC_URL`; switch to backup RPC                         |
+| Ledger gaps detected                 | Polling skipped ledgers under load       | Decrease `INGEST_POLL_INTERVAL_SECONDS` or add parallel ingest workers |
+| `events_rate_limited_total` rising   | Contract `max_events_per_minute` too low | Increase limit via `PUT /api/ingest/contracts/{pk}/`                   |
 
 ---
 
 ## 3. Monitoring Dashboards to Check
 
-All metrics are exposed at `GET /metrics` (Prometheus). Import the SoroScan Grafana dashboards from `docs/deployment/monitoring.md`.
+All metrics are exposed at `GET /metrics` (Prometheus). Import the SoroScan Grafana dashboards from
+`docs/deployment/monitoring.md`.
 
 ### Core API Health
 
-| Prometheus Metric | Warning Threshold | Indicates |
-|-------------------|-------------------|-----------|
-| `soroscan_http_responses_total{status_class="5xx"}` | > 1% of total | Service errors |
-| `django_http_requests_latency_seconds_by_view_method` p95 | > 500 ms | API slowdown |
-| `soroscan_db_pool_connections{state="active"}` | > 80% of `DB_POOL_MAX_SIZE` | Connection exhaustion |
+| Prometheus Metric                                         | Warning Threshold           | Indicates             |
+| --------------------------------------------------------- | --------------------------- | --------------------- |
+| `soroscan_http_responses_total{status_class="5xx"}`       | > 1% of total               | Service errors        |
+| `django_http_requests_latency_seconds_by_view_method` p95 | > 500 ms                    | API slowdown          |
+| `soroscan_db_pool_connections{state="active"}`            | > 80% of `DB_POOL_MAX_SIZE` | Connection exhaustion |
 
 ### Ingest Pipeline Health
 
-| Prometheus Metric | Warning Threshold | Indicates |
-|-------------------|-------------------|-----------|
-| `soroscan_celery_queue_depth{queue="default"}` | > 5 000 | Workers lagging |
-| `soroscan_ingest_errors_total` rate | > 5/min | Ingest task failures |
-| `soroscan_ledger_gaps_total` rate | > 0 | Missed ledgers |
-| `soroscan_circuit_breaker_trips_total` | Any increment | RPC instability |
+| Prometheus Metric                              | Warning Threshold | Indicates            |
+| ---------------------------------------------- | ----------------- | -------------------- |
+| `soroscan_celery_queue_depth{queue="default"}` | > 5 000           | Workers lagging      |
+| `soroscan_ingest_errors_total` rate            | > 5/min           | Ingest task failures |
+| `soroscan_ledger_gaps_total` rate              | > 0               | Missed ledgers       |
+| `soroscan_circuit_breaker_trips_total`         | Any increment     | RPC instability      |
 
 ### Cache Performance
 
-| Prometheus Metric | Warning Threshold | Indicates |
-|-------------------|-------------------|-----------|
-| `soroscan_cache_hits_total` / (`soroscan_cache_hits_total` + `soroscan_cache_misses_total`) | < 80% | Cold or invalidating cache |
-| Redis `evicted_keys` (via Redis Exporter) | Any sustained evictions | Memory pressure |
+| Prometheus Metric                                                                           | Warning Threshold       | Indicates                  |
+| ------------------------------------------------------------------------------------------- | ----------------------- | -------------------------- |
+| `soroscan_cache_hits_total` / (`soroscan_cache_hits_total` + `soroscan_cache_misses_total`) | < 80%                   | Cold or invalidating cache |
+| Redis `evicted_keys` (via Redis Exporter)                                                   | Any sustained evictions | Memory pressure            |
 
 ### Webhook Delivery
 
-| Prometheus Metric | Warning Threshold | Indicates |
-|-------------------|-------------------|-----------|
-| `soroscan_webhook_sla_total{outcome="missed"}` rate | Any | SLA breach |
-| `soroscan_webhook_dead_letter_depth` | > 10 | Stalled dead-letter queue |
-| `soroscan_webhook_delivery_duration_seconds` p95 | > 30 s | Slow subscriber endpoints |
+| Prometheus Metric                                   | Warning Threshold | Indicates                 |
+| --------------------------------------------------- | ----------------- | ------------------------- |
+| `soroscan_webhook_sla_total{outcome="missed"}` rate | Any               | SLA breach                |
+| `soroscan_webhook_dead_letter_depth`                | > 10              | Stalled dead-letter queue |
+| `soroscan_webhook_delivery_duration_seconds` p95    | > 30 s            | Slow subscriber endpoints |
 
 ---
 
@@ -147,7 +149,8 @@ ORDER BY avg_ms DESC
 LIMIT 10;
 ```
 
-SoroScan also logs queries exceeding `LOGGING_SLOW_QUERIES_THRESHOLD_MS` (default: 100 ms) via `SlowQueryMiddleware`. Check the `soroscan.slow_queries` logger output:
+SoroScan also logs queries exceeding `LOGGING_SLOW_QUERIES_THRESHOLD_MS` (default: 100 ms) via `SlowQueryMiddleware`.
+Check the `soroscan.slow_queries` logger output:
 
 ```bash
 docker logs soroscan-backend 2>&1 | grep "Slow query"
@@ -173,6 +176,7 @@ LIMIT 50;
 ```
 
 Look for:
+
 - `Seq Scan` on large tables → add an index
 - `Hash Join` with high rows estimate → check statistics freshness (`ANALYZE`)
 - High `Buffers: shared hit=0 read=N` → data not in `shared_buffers`; consider `pg_prewarm`
@@ -231,7 +235,8 @@ After adding an index, run `ANALYZE ingest_eventrecord;` so the planner picks it
 
 ### Why Warming Matters
 
-After a Redis restart or first deploy, all cached responses are gone. Incoming requests hit PostgreSQL directly, which can cause a spike in DB load and slow API responses. Pre-warm before traffic arrives.
+After a Redis restart or first deploy, all cached responses are gone. Incoming requests hit PostgreSQL directly, which
+can cause a spike in DB load and slow API responses. Pre-warm before traffic arrives.
 
 ### Manual Cache Warming Script
 
@@ -320,34 +325,33 @@ apt-get install k6     # Debian/Ubuntu
 Create `load-tests/events_read.js`:
 
 ```javascript
-import http from 'k6/http';
-import { check, sleep } from 'k6';
+import http from "k6/http";
+import { check, sleep } from "k6";
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
-const API_KEY  = __ENV.API_KEY  || 'test-key';
+const BASE_URL = __ENV.BASE_URL || "http://localhost:8000";
+const API_KEY = __ENV.API_KEY || "test-key";
 
 export const options = {
   stages: [
-    { duration: '30s', target: 20  },  // ramp up
-    { duration: '2m',  target: 50  },  // sustained load
-    { duration: '30s', target: 100 },  // peak spike
-    { duration: '30s', target: 0   },  // ramp down
+    { duration: "30s", target: 20 }, // ramp up
+    { duration: "2m", target: 50 }, // sustained load
+    { duration: "30s", target: 100 }, // peak spike
+    { duration: "30s", target: 0 }, // ramp down
   ],
   thresholds: {
-    'http_req_duration{status:200}': ['p(95)<300'],  // 95th percentile < 300 ms
-    'http_req_failed':               ['rate<0.01'],  // error rate < 1%
+    "http_req_duration{status:200}": ["p(95)<300"], // 95th percentile < 300 ms
+    http_req_failed: ["rate<0.01"], // error rate < 1%
   },
 };
 
 export default function () {
-  const res = http.get(
-    `${BASE_URL}/api/ingest/contracts/CABC123.../events/?page=1&page_size=25`,
-    { headers: { Authorization: `Bearer ${API_KEY}` } },
-  );
+  const res = http.get(`${BASE_URL}/api/ingest/contracts/CABC123.../events/?page=1&page_size=25`, {
+    headers: { Authorization: `Bearer ${API_KEY}` },
+  });
   check(res, {
-    'status 200':              r => r.status === 200,
-    'has RateLimit-Remaining': r => r.headers['RateLimit-Remaining'] !== undefined,
-    'latency < 300ms':         r => r.timings.duration < 300,
+    "status 200": (r) => r.status === 200,
+    "has RateLimit-Remaining": (r) => r.headers["RateLimit-Remaining"] !== undefined,
+    "latency < 300ms": (r) => r.timings.duration < 300,
   });
   sleep(1);
 }
@@ -365,34 +369,32 @@ k6 run \
 ### Ingest Endpoint Load Test
 
 ```javascript
-import http from 'k6/http';
-import { check, sleep } from 'k6';
+import http from "k6/http";
+import { check, sleep } from "k6";
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000';
-const API_KEY  = __ENV.API_KEY  || 'test-key';
+const BASE_URL = __ENV.BASE_URL || "http://localhost:8000";
+const API_KEY = __ENV.API_KEY || "test-key";
 
 export const options = {
   vus: 10,
-  duration: '1m',
+  duration: "1m",
   thresholds: {
-    'http_req_duration': ['p(95)<500'],
-    'http_req_failed':   ['rate<0.05'],
+    http_req_duration: ["p(95)<500"],
+    http_req_failed: ["rate<0.05"],
   },
 };
 
 export default function () {
   const payload = JSON.stringify({
-    contract_id: 'CABC123...',
-    event_type:  'transfer',
-    payload_hash: 'a'.repeat(64),
+    contract_id: "CABC123...",
+    event_type: "transfer",
+    payload_hash: "a".repeat(64),
   });
-  const res = http.post(
-    `${BASE_URL}/api/ingest/record/`,
-    payload,
-    { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` } },
-  );
+  const res = http.post(`${BASE_URL}/api/ingest/record/`, payload, {
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${API_KEY}` },
+  });
   check(res, {
-    'accepted': r => r.status === 201 || r.status === 202,
+    accepted: (r) => r.status === 201 || r.status === 202,
   });
   sleep(0.5);
 }
@@ -400,14 +402,15 @@ export default function () {
 
 ### Interpreting Results
 
-| k6 metric | What to look for |
-|-----------|-----------------|
-| `http_req_duration p(95)` | Should remain below 300 ms for read endpoints |
-| `http_req_failed` | Should be < 1%; investigate any `5xx` |
-| `iterations` | Throughput — compare against baseline |
-| `data_received` | Unusually large → check response payload size / pagination |
+| k6 metric                 | What to look for                                           |
+| ------------------------- | ---------------------------------------------------------- |
+| `http_req_duration p(95)` | Should remain below 300 ms for read endpoints              |
+| `http_req_failed`         | Should be < 1%; investigate any `5xx`                      |
+| `iterations`              | Throughput — compare against baseline                      |
+| `data_received`           | Unusually large → check response payload size / pagination |
 
-After a failed threshold, profile the Django view with Silk (`ENABLE_SILK=true`) or run `EXPLAIN ANALYZE` on the queries emitted during the test.
+After a failed threshold, profile the Django view with Silk (`ENABLE_SILK=true`) or run `EXPLAIN ANALYZE` on the queries
+emitted during the test.
 
 ---
 
@@ -415,18 +418,18 @@ After a failed threshold, profile the Django view with Silk (`ENABLE_SILK=true`)
 
 Full metric catalogue is in `docs/observability/index.md`. Key performance metrics:
 
-| Metric | Labels | Description |
-|--------|--------|-------------|
-| `soroscan_http_responses_total` | `status_class`, `view` | HTTP response counts by view |
-| `soroscan_task_duration_seconds` | `task_name` | Celery task latency histogram |
-| `soroscan_celery_queue_depth` | `queue` | Pending tasks per queue |
-| `soroscan_db_pool_connections` | `state` | DB pool connection states |
-| `soroscan_cache_hits_total` | `cache_type` | Redis cache hits |
-| `soroscan_cache_misses_total` | `cache_type` | Redis cache misses |
-| `soroscan_events_ingested_total` | `contract_id`, `network` | Ingest throughput |
-| `soroscan_ingest_errors_total` | `task_name`, `error_type` | Ingest failure rate |
-| `soroscan_circuit_breaker_trips_total` | `name` | RPC circuit breaker opens |
-| `soroscan_event_ingestion_rate` | — | Events per second (real-time) |
+| Metric                                 | Labels                    | Description                   |
+| -------------------------------------- | ------------------------- | ----------------------------- |
+| `soroscan_http_responses_total`        | `status_class`, `view`    | HTTP response counts by view  |
+| `soroscan_task_duration_seconds`       | `task_name`               | Celery task latency histogram |
+| `soroscan_celery_queue_depth`          | `queue`                   | Pending tasks per queue       |
+| `soroscan_db_pool_connections`         | `state`                   | DB pool connection states     |
+| `soroscan_cache_hits_total`            | `cache_type`              | Redis cache hits              |
+| `soroscan_cache_misses_total`          | `cache_type`              | Redis cache misses            |
+| `soroscan_events_ingested_total`       | `contract_id`, `network`  | Ingest throughput             |
+| `soroscan_ingest_errors_total`         | `task_name`, `error_type` | Ingest failure rate           |
+| `soroscan_circuit_breaker_trips_total` | `name`                    | RPC circuit breaker opens     |
+| `soroscan_event_ingestion_rate`        | —                         | Events per second (real-time) |
 
 ### Useful PromQL Queries
 
@@ -450,4 +453,4 @@ rate(soroscan_events_ingested_total[1m])
 
 ---
 
-*See also: `docs/deployment/monitoring.md` · `docs/observability/index.md` · `django-backend/docs/sla.md`*
+_See also: `docs/deployment/monitoring.md` · `docs/observability/index.md` · `django-backend/docs/sla.md`_

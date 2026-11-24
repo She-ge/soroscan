@@ -17,6 +17,7 @@ Returns all contracts registered for indexing.
 | `offset` | integer | Pagination offset |
 
 **Response:**
+
 ```json
 {
   "count": 42,
@@ -43,6 +44,7 @@ POST /api/contracts/
 Register a new contract for event indexing.
 
 **Request Body:**
+
 ```json
 {
   "contract_id": "CABC...9X4Z",
@@ -51,6 +53,7 @@ Register a new contract for event indexing.
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "1",
@@ -68,6 +71,7 @@ GET /api/contracts/{id}/
 ```
 
 **Response:**
+
 ```json
 {
   "id": "1",
@@ -86,6 +90,7 @@ PATCH /api/contracts/{id}/
 ```
 
 **Request Body (partial):**
+
 ```json
 {
   "label": "new-label"

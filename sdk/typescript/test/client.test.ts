@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { SoroScanClient, SoroScanError, DEFAULT_USER_AGENT } from "../src/client.js";
+import {
+  SoroScanClient,
+  SoroScanError,
+  SoroScanNotFoundError,
+  DEFAULT_USER_AGENT,
+} from "../src/client.js";
 import { EventQueryBuilder } from "../src/builder.js";
 import type {
   GetEventsResponse,
@@ -527,12 +532,15 @@ describe("testWebhook()", () => {
 describe("Error handling", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("throws SoroScanError on 404", async () => {
+  it("throws SoroScanNotFoundError on 404", async () => {
     mockFetch({ code: "NOT_FOUND", message: "Contract not found" }, 404);
-    await expect(
-      makeClient().getContract({ contractId: "CBAD" })
-    ).rejects.toMatchObject({
-      name: "SoroScanError",
+    const error = await makeClient()
+      .getContract({ contractId: "CBAD" })
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(SoroScanError);
+    expect(error).toBeInstanceOf(SoroScanNotFoundError);
+    expect(error).toMatchObject({
       statusCode: 404,
       code: "NOT_FOUND",
       message: "Contract not found",

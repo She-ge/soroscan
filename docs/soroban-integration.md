@@ -1,12 +1,15 @@
 # Soroban Contract Integration Guide
 
-This guide walks contract developers through integrating a custom Soroban smart contract with SoroScan — from emitting compatible events, to registering an ABI, to verifying that ingestion and monitoring are working correctly.
+This guide walks contract developers through integrating a custom Soroban smart contract with SoroScan — from emitting
+compatible events, to registering an ABI, to verifying that ingestion and monitoring are working correctly.
 
 ---
 
 ## Overview
 
-SoroScan indexes on-chain events emitted by Soroban contracts and makes them queryable via REST and GraphQL APIs, WebSocket streams, and webhooks. For SoroScan to index your contract automatically, your contract must emit events in a compatible format and be registered with the indexer.
+SoroScan indexes on-chain events emitted by Soroban contracts and makes them queryable via REST and GraphQL APIs,
+WebSocket streams, and webhooks. For SoroScan to index your contract automatically, your contract must emit events in a
+compatible format and be registered with the indexer.
 
 ```
 Your Contract  ──events──►  Stellar Ledger
@@ -31,17 +34,18 @@ Your Contract  ──events──►  Stellar Ledger
 
 ## Step 1: Event Emission Standards
 
-SoroScan processes Soroban `contract_events` emitted from your contract. Follow these conventions so events are indexed correctly and searchable.
+SoroScan processes Soroban `contract_events` emitted from your contract. Follow these conventions so events are indexed
+correctly and searchable.
 
 ### Event Structure
 
 Soroban events have a `topics` array and a `data` value. SoroScan maps:
 
-| Soroban field | SoroScan field | Notes |
-|---|---|---|
-| `topics[0]` (Symbol) | `event_type` | Keep it lowercase and snake_case, e.g. `transfer` |
-| `topics[1..N]` | indexed filter fields | Used for fast filtering queries |
-| `data` (any ScVal) | `payload` | Stored as JSON; supports nested structures |
+| Soroban field        | SoroScan field        | Notes                                             |
+| -------------------- | --------------------- | ------------------------------------------------- |
+| `topics[0]` (Symbol) | `event_type`          | Keep it lowercase and snake_case, e.g. `transfer` |
+| `topics[1..N]`       | indexed filter fields | Used for fast filtering queries                   |
+| `data` (any ScVal)   | `payload`             | Stored as JSON; supports nested structures        |
 
 ### Recommended Rust Contract Pattern
 
@@ -67,7 +71,8 @@ pub fn emit_transfer(env: &Env, from: Address, to: Address, amount: i128) {
 ### Naming Conventions
 
 - Use `snake_case` symbols: `transfer`, `swap`, `liquidity_add`, `contract_upgraded`.
-- Keep event type symbols ≤ 9 characters (Soroban `symbol_short!` limit) or use `Symbol::new(env, "longer_name")` for longer names.
+- Keep event type symbols ≤ 9 characters (Soroban `symbol_short!` limit) or use `Symbol::new(env, "longer_name")` for
+  longer names.
 - Be consistent — changing event type names is a breaking change for consumers.
 
 ### Versioned Events (SC-38)
@@ -108,14 +113,14 @@ SoroScan uses a JSON schema document that describes each event type your contrac
     "transfer": {
       "description": "Fungible token transfer between two accounts",
       "topics": [
-        {"name": "event_type", "type": "symbol"},
-        {"name": "from",       "type": "address"},
-        {"name": "to",         "type": "address"}
+        { "name": "event_type", "type": "symbol" },
+        { "name": "from", "type": "address" },
+        { "name": "to", "type": "address" }
       ],
       "data": {
         "type": "object",
         "properties": {
-          "amount": {"type": "integer", "description": "Token amount in stroops"}
+          "amount": { "type": "integer", "description": "Token amount in stroops" }
         },
         "required": ["amount"]
       }
@@ -123,16 +128,16 @@ SoroScan uses a JSON schema document that describes each event type your contrac
     "swap": {
       "description": "AMM token swap",
       "topics": [
-        {"name": "event_type", "type": "symbol"},
-        {"name": "pool_id",    "type": "bytes"}
+        { "name": "event_type", "type": "symbol" },
+        { "name": "pool_id", "type": "bytes" }
       ],
       "data": {
         "type": "object",
         "properties": {
-          "token_in":    {"type": "string"},
-          "token_out":   {"type": "string"},
-          "amount_in":   {"type": "integer"},
-          "amount_out":  {"type": "integer"}
+          "token_in": { "type": "string" },
+          "token_out": { "type": "string" },
+          "amount_in": { "type": "integer" },
+          "amount_out": { "type": "integer" }
         },
         "required": ["token_in", "token_out", "amount_in", "amount_out"]
       }
@@ -199,12 +204,12 @@ Response:
 
 ### Configuration Options
 
-| Field | Description |
-|---|---|
+| Field                   | Description                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------ |
 | `max_events_per_minute` | Ingest rate limit for this contract (default: unlimited). Set to protect your quota. |
-| `alias` | Short human-readable identifier for use in dashboard URLs. |
-| `network` | `testnet`, `mainnet`, or `futurenet`. |
-| `is_active` | Set to `false` to pause indexing without deleting the registration. |
+| `alias`                 | Short human-readable identifier for use in dashboard URLs.                           |
+| `network`               | `testnet`, `mainnet`, or `futurenet`.                                                |
+| `is_active`             | Set to `false` to pause indexing without deleting the registration.                  |
 
 ---
 
@@ -349,8 +354,8 @@ curl https://api.soroscan.io/api/ingest/contracts/CABC123.../event-types/
 
 ```json
 [
-  {"event_type": "transfer", "count": 1250},
-  {"event_type": "swap",     "count": 312}
+  { "event_type": "transfer", "count": 1250 },
+  { "event_type": "swap", "count": 312 }
 ]
 ```
 
@@ -365,19 +370,20 @@ Returns full deployment history with ABI version compatibility warnings for brea
 
 ### Prometheus Metrics to Watch
 
-| Metric | Labels | What it tells you |
-|--------|--------|-------------------|
-| `soroscan_events_ingested_total` | `contract_id`, `network` | Ingestion throughput |
-| `soroscan_events_rate_limited_total` | `contract_id`, `network` | Rate limit hits — raise `max_events_per_minute` if non-zero |
-| `soroscan_events_validation_failures_total` | `contract_id` | ABI mismatches — check your event schema |
-| `soroscan_ledger_gaps_total` | `contract_id` | Missed ledgers — investigate ingest worker health |
-| `soroscan_missing_events_total` | `contract_id` | Reconciliation gaps |
+| Metric                                      | Labels                   | What it tells you                                           |
+| ------------------------------------------- | ------------------------ | ----------------------------------------------------------- |
+| `soroscan_events_ingested_total`            | `contract_id`, `network` | Ingestion throughput                                        |
+| `soroscan_events_rate_limited_total`        | `contract_id`, `network` | Rate limit hits — raise `max_events_per_minute` if non-zero |
+| `soroscan_events_validation_failures_total` | `contract_id`            | ABI mismatches — check your event schema                    |
+| `soroscan_ledger_gaps_total`                | `contract_id`            | Missed ledgers — investigate ingest worker health           |
+| `soroscan_missing_events_total`             | `contract_id`            | Reconciliation gaps                                         |
 
 ---
 
 ## Step 7: Example Contract (Full Walkthrough)
 
-Below is a minimal Soroban contract that emits SoroScan-compatible events, suitable for testing the full integration flow.
+Below is a minimal Soroban contract that emits SoroScan-compatible events, suitable for testing the full integration
+flow.
 
 ```rust
 #![no_std]
@@ -403,7 +409,8 @@ impl SimpleToken {
 }
 ```
 
-After deploying to testnet, register the contract and upload the ABI (see Steps 2–3), then trigger a transfer and confirm the event appears in `GET /api/ingest/contracts/<id>/events/`.
+After deploying to testnet, register the contract and upload the ABI (see Steps 2–3), then trigger a transfer and
+confirm the event appears in `GET /api/ingest/contracts/<id>/events/`.
 
 ---
 
@@ -412,29 +419,30 @@ After deploying to testnet, register the contract and upload the ABI (see Steps 
 ### Events not appearing after a transaction
 
 1. **Check contract registration:** Confirm the contract is registered and `is_active=true`.
-2. **Check ledger lag:** SoroScan polls every few seconds. Wait 1–2 ledger closing times (~10 seconds on testnet).
-3. **Check completeness:** `GET /api/ingest/contracts/<id>/completeness/` — look for `missing_ledgers`.
-4. **Check ingest errors:** `GET /api/ingest/admin/ingest-errors/` (staff only) — look for validation failures.
-5. **Check the network config:** Confirm `network` in the contract registration matches where you deployed.
+1. **Check ledger lag:** SoroScan polls every few seconds. Wait 1–2 ledger closing times (~10 seconds on testnet).
+1. **Check completeness:** `GET /api/ingest/contracts/<id>/completeness/` — look for `missing_ledgers`.
+1. **Check ingest errors:** `GET /api/ingest/admin/ingest-errors/` (staff only) — look for validation failures.
+1. **Check the network config:** Confirm `network` in the contract registration matches where you deployed.
 
 ### Events are ingested but payload is wrong
 
 1. **Verify ABI:** Re-upload the ABI and confirm it matches the on-chain event structure.
-2. **Check `events_validation_failures_total` metric** — rising values indicate ABI mismatch.
-3. **Check the raw event:** Use `GET /api/ingest/events/<id>/` to inspect the raw stored payload.
+1. **Check `events_validation_failures_total` metric** — rising values indicate ABI mismatch.
+1. **Check the raw event:** Use `GET /api/ingest/events/<id>/` to inspect the raw stored payload.
 
 ### Webhook deliveries failing
 
 1. **Check your endpoint:** It must respond with HTTP 200 within 30 seconds.
-2. **Verify signature:** Confirm HMAC-SHA256 signature validation is not rejecting deliveries.
-3. **Check dead-letter queue:** `GET /api/webhooks/deliveries/metrics/` for delivery status breakdown.
-4. **Test delivery:** Use `POST /api/ingest/webhooks/<id>/test/` to send a synchronous test delivery.
+1. **Verify signature:** Confirm HMAC-SHA256 signature validation is not rejecting deliveries.
+1. **Check dead-letter queue:** `GET /api/webhooks/deliveries/metrics/` for delivery status breakdown.
+1. **Test delivery:** Use `POST /api/ingest/webhooks/<id>/test/` to send a synchronous test delivery.
 
 ### Rate limit exceeded (429)
 
-- Check `RateLimit-Remaining` header — if it reaches 0 frequently, raise `max_events_per_minute` on the contract or your API key quota.
+- Check `RateLimit-Remaining` header — if it reaches 0 frequently, raise `max_events_per_minute` on the contract or your
+  API key quota.
 - Review `soroscan_events_rate_limited_total` metric to understand frequency.
 
 ---
 
-*See also: `docs/rate-limits.mdx` · `django-backend/docs/api_reference.md` · `docs/deployment/monitoring.md`*
+_See also: `docs/rate-limits.mdx` · `django-backend/docs/api_reference.md` · `docs/deployment/monitoring.md`_

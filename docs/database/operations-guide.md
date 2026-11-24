@@ -2,28 +2,38 @@
 slug: /database/operations-guide
 
 title: Database & Cache Administration Guide
-description: Production administration, migrations, maintenance, performance tuning, and troubleshooting for PostgreSQL and Redis in SoroScan.
+description:
+  Production administration, migrations, maintenance, performance tuning, and troubleshooting for PostgreSQL and Redis
+  in SoroScan.
 sidebar_label: Database & Cache Admin
 hide_title: false
 ---
 
-# Database & Cache Administration Guide
+## Database & Cache Administration Guide
 
-This guide provides comprehensive, production-grade instructions and reference materials for managing **PostgreSQL** and **Redis** within the SoroScan ecosystem. It includes operations playbooks, SQL administration scripts, migration strategies, and diagnostic checklists.
+This guide provides comprehensive, production-grade instructions and reference materials for managing **PostgreSQL** and
+**Redis** within the SoroScan ecosystem. It includes operations playbooks, SQL administration scripts, migration
+strategies, and diagnostic checklists.
 
 ---
 
 ## 1. PostgreSQL Administration
 
-SoroScan relies on PostgreSQL for persistent storage of transaction logs, indexed events (`EventRecord`), webhook delivery records, and system settings.
+SoroScan relies on PostgreSQL for persistent storage of transaction logs, indexed events (`EventRecord`), webhook
+delivery records, and system settings.
 
 ### 1.1 Backup Strategy (Full & Incremental)
 
 For production environments, we recommend a hybrid backup strategy:
-1. **Full Backups (Daily/Weekly)**: Physical binary backups (`pg_basebackup`) or logical dumps (`pg_dump`) depending on database size.
-2. **Continuous Archiving / Incremental (WAL Shipping)**: Write-Ahead Logs (WAL) are continuously archived to secure, off-site object storage (e.g., AWS S3, Google Cloud Storage) every 60 seconds or upon file completion. This enables Point-in-Time Recovery (PITR).
+
+1. **Full Backups (Daily/Weekly)**: Physical binary backups (`pg_basebackup`) or logical dumps (`pg_dump`) depending on
+   database size.
+1. **Continuous Archiving / Incremental (WAL Shipping)**: Write-Ahead Logs (WAL) are continuously archived to secure,
+   off-site object storage (e.g., AWS S3, Google Cloud Storage) every 60 seconds or upon file completion. This enables
+   Point-in-Time Recovery (PITR).
 
 #### Tools
+
 - **pgBackRest** (Recommended for self-hosted / Kubernetes deployments)
 - **AWS Aurora/RDS Automated Backups** (For managed cloud deployments)
 
@@ -34,6 +44,7 @@ For production environments, we recommend a hybrid backup strategy:
 For self-hosted Docker/Kubernetes setups, you can schedule backups using a CronJob or systemd timer.
 
 #### Daily Logical Backup Script (`backup-postgres.sh`)
+
 ```bash
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -62,6 +73,7 @@ echo "[$DATE] Backup completed successfully. File: $FILENAME"
 ```
 
 #### Cron Schedule (`/etc/cron.d/postgres-backup`)
+
 ```cron
 # Run daily at 02:00 AM UTC
 0 2 * * * postgres /usr/local/bin/backup-postgres.sh >> /var/log/postgres-backup.log 2>&1
@@ -74,21 +86,27 @@ echo "[$DATE] Backup completed successfully. File: $FILENAME"
 A backup is only as good as its tested restore path. Always test restores on a isolated staging/sandbox instance.
 
 #### Logical Restore Runbook
+
 1. **Prepare target database**:
+
    ```sql
    -- Terminate existing connections (run as superuser)
-   SELECT pg_terminate_backend(pid) 
-   FROM pg_stat_activity 
+   SELECT pg_terminate_backend(pid)
+   FROM pg_stat_activity
    WHERE datname = 'soroscan' AND pid <> pg_backend_pid();
-   
+
    DROP DATABASE IF EXISTS soroscan;
    CREATE DATABASE soroscan WITH OWNER soroscan_admin;
    ```
-2. **Perform restore**:
+
+1. **Perform restore**:
+
    ```bash
    gunzip -c /var/backups/postgres/soroscan_backup_latest.sql.gz | psql -h localhost -U soroscan_admin -d soroscan
    ```
-3. **Re-analyze statistics**:
+
+1. **Re-analyze statistics**:
+
    ```bash
    vacuumdb -h localhost -U soroscan_admin -d soroscan --analyze --verbose
    ```
@@ -100,6 +118,7 @@ A backup is only as good as its tested restore path. Always test restores on a i
 PITR allows restoring PostgreSQL to any microsecond between the base backup and the latest archived WAL.
 
 #### Enable WAL Archiving (`postgresql.conf`)
+
 ```ini
 wal_level = replica
 archive_mode = on
@@ -108,20 +127,25 @@ restore_command = 'cp /var/lib/postgresql/archive/%f %p'
 ```
 
 #### PITR Restore Workflow
+
 1. Stop the active PostgreSQL service.
-2. Clear the PostgreSQL data directory (`PGDATA`), leaving the custom configuration files.
-3. Restore the base backup files to `PGDATA`.
-4. Create a `recovery.signal` file in `PGDATA` to tell Postgres it is in recovery mode:
+1. Clear the PostgreSQL data directory (`PGDATA`), leaving the custom configuration files.
+1. Restore the base backup files to `PGDATA`.
+1. Create a `recovery.signal` file in `PGDATA` to tell Postgres it is in recovery mode:
+
    ```bash
    touch /var/lib/postgresql/data/recovery.signal
    ```
-5. Configure the recovery target settings in `postgresql.conf` (or `postgresql.auto.conf`):
+
+1. Configure the recovery target settings in `postgresql.conf` (or `postgresql.auto.conf`):
+
    ```ini
    restore_command = 'cp /var/lib/postgresql/archive/%f %p'
    recovery_target_time = '2026-06-24 10:15:00 UTC'
    recovery_target_action = 'promote'
    ```
-6. Start PostgreSQL. It will replay WALs until the target time is reached and then transition to active primary.
+
+1. Start PostgreSQL. It will replay WALs until the target time is reached and then transition to active primary.
 
 ---
 
@@ -138,6 +162,7 @@ graph LR
 ```
 
 #### Primary Settings (`postgresql.conf`)
+
 ```ini
 listen_addresses = '*'
 wal_level = replica
@@ -147,23 +172,31 @@ hot_standby = on
 ```
 
 #### Replication User Creation (on Primary)
+
 ```sql
 CREATE ROLE replication_user WITH REPLICATION LOGIN PASSWORD 'SecureReplicationPassword';
 ```
+
 Add to `pg_hba.conf` on Primary:
+
 ```conf
 host replication replication_user 10.0.0.0/8 md5
 ```
 
 #### Replica Initialization
+
 1. Stop target database service.
-2. Clear data directory.
-3. Run `pg_basebackup` to stream the base state from primary:
+1. Clear data directory.
+1. Run `pg_basebackup` to stream the base state from primary:
+
    ```bash
    pg_basebackup -h primary-db-host -U replication_user -D /var/lib/postgresql/data -Fp -Xs -P -R
    ```
-   *(Note: `-R` generates the appropriate `standby.signal` and connection options automatically.)*
-4. Start replica service. Verify replication status on Primary:
+
+   _(Note: `-R` generates the appropriate `standby.signal` and connection options automatically.)_
+
+1. Start replica service. Verify replication status on Primary:
+
    ```sql
    SELECT client_addr, state, sent_lsn, write_lsn, flush_lsn, replay_lsn FROM pg_stat_replication;
    ```
@@ -172,9 +205,11 @@ host replication replication_user 10.0.0.0/8 md5
 
 ### 1.6 Connection Pooling (PgBouncer)
 
-Because Django spawns a connection per thread/process, SoroScan uses **PgBouncer** in **Transaction Mode** to prevent PostgreSQL from running out of file descriptors and memory.
+Because Django spawns a connection per thread/process, SoroScan uses **PgBouncer** in **Transaction Mode** to prevent
+PostgreSQL from running out of file descriptors and memory.
 
 #### Typical `pgbouncer.ini` Config
+
 ```ini
 [databases]
 soroscan = host=localhost port=5432 dbname=soroscan
@@ -192,27 +227,34 @@ reserve_pool_size = 5
 reserve_pool_timeout = 5
 ```
 
-> [!WARNING]
-> When using transaction-level pooling, you cannot use PostgreSQL session-level features such as temporary tables, `LISTEN/NOTIFY` (outside specialized connections), or `SET timezone`. Ensure your Django configuration uses client-side parameterization or handles connections safely.
+> [!WARNING] When using transaction-level pooling, you cannot use PostgreSQL session-level features such as temporary
+> tables, `LISTEN/NOTIFY` (outside specialized connections), or `SET timezone`. Ensure your Django configuration uses
+> client-side parameterization or handles connections safely.
 
 ---
 
 ## 2. Database Migrations
 
-SoroScan uses the standard Django migrations framework. Because we target a zero-downtime, continuous delivery model, migrations must be designed defensively to prevent exclusive table locks on large tables like `EventRecord`.
+SoroScan uses the standard Django migrations framework. Because we target a zero-downtime, continuous delivery model,
+migrations must be designed defensively to prevent exclusive table locks on large tables like `EventRecord`.
 
 ### 2.1 Django Migration Workflow
 
 1. Modify `django-backend/soroscan/ingest/models.py`.
-2. Generate migration:
+1. Generate migration:
+
    ```bash
    python manage.py makemigrations
    ```
-3. Inspect generated SQL to verify lock impact:
+
+1. Inspect generated SQL to verify lock impact:
+
    ```bash
    python manage.py sqlmigrate ingest 00XX_migration_name
    ```
-4. Run migration in staging/production:
+
+1. Run migration in staging/production:
+
    ```bash
    python manage.py migrate
    ```
@@ -221,17 +263,22 @@ SoroScan uses the standard Django migrations framework. Because we target a zero
 
 ### 2.2 Writing Safe Migrations (No Locks)
 
-In PostgreSQL, DDL operations (like `ALTER TABLE`) acquire an `ACCESS EXCLUSIVE` lock, which blocks all reads and writes to that table.
+In PostgreSQL, DDL operations (like `ALTER TABLE`) acquire an `ACCESS EXCLUSIVE` lock, which blocks all reads and writes
+to that table.
 
 #### Safe Column Additions (PostgreSQL 11+)
+
 In PostgreSQL 11+, adding a column with a default value is fast and does **not** rewrite the table:
+
 ```python
 # Safe in Postgres 11+
 status = models.CharField(max_length=20, default='pending')
 ```
 
 #### Adding Indexes Concurrently
-Standard indexing blocks writes. We must create indexes concurrently. In Django, do this by overriding the migration operation or utilizing `AddIndex` with `concurrently=True` inside a migration subclass with `atomic = False`.
+
+Standard indexing blocks writes. We must create indexes concurrently. In Django, do this by overriding the migration
+operation or utilizing `AddIndex` with `concurrently=True` inside a migration subclass with `atomic = False`.
 
 ```python
 # django-backend/soroscan/ingest/migrations/00XX_add_index_concurrently.py
@@ -253,9 +300,10 @@ class Migration(migrations.Migration):
 ```
 
 #### Safe Column Deletions
+
 1. Deploy code that stops writing or reading the column.
-2. Mark the column as nullable or unused in Django.
-3. Drop the column in a database migration.
+1. Mark the column as nullable or unused in Django.
+1. Drop the column in a database migration.
 
 ---
 
@@ -271,19 +319,24 @@ python manage.py showmigrations
 python manage.py migrate ingest 0012
 ```
 
-> [!CAUTION]
-> Avoid rolling back migrations that have dropped columns, as this data is permanently deleted. Always maintain database backups before performing DDL updates in production.
+> [!CAUTION] Avoid rolling back migrations that have dropped columns, as this data is permanently deleted. Always
+> maintain database backups before performing DDL updates in production.
 
 ---
 
 ### 2.4 Migrating Large Tables
 
-Tables containing millions of rows (like `EventRecord` or webhook log history) must be migrated in batches to avoid locking out the indexer.
+Tables containing millions of rows (like `EventRecord` or webhook log history) must be migrated in batches to avoid
+locking out the indexer.
 
 #### Large Table Migration Strategy: Batching Updates
+
 To add a new non-nullable column populated with data:
+
 1. Add the column as nullable.
-2. Write a management command or celery task to populate values in small batches (e.g., 5,000 rows per batch) with sleep intervals:
+1. Write a management command or celery task to populate values in small batches (e.g., 5,000 rows per batch) with sleep
+   intervals:
+
    ```python
    # Batch update example
    batch_size = 5000
@@ -296,7 +349,8 @@ To add a new non-nullable column populated with data:
        ...
        time.sleep(0.1) # Cool down DB
    ```
-3. Alter the column to `NOT NULL` once all rows are filled.
+
+1. Alter the column to `NOT NULL` once all rows are filled.
 
 ---
 
@@ -332,6 +386,7 @@ Database performance degrades over time due to query planner shifts, index fragm
 - **REINDEX**: Rebuilds indexes to recover space and restore performance.
 
 #### Safe Concurrent Reindexing (Postgres 12+)
+
 ```sql
 -- Rebuilds an index without blocking reads/writes
 REINDEX INDEX CONCURRENTLY ingest_event_contract_timestamp_idx;
@@ -341,9 +396,11 @@ REINDEX INDEX CONCURRENTLY ingest_event_contract_timestamp_idx;
 
 ### 3.2 Autovacuum Configuration
 
-Autovacuum is critical for cleaning dead tuples (deleted/updated rows). Event indexers are highly write-heavy, requiring aggressive autovacuum tuning.
+Autovacuum is critical for cleaning dead tuples (deleted/updated rows). Event indexers are highly write-heavy, requiring
+aggressive autovacuum tuning.
 
 #### Recommended Settings (`postgresql.conf`)
+
 ```ini
 autovacuum = on
 autovacuum_max_workers = 4
@@ -363,9 +420,10 @@ autovacuum_vacuum_cost_delay = 2ms         # Reduce sleep time between vacuum cy
 Bloat occurs when dead tuples are not reclaimed, causing table size to swell unnecessarily.
 
 #### Bloat Diagnostics Query
+
 ```sql
 SELECT
-  schemaname, tablename, 
+  schemaname, tablename,
   pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) as index_size,
   n_dead_tup,
@@ -380,9 +438,12 @@ ORDER BY dead_tuple_pct DESC;
 ### 3.4 Disk Space Management
 
 If disk space reaches 90%, PostgreSQL will fail safe into read-only mode or crash.
+
 - Set up automated alerts at **80% disk capacity**.
-- Place `pg_wal` (Write-Ahead Logs) on a separate SSD partition from database data directories if performance scaling requires it.
-- Schedule automatic deletion of raw logs or prune old webhook delivery records (keep only last 14 days of `WebhookDeliveryLog`).
+- Place `pg_wal` (Write-Ahead Logs) on a separate SSD partition from database data directories if performance scaling
+  requires it.
+- Schedule automatic deletion of raw logs or prune old webhook delivery records (keep only last 14 days of
+  `WebhookDeliveryLog`).
 
 ---
 
@@ -391,8 +452,9 @@ If disk space reaches 90%, PostgreSQL will fail safe into read-only mode or cras
 Run this query daily/weekly to verify index usefulness and cache hit ratios.
 
 #### Cache Hit Ratio (Should be > 99%)
+
 ```sql
-SELECT 
+SELECT
   sum(heap_blks_read) as heap_read,
   sum(heap_blks_hit)  as heap_hit,
   sum(heap_blks_hit) / (sum(heap_blks_read) + sum(heap_blks_hit) + 0.000001) as ratio
@@ -406,6 +468,7 @@ FROM pg_statio_user_tables;
 ### 4.1 Finding Slow Queries
 
 #### Currently Running Queries
+
 ```sql
 SELECT pid, age(clock_timestamp(), query_start), usename, query, state
 FROM pg_stat_activity
@@ -414,13 +477,15 @@ ORDER BY age DESC;
 ```
 
 #### Historical Slow Queries (requires `pg_stat_statements`)
+
 Ensure `shared_preload_libraries = 'pg_stat_statements'` is enabled in `postgresql.conf`.
+
 ```sql
-SELECT 
-  query, 
-  calls, 
-  total_exec_time / 1000 as total_seconds, 
-  mean_exec_time as mean_ms, 
+SELECT
+  query,
+  calls,
+  total_exec_time / 1000 as total_seconds,
+  mean_exec_time as mean_ms,
   rows
 FROM pg_stat_statements
 ORDER BY total_exec_time DESC
@@ -432,41 +497,53 @@ LIMIT 10;
 ### 4.2 EXPLAIN PLAN Analysis
 
 When optimizing, prefix your query with `EXPLAIN (ANALYZE, BUFFERS, VERBOSE)`:
+
 ```sql
-EXPLAIN (ANALYZE, BUFFERS) 
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT * FROM ingest_event WHERE contract_id = 'C...' ORDER BY timestamp DESC LIMIT 20;
 ```
 
 #### What to Look For:
-1. **Sequential Scan (Seq Scan)** vs **Index Scan**: A Seq Scan reads the entire table from disk. If a query filtering on `contract_id` uses a Seq Scan, the table lacks an index on that column.
-2. **Filter**: Indicates rows were filtered *after* being loaded. Aim to push filters into the index search.
-3. **Buffers**: Shows blocks read from disk vs cached in memory:
+
+1. **Sequential Scan (Seq Scan)** vs **Index Scan**: A Seq Scan reads the entire table from disk. If a query filtering
+   on `contract_id` uses a Seq Scan, the table lacks an index on that column.
+1. **Filter**: Indicates rows were filtered _after_ being loaded. Aim to push filters into the index search.
+1. **Buffers**: Shows blocks read from disk vs cached in memory:
    - `shared read`: Read from disk (slow).
    - `shared hit`: Read from RAM buffer cache (fast).
-4. **Actual Time**: The actual duration of the step. Compare this against cost estimates.
+1. **Actual Time**: The actual duration of the step. Compare this against cost estimates.
 
 ---
 
 ### 4.3 Query Optimization Techniques
 
-- **Partial Indexes**: For events that are heavily queried (e.g. only successful transactions), write indexes with filters:
+- **Partial Indexes**: For events that are heavily queried (e.g. only successful transactions), write indexes with
+  filters:
+
   ```sql
   CREATE INDEX CONCURRENTLY idx_event_success ON ingest_event(contract_id) WHERE status = 'SUCCESS';
   ```
+
 - **Compound Indexes**: Put the equality filter first, then order parameters:
+
   ```sql
   -- Matches filtering on contract_id and ordering by timestamp
   CREATE INDEX CONCURRENTLY idx_event_contract_time ON ingest_event(contract_id, timestamp DESC);
   ```
-- **Limit/Offset Tuning**: Large offsets (e.g., `LIMIT 100 OFFSET 500000`) force Postgres to scan all preceding rows. Use keyset (cursor-based) pagination instead.
+
+- **Limit/Offset Tuning**: Large offsets (e.g., `LIMIT 100 OFFSET 500000`) force Postgres to scan all preceding rows.
+  Use keyset (cursor-based) pagination instead.
 
 ---
 
 ### 4.4 Statistics and Selectivity
 
 PostgreSQL maintains statistics on column value distributions to pick query plans.
-- If the planner makes poor choices (e.g., choosing Seq Scan instead of Index Scan because it thinks a value is extremely common when it is not), run `ANALYZE table_name`.
+
+- If the planner makes poor choices (e.g., choosing Seq Scan instead of Index Scan because it thinks a value is
+  extremely common when it is not), run `ANALYZE table_name`.
 - For columns with extreme distribution skew, increase the statistics target:
+
   ```sql
   ALTER TABLE ingest_event ALTER COLUMN contract_id SET STATISTICS 500;
   ANALYZE ingest_event;
@@ -482,12 +559,13 @@ SoroScan uses Redis for rate limiting, cache storage, task queues (via Celery), 
 
 Depending on the Redis cluster usage, configure persistence appropriately:
 
-| Use Case | Recommended Persistence | Rationale |
-| :--- | :--- | :--- |
+| Use Case                          | Recommended Persistence          | Rationale                                                        |
+| :-------------------------------- | :------------------------------- | :--------------------------------------------------------------- |
 | **Celery Tasks & Webhook Queues** | **AOF (Append Only File) + RDB** | Prevents loss of pending webhook delivery tasks on server crash. |
-| **Caching & Session Storage** | **No persistence (or RDB only)** | Fast restarts, data can be reconstructed from PostgreSQL. |
+| **Caching & Session Storage**     | **No persistence (or RDB only)** | Fast restarts, data can be reconstructed from PostgreSQL.        |
 
 #### High-Safety Persistence Configuration (`redis.conf`)
+
 ```ini
 save 900 1      # Save RDB snapshot if 1 key changes in 15 mins
 save 300 10     # Save RDB snapshot if 10 keys change in 5 mins
@@ -502,13 +580,16 @@ appendfsync everysec  # Balance write speed with maximum 1-second data loss safe
 When Redis reaches its memory limits, it behaves according to its configured eviction policy.
 
 #### Recommended Memory Config (`redis.conf`)
+
 ```ini
 maxmemory 4gb # Adjust based on node size (reserve 20% for OS)
 maxmemory-policy volatile-lru
 ```
 
 #### Eviction Policies:
-- **`volatile-lru` (Recommended)**: Evicts the least recently used keys *that have an expiration set (TTL)*. This prevents caching from ejecting Celery job queues or rate limit counters that do not have TTLs.
+
+- **`volatile-lru` (Recommended)**: Evicts the least recently used keys _that have an expiration set (TTL)_. This
+  prevents caching from ejecting Celery job queues or rate limit counters that do not have TTLs.
 - **`allkeys-lru`**: Evicts any key based on LRU algorithm. Use only if Redis is dedicated solely to caching.
 - **`noeviction`**: Returns out-of-memory errors on writes. Set this if data loss on queues is strictly unacceptable.
 
@@ -517,14 +598,17 @@ maxmemory-policy volatile-lru
 ### 5.3 Key Expiration Strategy
 
 To protect Redis capacity, **every cached item must have a Time-To-Live (TTL)**.
+
 - **API Cache**: TTL of 60 seconds - 5 minutes.
 - **Rate Limit Windows**: TTL of 60 seconds (or length of sliding window).
 - **Session Tokens**: TTL of 24 hours.
 
 #### Redis Passive vs Active Expiration
+
 Redis deletes expired keys in two ways:
+
 1. **Passive**: When a key is requested and found to be expired, it is deleted.
-2. **Active**: Redis periodically tests random keys for expiration and deletes them to clear memory.
+1. **Active**: Redis periodically tests random keys for expiration and deletes them to clear memory.
 
 ---
 
@@ -533,6 +617,7 @@ Redis deletes expired keys in two ways:
 Use `redis-cli` or Prometheus Exporters to audit Redis node health.
 
 #### Critical Command Line Checks
+
 ```bash
 # Check memory layout and fragmentation
 redis-cli INFO memory
@@ -549,13 +634,16 @@ redis-cli SLOWLOG GET 10
 ### 5.5 Troubleshooting Memory Issues
 
 #### Identifying Memory Consumers
+
 To find which keys are consuming the most memory:
+
 ```bash
 # Scan database and report largest keys
 redis-cli --bigkeys
 ```
 
 #### Diagnosis Decision Tree (Out of Memory)
+
 ```mermaid
 graph TD
     A[Redis Out of Memory Error] --> B{Check fragmentation ratio}
@@ -593,12 +681,13 @@ Establish the following alerting thresholds in your monitoring infrastructure (e
 ### 7.1 Backup Verification Procedures
 
 An untested backup is a vulnerability. Set up an automated testing flow:
+
 1. Every Sunday, a scheduled pipeline provisions a temporary PostgreSQL container.
-2. Restores the latest daily backup from storage.
-3. Runs a query suite to check integrity:
+1. Restores the latest daily backup from storage.
+1. Runs a query suite to check integrity:
    - Row count checks on critical tables (e.g. `EventRecord`).
    - Verifies the last indexed ledger block corresponds with the actual blockchain height minus replication lag.
-4. Alerts the operations team via webhook if restore or verification fails.
+1. Alerts the operations team via webhook if restore or verification fails.
 
 ---
 
@@ -606,17 +695,21 @@ An untested backup is a vulnerability. Set up an automated testing flow:
 
 SoroScan defines the following service-level objectives for disaster recovery:
 
-| Tier | Service component | Target RTO (Max Downtime) | Target RPO (Max Data Loss) | Recovery Mechanism |
-| :--- | :--- | :--- | :--- | :--- |
-| **Tier 1** | PostgreSQL | 30 minutes | 5 minutes | Multi-AZ Failover / WAL Point-in-time recovery |
-| **Tier 2** | Redis | 1 hour | 15 minutes | RDB snapshot restore / reconstruction from DB |
-| **Tier 3** | Ingestion Pipeline | 2 hours | 0 minutes | Re-index blocks from public Soroban RPC network |
+| Tier       | Service component  | Target RTO (Max Downtime) | Target RPO (Max Data Loss) | Recovery Mechanism                              |
+| :--------- | :----------------- | :------------------------ | :------------------------- | :---------------------------------------------- |
+| **Tier 1** | PostgreSQL         | 30 minutes                | 5 minutes                  | Multi-AZ Failover / WAL Point-in-time recovery  |
+| **Tier 2** | Redis              | 1 hour                    | 15 minutes                 | RDB snapshot restore / reconstruction from DB   |
+| **Tier 3** | Ingestion Pipeline | 2 hours                   | 0 minutes                  | Re-index blocks from public Soroban RPC network |
 
 ---
 
 ### 7.3 Testing Disaster Recovery Plan
 
 Conduct simulated DR drills bi-annually:
-- **Scenario A: Primary Database Corruption**: Simulate corrupt tables by dropping a mock schema. Verify restoration using WALs to 5 minutes before corruption.
-- **Scenario B: Regional Cloud Failure**: Spin up SoroScan in a fallback region using Terraform templates. Verify configurations and event ingestion flow from scratch.
-- **Scenario C: Redis Loss**: Force-kill Redis cache. Verify that the application continues serving requests directly from PostgreSQL (degraded state) and recovers cache naturally.
+
+- **Scenario A: Primary Database Corruption**: Simulate corrupt tables by dropping a mock schema. Verify restoration
+  using WALs to 5 minutes before corruption.
+- **Scenario B: Regional Cloud Failure**: Spin up SoroScan in a fallback region using Terraform templates. Verify
+  configurations and event ingestion flow from scratch.
+- **Scenario C: Redis Loss**: Force-kill Redis cache. Verify that the application continues serving requests directly
+  from PostgreSQL (degraded state) and recovers cache naturally.

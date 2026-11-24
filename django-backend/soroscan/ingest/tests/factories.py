@@ -1,5 +1,6 @@
 import factory
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from factory.django import DjangoModelFactory
 
 from soroscan.ingest.models import (
@@ -82,7 +83,10 @@ class ContractEventFactory(DjangoModelFactory):
     payload_hash = factory.Sequence(lambda n: f"{'a' * 64}")
     ledger = factory.Sequence(lambda n: 1000 + n)
     event_index = factory.Sequence(lambda n: n)
-    timestamp = factory.Faker("date_time")
+    # Use a timezone-aware "now" instead of Faker("date_time"), which returns a
+    # naive datetime and triggered a RuntimeWarning on every event created with
+    # time zone support enabled (issue #1901).
+    timestamp = factory.LazyFunction(timezone.now)
     tx_hash = factory.Sequence(lambda n: f"{'b' * 64}")
 
 

@@ -67,7 +67,7 @@ that the restore drill measures the actual RTO/RPO instead of assuming them.
 - Restore with `restore_contracts`; this is the fastest way to rebuild contract
   metadata independently of a database snapshot.
 - The recommended cron entry is documented in
-  [`docs/CLI_COMMANDS.md`](../../CLI_COMMANDS.md).
+  [`docs/CLI_COMMANDS.md`](https://github.com/SoroScan/soroscan/blob/main/docs/CLI_COMMANDS.md).
 
 ### Archived events
 
@@ -90,14 +90,14 @@ python scripts/backup/test_backup.py full-test --restore-db-url "$STAGING_DATABA
 ## Before you start
 
 1. Declare an incident and notify on-call, the data owner, and API consumers.
-2. Stop writes to the affected environment. Scale the backend and Celery
+1. Stop writes to the affected environment. Scale the backend and Celery
    workers to zero so no new events, webhooks, or registry updates arrive
    during the restore.
-3. Confirm the target environment. Never restore a production dump over
+1. Confirm the target environment. Never restore a production dump over
    staging or vice versa without explicit approval.
-4. Record the incident start time, chosen backup key, and target recovery time
+1. Record the incident start time, chosen backup key, and target recovery time
    (for PITR) in the incident channel.
-5. Confirm access to the S3 bucket, the database host, and the Kubernetes
+1. Confirm access to the S3 bucket, the database host, and the Kubernetes
    namespace. Required tools: `aws`, `psql`, `pg_restore`, `kubectl`, and the
    Python environment for `manage.py`.
 
@@ -133,7 +133,7 @@ database, then runs `pg_restore` with `--jobs=${RESTORE_JOBS}`. Set
 Use PITR when the failure time is known and WAL archiving was healthy.
 
 1. Restore the most recent base backup before the target time using Option A.
-2. Configure recovery on the PostgreSQL instance:
+1. Configure recovery on the PostgreSQL instance:
 
    ```conf
    restore_command = '/scripts/wal_restore.sh %f %p'
@@ -141,14 +141,14 @@ Use PITR when the failure time is known and WAL archiving was healthy.
    recovery_target_action = 'promote'
    ```
 
-3. Create the recovery signal and start PostgreSQL:
+1. Create the recovery signal and start PostgreSQL:
 
    ```bash
    touch "$PGDATA/recovery.signal"
    pg_ctl start
    ```
 
-4. Watch the PostgreSQL log until replay reaches the target and the instance
+1. Watch the PostgreSQL log until replay reaches the target and the instance
    promotes.
 
 If WAL replay fails, stop and restore the base backup again. Do not keep
@@ -160,9 +160,9 @@ For RDS, Cloud SQL, or an equivalent managed service:
 
 1. Restore the automated snapshot or promote a read replica in the provider
    console.
-2. Point `DATABASE_URL` at the new endpoint. Update the `soroscan-secrets`
+1. Point `DATABASE_URL` at the new endpoint. Update the `soroscan-secrets`
    Secret (or ExternalSecret) rather than committing credentials.
-3. Continue with the post-restore verification below.
+1. Continue with the post-restore verification below.
 
 ### Bring the application back
 
@@ -219,14 +219,14 @@ the base data is stable makes parity checks harder.
    ORDER BY archived_at DESC;
    ```
 
-2. Restore each batch through the API (requires an authenticated token):
+1. Restore each batch through the API (requires an authenticated token):
 
    ```bash
    curl -X POST "https://<host>/api/events/restore-archive/?batch_id=42" \
      -H "Authorization: Bearer ${TOKEN}"
    ```
 
-3. Repeat until all batches needed for the recovery window report `restored`
+1. Repeat until all batches needed for the recovery window report `restored`
    or `already restored`.
 
 ## Post-restore verification
@@ -362,7 +362,7 @@ drill against production.
 ## Related documentation
 
 - [Backups & Disaster Recovery](../backups.md)
-- [Backup tooling README](../../../scripts/backup/README.md)
+- [Backup tooling README](https://github.com/SoroScan/soroscan/blob/main/scripts/backup/README.md)
 - [Data retention and event archival](../../operations/DATA_RETENTION.md)
 - [Incident response playbooks](./README.md)
 - [Runbooks & incident procedures](../runbooks.md)

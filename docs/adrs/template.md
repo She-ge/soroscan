@@ -27,13 +27,16 @@ For example:
 
 > We will use `<technology or approach>` for `<purpose>`.
 
-Explain the important parts of the decision, including any boundaries or assumptions that contributors should know about.
+Explain the important parts of the decision, including any boundaries or assumptions that contributors should know
+about.
 
 ## Rationale
 
 Explain why this option was selected.
 
-Consider factors such as: compatibility with the existing SoroScan architecture; maintainability; developer experience; reliability and operational requirements; performance; security; ecosystem maturity; integration with existing technologies; implementation complexity.
+Consider factors such as: compatibility with the existing SoroScan architecture; maintainability; developer experience;
+reliability and operational requirements; performance; security; ecosystem maturity; integration with existing
+technologies; implementation complexity.
 
 ## Alternatives Considered
 

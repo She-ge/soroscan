@@ -11,6 +11,7 @@
 ## MVP Deliverables
 
 ### 1. API Documentation Structure
+
 - [ ] Create `/soroscan-docs/docs/api/` directory
 - [ ] Create `/soroscan-docs/docs/api/index.md` (landing page with overview)
 - [ ] Create `/soroscan-docs/docs/api/overview.md` (authentication, rate limits, best practices)
@@ -20,6 +21,7 @@
 - [ ] Update `sidebars.ts` to add API docs section
 
 ### 2. Auto-Generated Schema Docs
+
 - [ ] Determine schema docs generation method:
   - Option A: Use `graphql-codegen` (if already in project)
   - Option B: Introspection query → generate markdown programmatically
@@ -30,18 +32,23 @@
   - [ ] Key types/enums (Contract, Event, Webhook, etc.)
 
 ### 3. Interactive GraphQL Playground
+
 - [ ] Embed Apollo Sandbox iframe in at least 3 pages:
   - [ ] `/api/overview.md`
   - [ ] A queries example page
   - [ ] A mutations example page
 - [ ] Apollo Sandbox URL format:
+
   ```
   https://www.apollographql.com/studio/sandbox/?document=<INTROSPECTION_JSON>&endpoint=<GRAPHQL_ENDPOINT>
   ```
+
 - [ ] Alternative: GraphiQL embed (simpler, but less features)
 
 ### 4. Query Documentation Template
+
 Each query doc should include:
+
 - [ ] Query name (as h1 heading)
 - [ ] Description (1-2 sentences)
 - [ ] Arguments table: name, type, required, description
@@ -52,6 +59,7 @@ Each query doc should include:
 - [ ] Performance notes (if slow query, warn user)
 
 **Template file**: `QUERY_TEMPLATE.md`
+
 ```markdown
 # Query: getContractEvents
 
@@ -96,6 +104,7 @@ Array of Event objects with: id, type, timestamp, payload, status.
 ```
 
 ### 5. Code Examples
+
 - [ ] Create `/docs/api/examples/` with real-world examples:
   - [ ] `list-contracts.md` - query all contracts
   - [ ] `get-contract-events.md` - fetch events with filtering
@@ -105,7 +114,9 @@ Array of Event objects with: id, type, timestamp, payload, status.
 - [ ] Include error handling examples
 
 ### 6. Schema Explorer Sidebar
+
 - [ ] Update `soroscan-docs/sidebars.ts` to add API section:
+
   ```typescript
   {
     label: 'API Reference',
@@ -132,16 +143,19 @@ Array of Event objects with: id, type, timestamp, payload, status.
   ```
 
 ### 7. Search Integration
+
 - [ ] Verify Algolia/Docusaurus search picks up API docs (usually automatic)
 - [ ] Test search for: "contract", "event", "webhook" → returns API docs
 - [ ] (Optional) Add search index metadata to critical pages
 
 ### 8. Dark Mode
+
 - [ ] Test all markdown in dark mode (Docusaurus default theme handles this)
 - [ ] Code blocks readable in dark theme
 - [ ] Apollo Sandbox iframe respects dark mode (usually does)
 
 ### 9. Mobile Layout
+
 - [ ] On mobile (< 768px): sidebar collapses, docs readable
 - [ ] Code blocks scrollable (don't overflow)
 - [ ] Playground link prominent (Apollo Sandbox responsive)
@@ -186,12 +200,14 @@ soroscan-docs/
 ## Acceptance Tests
 
 ### Content
+
 - [ ] All 20+ API endpoints documented
 - [ ] Each query/mutation has: description, arguments, example, response
 - [ ] Examples are valid and tested (no typos)
 - [ ] Queries organized logically (by entity: contracts, events, webhooks)
 
 ### Functionality
+
 - [ ] Docusaurus builds without errors: `pnpm build`
 - [ ] Apollo Sandbox iframe loads and works
 - [ ] Search finds API docs (test searching "webhook")
@@ -199,6 +215,7 @@ soroscan-docs/
 - [ ] Code syntax highlighting works (check `getContractEvents` example)
 
 ### Visual/UX
+
 - [ ] Dark mode: code blocks readable
 - [ ] Mobile: no horizontal scroll, sidebar accessible
 - [ ] Breadcrumbs or navigation shows current section
@@ -210,18 +227,18 @@ soroscan-docs/
 
 **Don't aim for perfection.** Do this in order:
 
-1. **Day 1**: 
+1. **Day 1**:
    - Create `/docs/api/index.md` and `/overview.md` (overview, auth, pagination)
    - Write 10 most-used queries (use existing GraphQL schema)
    - Write 5 most-used mutations
    - Update `sidebars.ts`
 
-2. **Day 2**:
+1. **Day 2**:
    - Create 5-10 code examples (copy from existing SDK examples if available)
    - Embed Apollo Sandbox in 2-3 pages
    - Test docs build and search
 
-3. **Optional Day 3**:
+1. **Optional Day 3**:
    - Add more examples
    - Add subscription docs (if applicable)
    - Add troubleshooting / FAQ section
@@ -246,6 +263,7 @@ Then use `graphql-codegen` or write a script to generate markdown from introspec
 ## Apollo Sandbox Embedding
 
 Example iframe:
+
 ```html
 <iframe 
   src="https://www.apollographql.com/studio/sandbox/?document=YOUR_INTROSPECTION_JSON&endpoint=https://api.soroscan.xyz/graphql"
@@ -269,7 +287,7 @@ Or simpler: just link to Apollo Studio for your endpoint.
 
 ## References
 
-- Docusaurus docs: https://docusaurus.io/
-- Apollo Sandbox docs: https://www.apollographql.com/docs/studio/sandbox/
+- Docusaurus docs: <https://docusaurus.io/>
+- Apollo Sandbox docs: <https://www.apollographql.com/docs/studio/sandbox/>
 - Example: GitHub GraphQL API docs (good reference for structure)
 - Example: Stripe API docs (good reference for query organization)

@@ -1,45 +1,46 @@
 # Webhook Examples
 
-SoroScan allows you to register webhook endpoints that are triggered whenever specific smart contract events occur. Below are several examples of how to consume these webhooks.
+SoroScan allows you to register webhook endpoints that are triggered whenever specific smart contract events occur.
+Below are several examples of how to consume these webhooks.
 
 ## 1. Discord Webhook Sender
 
 You can use an intermediate server (e.g., Express.js) to receive the SoroScan webhook and format it for Discord.
 
 ```javascript
-const express = require('express');
-const axios = require('axios');
+const express = require("express");
+const axios = require("axios");
 const app = express();
 
 app.use(express.json());
 
-const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN';
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN";
 
-app.post('/soroscan-webhook', async (req, res) => {
+app.post("/soroscan-webhook", async (req, res) => {
   const event = req.body;
-  
+
   // Format the message for Discord
   const embed = {
-    title: 'New Smart Contract Event',
+    title: "New Smart Contract Event",
     color: 0x0099ff,
     fields: [
-      { name: 'Contract ID', value: event.contract_id },
-      { name: 'Ledger', value: event.ledger.toString(), inline: true },
-      { name: 'Data', value: `\`\`\`json\n${JSON.stringify(event.data, null, 2)}\n\`\`\`` }
+      { name: "Contract ID", value: event.contract_id },
+      { name: "Ledger", value: event.ledger.toString(), inline: true },
+      { name: "Data", value: `\`\`\`json\n${JSON.stringify(event.data, null, 2)}\n\`\`\`` },
     ],
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
   try {
     await axios.post(DISCORD_WEBHOOK_URL, { embeds: [embed] });
-    res.status(200).send('Webhook processed');
+    res.status(200).send("Webhook processed");
   } catch (err) {
-    console.error('Discord Webhook Error:', err);
-    res.status(500).send('Error');
+    console.error("Discord Webhook Error:", err);
+    res.status(500).send("Error");
   }
 });
 
-app.listen(3000, () => console.log('Webhook receiver listening on port 3000'));
+app.listen(3000, () => console.log("Webhook receiver listening on port 3000"));
 ```
 
 ## 2. Email Notification Sender
@@ -57,14 +58,14 @@ app = Flask(__name__)
 @app.route('/webhook', methods=['POST'])
 def handle_webhook():
     event = request.json
-    
+
     message = Mail(
         from_email='alerts@yourdomain.com',
         to_emails='admin@yourdomain.com',
         subject=f"New Event on {event['contract_id']}",
         html_content=f"<strong>Ledger:</strong> {event['ledger']}<br/><strong>Data:</strong> {event['data']}"
     )
-    
+
     try:
         sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
         response = sg.send(message)
@@ -94,7 +95,7 @@ conn = psycopg2.connect(
 @app.post("/sync-event")
 async def sync_event(request: Request):
     event = await request.json()
-    
+
     cur = conn.cursor()
     cur.execute(
         "INSERT INTO contract_events (contract_id, ledger, data) VALUES (%s, %s, %s)",
@@ -102,7 +103,7 @@ async def sync_event(request: Request):
     )
     conn.commit()
     cur.close()
-    
+
     return {"status": "synced"}
 ```
 
@@ -111,27 +112,28 @@ async def sync_event(request: Request):
 Triggering an external API based on an on-chain event (e.g., fulfilling an order when payment is received).
 
 ```javascript
-app.post('/order-payment-webhook', async (req, res) => {
+app.post("/order-payment-webhook", async (req, res) => {
   const event = req.body;
-  
+
   // Verify it's a "PaymentReceived" event
-  if (event.topics[0] === 'PaymentReceived') {
+  if (event.topics[0] === "PaymentReceived") {
     const orderId = event.data.orderId;
-    
+
     // Call your internal fulfillment service
-    await axios.post('https://internal-api.com/fulfill', {
+    await axios.post("https://internal-api.com/fulfill", {
       order_id: orderId,
-      tx_hash: event.tx_hash
+      tx_hash: event.tx_hash,
     });
   }
-  
+
   res.sendStatus(200);
 });
 ```
 
 ## 5. Retry Logic Implementation
 
-Webhooks can fail due to network issues. Always implement retry logic in your webhook consumers if you plan on fetching additional data.
+Webhooks can fail due to network issues. Always implement retry logic in your webhook consumers if you plan on fetching
+additional data.
 
 ```python
 import time

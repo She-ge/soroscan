@@ -1,6 +1,7 @@
 # Soroban Contract Integration Guide
 
-This guide shows how to integrate custom Soroban contracts with SoroScan so events are indexed, queryable, and deliverable via webhooks.
+This guide shows how to integrate custom Soroban contracts with SoroScan so events are indexed, queryable, and
+deliverable via webhooks.
 
 ## What You Will Configure
 
@@ -131,12 +132,12 @@ Use dashboard alerts for:
 ## End-to-End Walkthrough
 
 1. Deploy contract update with stable event topics.
-2. Register contract in SoroScan.
-3. Emit test transaction that triggers your event.
-4. Query events endpoint and validate payload.
-5. Add webhook subscription.
-6. Trigger event again and verify webhook receipt.
-7. Add monitor/alerts for lag and failures.
+1. Register contract in SoroScan.
+1. Emit test transaction that triggers your event.
+1. Query events endpoint and validate payload.
+1. Add webhook subscription.
+1. Trigger event again and verify webhook receipt.
+1. Add monitor/alerts for lag and failures.
 
 ## Troubleshooting
 

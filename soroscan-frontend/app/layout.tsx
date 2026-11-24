@@ -7,7 +7,6 @@ import { Providers } from "./providers"
 import { SkipToContent } from "@/components/ui/SkipToContent"
 import { locales, defaultLocale } from "@/lib/locales"
 import { WebVitalsReporter } from "@/components/WebVitalsReporter"
-import CookieConsentBanner from "@/components/compliance/CookieConsentBanner"
 
 const inter = Inter({
   variable: "--font-inter",

@@ -9,9 +9,9 @@
 
 ### Primary — Monospace (Terminal)
 
-| Token                  | CSS variable              | Font stack                                                                      |
-|------------------------|---------------------------|---------------------------------------------------------------------------------|
-| `font-terminal-mono`   | `--font-terminal-mono`    | `"JetBrains Mono"`, `"IBM Plex Mono"`, `monospace`                             |
+| Token                | CSS variable           | Font stack                                         |
+| -------------------- | ---------------------- | -------------------------------------------------- |
+| `font-terminal-mono` | `--font-terminal-mono` | `"JetBrains Mono"`, `"IBM Plex Mono"`, `monospace` |
 
 - **Role:** All headings, labels, navigation, code, badges, status indicators, button text
 - **Loading:** `JetBrains Mono` loaded via `next/font/google` (variable font)
@@ -19,9 +19,9 @@
 
 ### Secondary — Sans-Serif (Prose)
 
-| Token                  | CSS variable              | Font stack                                                          |
-|------------------------|---------------------------|---------------------------------------------------------------------|
-| `font-terminal-sans`   | `--font-terminal-sans`    | `"IBM Plex Sans"`, `"Source Sans 3"`, `system-ui`, `sans-serif`    |
+| Token                | CSS variable           | Font stack                                                      |
+| -------------------- | ---------------------- | --------------------------------------------------------------- |
+| `font-terminal-sans` | `--font-terminal-sans` | `"IBM Plex Sans"`, `"Source Sans 3"`, `system-ui`, `sans-serif` |
 
 - **Role:** Long-form body copy, descriptions, documentation prose
 - **Loading:** `Inter` loaded via `next/font/google` (variable font, used in admin)
@@ -33,28 +33,28 @@
 
 All values defined as CSS custom properties in `:root`.
 
-| Level     | Token                   | Size        | Weight | Line Height | Font family   | Tailwind equivalent       |
-|-----------|-------------------------|-------------|--------|-------------|---------------|---------------------------|
-| H1        | `--type-h1-size`        | `2rem` (32px)   | 600    | 1.25        | terminal-mono | `text-3xl font-semibold`  |
-| H2        | `--type-h2-size`        | `1.5rem` (24px) | 600    | 1.3         | terminal-mono | `text-2xl font-semibold`  |
-| H3        | `--type-h3-size`        | `1.125rem` (18px)| 600   | 1.35        | terminal-mono | `text-lg font-semibold`   |
-| Body      | `--type-body-size`      | `0.875rem` (14px)| 400   | 1.55        | terminal-mono | `text-sm`                 |
-| Caption   | `--type-caption-size`   | `0.75rem` (12px) | 400   | 1.4         | terminal-mono | `text-xs`                 |
+| Level   | Token                 | Size              | Weight | Line Height | Font family   | Tailwind equivalent      |
+| ------- | --------------------- | ----------------- | ------ | ----------- | ------------- | ------------------------ |
+| H1      | `--type-h1-size`      | `2rem` (32px)     | 600    | 1.25        | terminal-mono | `text-3xl font-semibold` |
+| H2      | `--type-h2-size`      | `1.5rem` (24px)   | 600    | 1.3         | terminal-mono | `text-2xl font-semibold` |
+| H3      | `--type-h3-size`      | `1.125rem` (18px) | 600    | 1.35        | terminal-mono | `text-lg font-semibold`  |
+| Body    | `--type-body-size`    | `0.875rem` (14px) | 400    | 1.55        | terminal-mono | `text-sm`                |
+| Caption | `--type-caption-size` | `0.75rem` (12px)  | 400    | 1.4         | terminal-mono | `text-xs`                |
 
 ### Additional in-component sizes
 
-| Context                  | Size             | Weight | Letter spacing | Transform  | Component             |
-|--------------------------|------------------|--------|----------------|------------|-----------------------|
-| Panel title / label      | `0.75rem` (12px) | 700    | `0.1em` (wide) | uppercase  | `DashboardPanel`      |
-| Nav link                 | `0.875rem` (14px)| 500    | normal         | —          | `AppShell`            |
-| Header nav link          | `0.75rem` (12px) | 400    | `0.05em`       | uppercase  | `AppShell`            |
-| Badge text (sm)          | `0.75rem` (12px) | 600    | `0.05em`       | uppercase  | `Badge`               |
-| Badge text (md/lg)       | `0.75rem` (12px) | 600    | `0.05em`       | uppercase  | `Badge`               |
-| Button (default)         | `0.875rem` (14px)| 500    | normal         | —          | `Button`              |
-| Status indicator         | `0.75rem` (12px) | 400    | `0.05em` wider | uppercase  | `StatusIndicator`     |
-| Code body                | `0.8rem` (12.8px)| 400    | normal         | —          | `CodeBlock`           |
-| Code body (mobile)       | `0.72rem` (11.5px)| 400   | normal         | —          | `CodeBlock` < 640px   |
-| Code header label        | `0.625rem` (10px)| 400    | `0.12em`       | uppercase  | `CodeBlock`           |
+| Context             | Size               | Weight | Letter spacing | Transform | Component           |
+| ------------------- | ------------------ | ------ | -------------- | --------- | ------------------- |
+| Panel title / label | `0.75rem` (12px)   | 700    | `0.1em` (wide) | uppercase | `DashboardPanel`    |
+| Nav link            | `0.875rem` (14px)  | 500    | normal         | —         | `AppShell`          |
+| Header nav link     | `0.75rem` (12px)   | 400    | `0.05em`       | uppercase | `AppShell`          |
+| Badge text (sm)     | `0.75rem` (12px)   | 600    | `0.05em`       | uppercase | `Badge`             |
+| Badge text (md/lg)  | `0.75rem` (12px)   | 600    | `0.05em`       | uppercase | `Badge`             |
+| Button (default)    | `0.875rem` (14px)  | 500    | normal         | —         | `Button`            |
+| Status indicator    | `0.75rem` (12px)   | 400    | `0.05em` wider | uppercase | `StatusIndicator`   |
+| Code body           | `0.8rem` (12.8px)  | 400    | normal         | —         | `CodeBlock`         |
+| Code body (mobile)  | `0.72rem` (11.5px) | 400    | normal         | —         | `CodeBlock` < 640px |
+| Code header label   | `0.625rem` (10px)  | 400    | `0.12em`       | uppercase | `CodeBlock`         |
 
 ---
 
@@ -86,19 +86,19 @@ All values defined as CSS custom properties in `:root`.
 
 ## 4. Text Color Pairings
 
-| Role                  | Color token          | Hex       | Background        | Contrast |
-|-----------------------|----------------------|-----------|-------------------|----------|
-| Primary heading       | `terminal-green`     | `#00ff41` | `terminal-black`  | 15.3:1   |
-| Secondary heading     | `terminal-cyan`      | `#00d4ff` | `terminal-black`  | 12.4:1   |
-| Panel title           | `terminal-green`     | `#00ff41` | `terminal-black`  | 15.3:1   |
-| Body copy             | `terminal-light`     | `#e2e8f0` | `terminal-black`  | 14.7:1   |
-| Muted / secondary     | `terminal-gray`      | `#94a3b8` | `terminal-black`  | 7.41:1   |
-| Error text            | `terminal-danger`    | `#ff3366` | `terminal-black`  | 5.2:1    |
-| Warning text          | `terminal-warning`   | `#ffaa00` | `terminal-black`  | 9.8:1    |
-| Nav active            | `terminal-green`     | `#00ff41` | `terminal-green/10`| —       |
-| Nav inactive          | `terminal-gray`      | `#94a3b8` | transparent       | 7.41:1   |
-| Code body text        | `#b8c5d6`            | `#b8c5d6` | `#050810`         | ~8:1     |
-| Code header label     | `#7ba8b5`            | `#7ba8b5` | `#0d1120`         | ~4.5:1   |
+| Role              | Color token        | Hex       | Background          | Contrast |
+| ----------------- | ------------------ | --------- | ------------------- | -------- |
+| Primary heading   | `terminal-green`   | `#00ff41` | `terminal-black`    | 15.3:1   |
+| Secondary heading | `terminal-cyan`    | `#00d4ff` | `terminal-black`    | 12.4:1   |
+| Panel title       | `terminal-green`   | `#00ff41` | `terminal-black`    | 15.3:1   |
+| Body copy         | `terminal-light`   | `#e2e8f0` | `terminal-black`    | 14.7:1   |
+| Muted / secondary | `terminal-gray`    | `#94a3b8` | `terminal-black`    | 7.41:1   |
+| Error text        | `terminal-danger`  | `#ff3366` | `terminal-black`    | 5.2:1    |
+| Warning text      | `terminal-warning` | `#ffaa00` | `terminal-black`    | 9.8:1    |
+| Nav active        | `terminal-green`   | `#00ff41` | `terminal-green/10` | —        |
+| Nav inactive      | `terminal-gray`    | `#94a3b8` | transparent         | 7.41:1   |
+| Code body text    | `#b8c5d6`          | `#b8c5d6` | `#050810`           | ~8:1     |
+| Code header label | `#7ba8b5`          | `#7ba8b5` | `#0d1120`           | ~4.5:1   |
 
 ---
 
@@ -240,36 +240,36 @@ Button/Small
 
 ## 6. Line Length Guidelines
 
-| Context              | Max width       | Rationale                              |
-|----------------------|-----------------|----------------------------------------|
-| Body prose           | 65–75 characters | Optimal readability range             |
-| Panel description    | 60ch            | Constrained by panel width            |
-| Modal body           | `max-w-lg` (512px) | Set by ModalContent component       |
-| Code block           | No limit (scroll) | Horizontal scroll enabled           |
-| Alert description    | Full width      | Alerts span full container width      |
+| Context           | Max width          | Rationale                        |
+| ----------------- | ------------------ | -------------------------------- |
+| Body prose        | 65–75 characters   | Optimal readability range        |
+| Panel description | 60ch               | Constrained by panel width       |
+| Modal body        | `max-w-lg` (512px) | Set by ModalContent component    |
+| Code block        | No limit (scroll)  | Horizontal scroll enabled        |
+| Alert description | Full width         | Alerts span full container width |
 
 ---
 
 ## 7. Responsive Font Adjustments
 
-| Breakpoint     | Context          | Adjustment                     |
-|----------------|------------------|--------------------------------|
-| `< 640px`      | Code body        | 12.8px → 11.5px (0.72rem)      |
-| `< 640px`      | Code padding     | 1rem → 0.75rem                 |
-| All sizes      | Button height    | 44px min touch (mobile) → 36px (sm:) |
-| All sizes      | Input height     | 44px min touch (mobile) → 36px (sm:) |
+| Breakpoint | Context       | Adjustment                           |
+| ---------- | ------------- | ------------------------------------ |
+| `< 640px`  | Code body     | 12.8px → 11.5px (0.72rem)            |
+| `< 640px`  | Code padding  | 1rem → 0.75rem                       |
+| All sizes  | Button height | 44px min touch (mobile) → 36px (sm:) |
+| All sizes  | Input height  | 44px min touch (mobile) → 36px (sm:) |
 
 ---
 
 ## 8. Letter Spacing Reference
 
-| Tailwind utility    | Value      | Used in                                     |
-|---------------------|------------|---------------------------------------------|
-| `tracking-widest`   | `0.1em`    | Panel titles, `DashboardPanel` header       |
-| `tracking-wider`    | `0.05em`   | Status indicators, header nav labels        |
-| `tracking-wide`     | `0.025em`  | Badge text                                  |
-| `tracking-normal`   | `0`        | Body text, nav links                        |
-| Code header label   | `0.12em`   | `CodeBlock` file path label                 |
+| Tailwind utility  | Value     | Used in                               |
+| ----------------- | --------- | ------------------------------------- |
+| `tracking-widest` | `0.1em`   | Panel titles, `DashboardPanel` header |
+| `tracking-wider`  | `0.05em`  | Status indicators, header nav labels  |
+| `tracking-wide`   | `0.025em` | Badge text                            |
+| `tracking-normal` | `0`       | Body text, nav links                  |
+| Code header label | `0.12em`  | `CodeBlock` file path label           |
 
 ---
 
@@ -279,23 +279,28 @@ Practical rules for choosing Tailwind utility classes so type hierarchy stays co
 
 ### Do
 
-| Use | For |
-|---|---|
-| `font-terminal-mono` | Any heading, label, badge, button, code, or status text — the default typeface for this UI. |
-| `font-terminal-sans` | Long-form prose only (docs pages, markdown-rendered content). |
-| `text-3xl font-semibold` / `text-2xl font-semibold` / `text-lg font-semibold` | H1 / H2 / H3 respectively — matches the `--type-h1-size` … `--type-h3-size` scale. |
-| `text-sm` | Body copy (`--type-body-size`, 14px). |
-| `text-xs` | Captions, helper text, timestamps (`--type-caption-size`, 12px). |
-| `tracking-widest uppercase text-xs font-bold` | Panel titles / section labels only. |
-| `tracking-wider uppercase text-xs` | Status indicators and header nav labels. |
+| Use                                                                           | For                                                                                         |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `font-terminal-mono`                                                          | Any heading, label, badge, button, code, or status text — the default typeface for this UI. |
+| `font-terminal-sans`                                                          | Long-form prose only (docs pages, markdown-rendered content).                               |
+| `text-3xl font-semibold` / `text-2xl font-semibold` / `text-lg font-semibold` | H1 / H2 / H3 respectively — matches the `--type-h1-size` … `--type-h3-size` scale.          |
+| `text-sm`                                                                     | Body copy (`--type-body-size`, 14px).                                                       |
+| `text-xs`                                                                     | Captions, helper text, timestamps (`--type-caption-size`, 12px).                            |
+| `tracking-widest uppercase text-xs font-bold`                                 | Panel titles / section labels only.                                                         |
+| `tracking-wider uppercase text-xs`                                            | Status indicators and header nav labels.                                                    |
 
 ### Don't
 
-- Don't introduce a new font size outside the scale in §2 (`H1`–`Caption`) or the in-component sizes table. If a component needs something new, add it to that table first.
-- Don't apply `font-terminal-sans` inside dashboard/terminal panels — sans is reserved for prose contexts, not UI chrome.
-- Don't combine `uppercase` with body-copy text classes (`text-sm`/body weight) — uppercase treatment is reserved for labels, badges, and status text per §1–§2.
-- Don't hardcode a `line-height` value in a component; rely on the Tailwind text-size utility (which already carries the correct line-height for that scale step) or the CSS custom properties in §2.
-- Don't use a font weight other than 400/500/600/700 — these are the only weights loaded for JetBrains Mono/Inter in `layout.tsx`.
+- Don't introduce a new font size outside the scale in §2 (`H1`–`Caption`) or the in-component sizes table. If a
+  component needs something new, add it to that table first.
+- Don't apply `font-terminal-sans` inside dashboard/terminal panels — sans is reserved for prose contexts, not UI
+  chrome.
+- Don't combine `uppercase` with body-copy text classes (`text-sm`/body weight) — uppercase treatment is reserved for
+  labels, badges, and status text per §1–§2.
+- Don't hardcode a `line-height` value in a component; rely on the Tailwind text-size utility (which already carries the
+  correct line-height for that scale step) or the CSS custom properties in §2.
+- Don't use a font weight other than 400/500/600/700 — these are the only weights loaded for JetBrains Mono/Inter in
+  `layout.tsx`.
 
 ---
 
@@ -304,14 +309,14 @@ Practical rules for choosing Tailwind utility classes so type hierarchy stays co
 To use `JetBrains Mono` in Figma:
 
 1. Install the **Google Fonts** plugin or the **Figma Font Helper** desktop app.
-2. Search for `JetBrains Mono` — available as a variable font with weights 100–800.
-3. For `IBM Plex Mono` (fallback): available on Google Fonts.
-4. Set document defaults:  
-   - Default font: `JetBrains Mono`  
-   - Default weight: Regular (400)  
-   - Default size: 14  
+1. Search for `JetBrains Mono` — available as a variable font with weights 100–800.
+1. For `IBM Plex Mono` (fallback): available on Google Fonts.
+1. Set document defaults:
+   - Default font: `JetBrains Mono`
+   - Default weight: Regular (400)
+   - Default size: 14
    - Default color: `#e2e8f0`
 
 ---
 
-*Last updated: 2026-07-29 | Source: `soroscan-frontend/app/globals.css`, `soroscan-frontend/app/layout.tsx`*
+_Last updated: 2026-07-29 | Source: `soroscan-frontend/app/globals.css`, `soroscan-frontend/app/layout.tsx`_

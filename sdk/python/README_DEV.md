@@ -33,6 +33,7 @@ Two client implementations sharing the same interface:
 - `AsyncSoroScanClient`: Asynchronous using `httpx.AsyncClient`
 
 Both clients:
+
 - Handle authentication via Bearer tokens
 - Provide error handling with specific exceptions
 - Support context managers for cleanup
@@ -41,11 +42,13 @@ Both clients:
 ### Models Layer (`models.py`)
 
 Pydantic v2 models for:
+
 - Request validation (`RecordEventRequest`)
 - Response parsing (all other models)
 - Type safety throughout the SDK
 
 Key models:
+
 - `TrackedContract`: Contract metadata
 - `ContractEvent`: Event data
 - `WebhookSubscription`: Webhook config
@@ -54,6 +57,7 @@ Key models:
 ### Exception Layer (`exceptions.py`)
 
 Exception hierarchy:
+
 ```
 SoroScanError (base)
 └── SoroScanAPIError
@@ -89,17 +93,20 @@ SoroScanError (base)
 ## Testing Strategy
 
 ### Unit Tests
+
 - Mock all HTTP calls with `pytest-httpx`
 - Test success and error paths
 - Verify model validation
 - Check exception handling
 
 ### Integration Tests
+
 - Test complete workflows
 - Verify pagination logic
 - Test concurrent operations (async)
 
 ### Type Tests
+
 - Run mypy in strict mode
 - Verify no `Any` in return types
 - Check all public APIs have hints
@@ -107,11 +114,11 @@ SoroScanError (base)
 ## Adding New Features
 
 1. Update models in `models.py`
-2. Add client methods in `client.py` (both sync and async)
-3. Export from `__init__.py`
-4. Add tests in `tests/`
-5. Update README with examples
-6. Run all checks: `python run_tests.py`
+1. Add client methods in `client.py` (both sync and async)
+1. Export from `__init__.py`
+1. Add tests in `tests/`
+1. Update README with examples
+1. Run all checks: `python run_tests.py`
 
 ## Performance Considerations
 

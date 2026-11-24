@@ -1,6 +1,7 @@
 # Celery Troubleshooting Guide
 
-This guide provides solutions for common Celery issues in SoroScan, including task timeouts, Redis connection drops, and queue congestion.
+This guide provides solutions for common Celery issues in SoroScan, including task timeouts, Redis connection drops, and
+queue congestion.
 
 ## Table of Contents
 
@@ -17,11 +18,13 @@ This guide provides solutions for common Celery issues in SoroScan, including ta
 ## Task Timeouts
 
 ### Symptoms
+
 - Tasks failing with `SoftTimeLimitExceeded` or `TimeLimitExceeded`
 - Workers appearing to hang or become unresponsive
 - Tasks taking longer than expected to complete
 
 ### Current Configuration
+
 ```python
 # Global timeout settings (soroscan/settings.py)
 CELERY_TASK_TIME_LIMIT = 600        # Hard timeout: 10 minutes
@@ -31,6 +34,7 @@ CELERY_TASK_SOFT_TIME_LIMIT = 540   # Soft timeout: 9 minutes
 ### Solutions
 
 #### 1. Increase Task Timeouts
+
 For specific long-running tasks, adjust timeouts in the task decorator:
 
 ```python
@@ -45,6 +49,7 @@ def your_long_task(self):
 ```
 
 #### 2. Environment Variable Override
+
 ```bash
 # In .env file
 CELERY_TASK_TIME_LIMIT=1200          # 20 minutes
@@ -52,6 +57,7 @@ CELERY_TASK_SOFT_TIME_LIMIT=1080     # 18 minutes
 ```
 
 #### 3. Handle Soft Timeouts Gracefully
+
 ```python
 from celery.exceptions import SoftTimeLimitExceeded
 
@@ -68,6 +74,7 @@ def robust_task(self):
 ```
 
 #### 4. Monitor Task Duration
+
 Check which tasks are timing out:
 
 ```bash
@@ -81,6 +88,7 @@ grep "task_duration_seconds" /var/log/celery/worker.log
 ## OOM (Out of Memory) Errors
 
 ### Symptoms
+
 - Workers crashing with exit code 137 (SIGKILL)
 - `MemoryError` exceptions in task logs
 - System running out of available memory
@@ -88,6 +96,7 @@ grep "task_duration_seconds" /var/log/celery/worker.log
 ### Solutions
 
 #### 1. Reduce Worker Concurrency
+
 ```bash
 # Start workers with lower concurrency
 celery -A soroscan worker --concurrency=2 --loglevel=info
@@ -97,6 +106,7 @@ export CELERY_WORKER_CONCURRENCY=2
 ```
 
 #### 2. Enable Worker Memory Limits
+
 ```python
 # In soroscan/settings.py
 CELERY_WORKER_MAX_MEMORY_PER_CHILD = 200000  # 200MB per worker process
@@ -104,6 +114,7 @@ CELERY_WORKER_MAX_TASKS_PER_CHILD = 50      # Restart worker after 50 tasks
 ```
 
 #### 3. Use Memory-Efficient Task Design
+
 ```python
 @shared_task(bind=True)
 def memory_efficient_task(self):
@@ -112,13 +123,14 @@ def memory_efficient_task(self):
         process_chunk(chunk)
         # Explicit cleanup
         del chunk
-        
+
     # Force garbage collection for large datasets
     import gc
     gc.collect()
 ```
 
 #### 4. Monitor Memory Usage
+
 ```bash
 # Monitor worker memory usage
 ps aux | grep celery | awk '{print $2, $4, $6, $11}' | column -t
@@ -129,11 +141,12 @@ top -p $(pgrep -f "celery.*worker")
 ```
 
 #### 5. Batch Large Operations
+
 ```python
 # Instead of processing all events at once
 def process_all_events():
     events = ContractEvent.objects.all()  # Memory intensive!
-    
+
 # Use batching
 def process_events_batched():
     batch_size = 1000
@@ -145,6 +158,7 @@ def process_events_batched():
 ## Redis Connection Issues
 
 ### Symptoms
+
 - `ConnectionError: Error connecting to Redis`
 - Tasks getting lost or not executing
 - Intermittent connection drops
@@ -152,6 +166,7 @@ def process_events_batched():
 ### Solutions
 
 #### 1. Connection Pool Configuration
+
 ```python
 # In soroscan/settings.py
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
@@ -164,6 +179,7 @@ CELERY_REDIS_RETRY_ON_TIMEOUT = True
 ```
 
 #### 2. Health Check Redis Connection
+
 ```bash
 # Test Redis connectivity
 redis-cli -u "$REDIS_URL" ping
@@ -176,6 +192,7 @@ redis-cli -u "$REDIS_URL" info memory
 ```
 
 #### 3. Handle Connection Failures in Tasks
+
 ```python
 from celery.exceptions import Retry
 import redis
@@ -191,6 +208,7 @@ def redis_dependent_task(self):
 ```
 
 #### 4. Redis Configuration Tuning
+
 ```bash
 # In redis.conf or via environment
 # Increase timeout values
@@ -204,6 +222,7 @@ maxclients 10000
 ## Queue Congestion
 
 ### Symptoms
+
 - Tasks piling up in queues without processing
 - Increasing task lag times
 - Queue length growing continuously
@@ -211,6 +230,7 @@ maxclients 10000
 ### Solutions
 
 #### 1. Monitor Queue Status
+
 ```bash
 # Check queue lengths
 celery -A soroscan inspect active_queues
@@ -225,6 +245,7 @@ redis-cli -u "$REDIS_URL" llen low_priority
 ```
 
 #### 2. Scale Workers by Queue
+
 ```bash
 # Start dedicated workers for specific queues
 celery -A soroscan worker -Q high_priority --concurrency=4
@@ -233,6 +254,7 @@ celery -A soroscan worker -Q low_priority --concurrency=1
 ```
 
 #### 3. Purge Stuck Queues
+
 ```bash
 # Purge all tasks from a queue (USE WITH CAUTION)
 celery -A soroscan purge -Q low_priority
@@ -242,6 +264,7 @@ celery -A soroscan purge --force
 ```
 
 #### 4. Task Routing Optimization
+
 Review and optimize task routing in `settings.py`:
 
 ```python
@@ -249,7 +272,7 @@ CELERY_TASK_ROUTES = {
     # High-priority, time-sensitive tasks
     "ingest.tasks.ingest_latest_events": {"queue": "high_priority"},
     "ingest.tasks.dispatch_webhook": {"queue": "default"},
-    
+
     # Resource-intensive, can be delayed
     "ingest.tasks.aggregate_event_statistics": {"queue": "low_priority"},
     "soroscan.ingest.tasks.backfill_contract_events": {"queue": "backfill"},
@@ -259,6 +282,7 @@ CELERY_TASK_ROUTES = {
 ## Task Retries
 
 ### Current Retry Configurations
+
 SoroScan uses different retry strategies per task type:
 
 ```python
@@ -281,6 +305,7 @@ def send_alert(self, rule_id: int, event_id: int):
 ### Solutions
 
 #### 1. Implement Custom Retry Logic
+
 ```python
 @shared_task(bind=True)
 def robust_task_with_custom_retry(self):
@@ -298,6 +323,7 @@ def robust_task_with_custom_retry(self):
 ```
 
 #### 2. Monitor Retry Patterns
+
 ```bash
 # View failed tasks
 celery -A soroscan events
@@ -307,6 +333,7 @@ grep "Celery task retrying" /var/log/celery/worker.log | tail -20
 ```
 
 #### 3. Handle Exhausted Retries
+
 ```python
 @shared_task(bind=True, max_retries=3)
 def task_with_fallback(self):
@@ -324,6 +351,7 @@ def task_with_fallback(self):
 ## Task Lag
 
 ### Symptoms
+
 - Tasks taking a long time to start after being queued
 - Backlog of pending tasks
 - Poor user experience due to delays
@@ -331,6 +359,7 @@ def task_with_fallback(self):
 ### Solutions
 
 #### 1. Identify Bottlenecks
+
 ```bash
 # Check worker utilization
 celery -A soroscan inspect stats
@@ -343,13 +372,14 @@ grep "task_duration_seconds" /var/log/celery/worker.log | sort -k3 -n
 ```
 
 #### 2. Optimize Database Queries
+
 ```python
 # Use select_related and prefetch_related
 def optimize_database_task():
     # Bad: N+1 queries
     for event in ContractEvent.objects.all():
         print(event.contract.name)
-    
+
     # Good: Single query with join
     events = ContractEvent.objects.select_related('contract').all()
     for event in events:
@@ -357,6 +387,7 @@ def optimize_database_task():
 ```
 
 #### 3. Add Task Prioritization
+
 ```python
 # Use priority routing
 @shared_task(bind=True)
@@ -370,6 +401,7 @@ CELERY_TASK_ROUTES = {
 ```
 
 #### 4. Scale Horizontally
+
 ```bash
 # Run multiple worker instances
 celery -A soroscan worker --hostname=worker1@%h --concurrency=4
@@ -379,6 +411,7 @@ celery -A soroscan worker --hostname=worker2@%h --concurrency=4
 ## Monitoring Commands
 
 ### Worker Status
+
 ```bash
 # Check active workers
 celery -A soroscan inspect active
@@ -394,6 +427,7 @@ celery -A soroscan status
 ```
 
 ### Queue Monitoring
+
 ```bash
 # Queue lengths
 redis-cli -u "$REDIS_URL" llen celery
@@ -408,6 +442,7 @@ redis-cli -u "$REDIS_URL" keys "*queue*"
 ```
 
 ### Task Monitoring
+
 ```bash
 # Real-time task events
 celery -A soroscan events
@@ -420,6 +455,7 @@ celery -A soroscan inspect failed
 ```
 
 ### Performance Monitoring
+
 ```bash
 # Worker memory usage
 ps aux | grep "celery.*worker" | awk '{print $2, $4, $6, $11}' | column -t
@@ -435,6 +471,7 @@ netstat -an | grep :6379
 ```
 
 ### Log Analysis
+
 ```bash
 # Recent task failures
 grep "ERROR" /var/log/celery/worker.log | tail -20
@@ -451,6 +488,7 @@ grep "retrying" /var/log/celery/worker.log | \
 ## Concurrency Tuning
 
 ### Current Setup
+
 SoroScan uses these worker configurations by default:
 
 ```bash
@@ -463,12 +501,14 @@ celery -A soroscan worker --loglevel=info
 #### 1. CPU-Bound vs I/O-Bound Tasks
 
 **For CPU-intensive tasks:**
+
 ```bash
 # Use processes (default), limit to CPU cores
 celery -A soroscan worker --concurrency=$(nproc) --pool=prefork
 ```
 
 **For I/O-intensive tasks (webhooks, API calls):**
+
 ```bash
 # Use threads or gevent for better I/O concurrency
 celery -A soroscan worker --concurrency=20 --pool=threads
@@ -477,6 +517,7 @@ celery -A soroscan worker --concurrency=100 --pool=gevent
 ```
 
 #### 2. Queue-Specific Concurrency
+
 ```bash
 # High-priority queue: More workers
 celery -A soroscan worker -Q high_priority --concurrency=8 --hostname=hp_worker@%h
@@ -489,6 +530,7 @@ celery -A soroscan worker -Q default --concurrency=10 --pool=threads --hostname=
 ```
 
 #### 3. Memory-Based Concurrency
+
 ```bash
 # For systems with limited memory
 celery -A soroscan worker --concurrency=2 --max-memory-per-child=200000
@@ -498,6 +540,7 @@ celery -A soroscan worker --concurrency=8 --max-memory-per-child=500000
 ```
 
 #### 4. Dynamic Scaling with Autoscale
+
 ```bash
 # Auto-scale between 2-10 workers based on load
 celery -A soroscan worker --autoscale=10,2 --loglevel=info
@@ -508,6 +551,7 @@ celery -A soroscan worker -Q low_priority --autoscale=4,1
 ```
 
 #### 5. Production Configuration Example
+
 ```bash
 #!/bin/bash
 # production-celery.sh
@@ -548,11 +592,11 @@ wait
 ### Tuning Guidelines
 
 1. **Start Conservative**: Begin with `concurrency=2` and increase gradually
-2. **Monitor Resources**: Watch CPU, memory, and I/O usage during load testing
-3. **Queue Separation**: Use dedicated workers for different task types
-4. **Memory Limits**: Set `max-memory-per-child` to prevent OOM issues
-5. **Task Limits**: Use `max-tasks-per-child` to prevent memory leaks
-6. **Pool Selection**: 
+1. **Monitor Resources**: Watch CPU, memory, and I/O usage during load testing
+1. **Queue Separation**: Use dedicated workers for different task types
+1. **Memory Limits**: Set `max-memory-per-child` to prevent OOM issues
+1. **Task Limits**: Use `max-tasks-per-child` to prevent memory leaks
+1. **Pool Selection**:
    - `prefork` for CPU-bound tasks
    - `threads` for I/O-bound tasks with shared state
    - `gevent` for high-concurrency I/O without shared state
@@ -560,13 +604,14 @@ wait
 ## Configuration Reference
 
 ### Environment Variables
+
 ```bash
 # Core settings
 REDIS_URL=redis://localhost:6379/0
 CELERY_TASK_TIME_LIMIT=600
 CELERY_TASK_SOFT_TIME_LIMIT=540
 
-# Worker settings  
+# Worker settings
 CELERY_WORKER_CONCURRENCY=4
 CELERY_WORKER_MAX_MEMORY_PER_CHILD=200000
 CELERY_WORKER_MAX_TASKS_PER_CHILD=100
@@ -577,6 +622,7 @@ CELERY_BROKER_CONNECTION_MAX_RETRIES=10
 ```
 
 ### Django Settings
+
 ```python
 # soroscan/settings.py - Key Celery configurations
 
@@ -604,6 +650,7 @@ CELERY_TASK_ROUTES = {
 ```
 
 ### Task Decorator Examples
+
 ```python
 # Basic task with retries
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -635,6 +682,7 @@ def network_task(self):
 ## Emergency Procedures
 
 ### Stopping All Workers
+
 ```bash
 # Graceful shutdown
 pkill -TERM -f "celery.*worker"
@@ -644,6 +692,7 @@ pkill -KILL -f "celery.*worker"
 ```
 
 ### Clearing All Queues
+
 ```bash
 # Clear specific queue
 celery -A soroscan purge -Q high_priority
@@ -653,6 +702,7 @@ celery -A soroscan purge --force
 ```
 
 ### Restarting Services
+
 ```bash
 # Restart workers
 sudo systemctl restart celery-worker

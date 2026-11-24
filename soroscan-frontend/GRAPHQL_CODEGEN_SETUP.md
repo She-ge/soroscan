@@ -107,22 +107,23 @@ After running `pnpm run codegen`, you'll find:
 ## Workflow
 
 1. Write GraphQL queries in `.graphql` files
-2. Run `pnpm run codegen` to generate types
-3. Import and use types in your components
-4. TypeScript will catch any mismatches between queries and usage
+1. Run `pnpm run codegen` to generate types
+1. Import and use types in your components
+1. TypeScript will catch any mismatches between queries and usage
 
 ## Updating Schema
 
 When the backend schema changes:
 
 1. Update `src/schema.graphql` (if using local schema)
-2. Or run codegen with `GRAPHQL_ENDPOINT` pointing to backend
-3. Run `pnpm run codegen`
-4. Fix any TypeScript errors in your code
+1. Or run codegen with `GRAPHQL_ENDPOINT` pointing to backend
+1. Run `pnpm run codegen`
+1. Fix any TypeScript errors in your code
 
 ## IDE Support
 
 The `.graphqlrc.yml` file provides IDE support for:
+
 - Syntax highlighting in `.graphql` files
 - Autocomplete for GraphQL queries
 - Schema validation

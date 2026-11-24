@@ -1,6 +1,7 @@
 # Deployment Examples
 
-Once you have built your SoroScan integration or webhook consumer, you need to deploy it. Here are some quick examples for common platforms.
+Once you have built your SoroScan integration or webhook consumer, you need to deploy it. Here are some quick examples
+for common platforms.
 
 ## 1. Deploy Webhook Receiver on AWS Lambda
 
@@ -16,20 +17,21 @@ import os
 def lambda_handler(event, context):
     # Parse the incoming webhook from SoroScan
     body = json.loads(event['body'])
-    
+
     contract_id = body.get('contract_id')
     event_data = body.get('data')
-    
+
     # Example: Forward to an internal service
     print(f"Received event for {contract_id}")
-    
+
     return {
         'statusCode': 200,
         'body': json.dumps('Webhook processed successfully!')
     }
 ```
 
-*Deploy using the Serverless framework:*
+_Deploy using the Serverless framework:_
+
 ```yaml
 # serverless.yml
 service: soroscan-webhook
@@ -47,9 +49,11 @@ functions:
 
 ## 2. Deploy on Railway / Render / Heroku
 
-If you have a Node.js express app acting as a real-time dashboard or webhook receiver, deploying on PaaS platforms is trivial.
+If you have a Node.js express app acting as a real-time dashboard or webhook receiver, deploying on PaaS platforms is
+trivial.
 
 **package.json**
+
 ```json
 {
   "name": "soroscan-consumer",
@@ -64,12 +68,13 @@ If you have a Node.js express app acting as a real-time dashboard or webhook rec
 ```
 
 **index.js**
+
 ```javascript
-const express = require('express');
+const express = require("express");
 const app = express();
 app.use(express.json());
 
-app.post('/webhook', (req, res) => {
+app.post("/webhook", (req, res) => {
   console.log("Event received:", req.body);
   res.sendStatus(200);
 });
@@ -80,15 +85,18 @@ app.listen(PORT, () => {
   console.log(`Listening on port ${PORT}`);
 });
 ```
-*Push to GitHub and link the repository in Railway/Render. It will automatically detect the Node environment and start the app.*
+
+_Push to GitHub and link the repository in Railway/Render. It will automatically detect the Node environment and start
+the app._
 
 ## 3. Docker Compose Example
 
 For self-hosted deployments containing a webhook receiver, database, and a frontend dashboard.
 
 **docker-compose.yml**
+
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   webhook-receiver:
@@ -125,6 +133,7 @@ volumes:
 Similar to AWS Lambda, GCP functions are great for serverless webhook handling.
 
 **main.py**
+
 ```python
 import functions_framework
 
@@ -132,7 +141,7 @@ import functions_framework
 def soroscan_webhook(request):
     """HTTP Cloud Function."""
     request_json = request.get_json(silent=True)
-    
+
     if request_json and 'contract_id' in request_json:
         # Process the event
         print(f"Processing event for contract {request_json['contract_id']}")
@@ -142,11 +151,13 @@ def soroscan_webhook(request):
 ```
 
 **requirements.txt**
+
 ```text
 functions-framework==3.4.0
 ```
 
-*Deploy command:*
+_Deploy command:_
+
 ```bash
 gcloud functions deploy soroscan_webhook \
 --runtime python310 \

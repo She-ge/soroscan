@@ -7,30 +7,22 @@ sidebar_label: Deployment & Ops
 hide_title: false
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs'; import TabItem from '@theme/TabItem';
 
-# SoroScan Production Deployment & Operations
+## SoroScan Production Deployment & Operations
 
-This guide covers recommended production deployments for SoroScan, including local Docker Compose, Kubernetes (Helm + Terraform), an AWS/EKS example, monitoring, backups, security, runbooks, and troubleshooting.
+This guide covers recommended production deployments for SoroScan, including local Docker Compose, Kubernetes (Helm +
+Terraform), an AWS/EKS example, monitoring, backups, security, runbooks, and troubleshooting.
 
 **Quick links**
-- [Docker Compose](deployment/docker-compose)
-- [Kubernetes (Helm)](deployment/kubernetes)
-- [AWS EKS (Terraform)](deployment/aws)
-- [Monitoring & Observability](deployment/monitoring)
-- [Backups & Disaster Recovery](deployment/backups)
-- [Troubleshooting & Runbooks](deployment/runbooks)
-- [Pre-Deployment Security Checklist](deployment/security)
-- [Cost Estimates](deployment/costs)
-- [Docker Compose](./docker-compose)
-- [Kubernetes (Helm)](./kubernetes)
-- [AWS EKS (Terraform)](./aws)
-- [Monitoring & Observability](./monitoring)
-- [Backups & Disaster Recovery](./backups)
-- [Troubleshooting & Runbooks](./runbooks)
-- [Security Checklist](./security)
-- [Cost Estimates](./costs)
+- [Docker Compose](./docker-compose.md)
+- [Kubernetes (Helm)](./kubernetes.md)
+- [AWS EKS (Terraform)](./aws.md)
+- [Monitoring & Observability](./monitoring.md)
+- [Backups & Disaster Recovery](./backups.md)
+- [Troubleshooting & Runbooks](./runbooks.md)
+- [Pre-Deployment Security Checklist](./security.md)
+- [Cost Estimates](./costs.md)
 
 ## Decision tree
 
@@ -65,7 +57,8 @@ flowchart LR
   CELERY --> REDIS
 ```
 
-
 ## Notes and scope
-- These docs provide examples and operational guidance. Adapt resource sizes and retention policies to your workload and compliance needs.
+
+- These docs provide examples and operational guidance. Adapt resource sizes and retention policies to your workload and
+  compliance needs.
 - Files included: sample Helm values, a Terraform EKS snippet, and a Postgres backup example.

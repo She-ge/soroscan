@@ -10,6 +10,7 @@ hide_title: false
 This page explains how to monitor SoroScan in production: metrics, dashboards, logs, and alerting.
 
 ## Metrics (Prometheus)
+
 - Expose application metrics via `django-prometheus` or `prometheus_client`.
 - Scrape targets:
   - `soroscan-backend` `/metrics`
@@ -18,6 +19,7 @@ This page explains how to monitor SoroScan in production: metrics, dashboards, l
   - Redis exporter
 
 ### Important application metrics
+
 - `http_request_duration_seconds` (95th/99th percentile)
 - `http_requests_total` (by endpoint, status)
 - `celery_task_duration_seconds` (latency of ingest tasks)
@@ -28,7 +30,15 @@ This page explains how to monitor SoroScan in production: metrics, dashboards, l
   `soroscan_celery_tasks_total`, and `soroscan_celery_task_duration_seconds`
 
 ## Grafana dashboards
+
 - Import `k8s/grafana-dashboard.json` as a starting point.
+- The repo also ships five ready-to-import dashboard templates in
+  `k8s/grafana-templates/`: system health, event ingestion, webhook delivery,
+  performance analysis, and the Celery task queue. See
+  [Grafana Dashboards](../observability/grafana-dashboards.md) for each
+  dashboard's purpose, panels, Prometheus queries, and import/provisioning steps.
+- `k8s/grafana-datasource.yaml` and `k8s/grafana-dashboard-provider.yaml`
+  provision the Prometheus datasource and the file-based dashboard provider.
 - Key panels:
   - API latency (p95/p99)
   - Error rate (5xx) per minute
@@ -37,11 +47,13 @@ This page explains how to monitor SoroScan in production: metrics, dashboards, l
   - Redis memory & hit/miss rate
 
 ## Logging strategy
+
 - Structured JSON logs from Django & Celery (logfmt or JSON).
 - Centralize logs to Loki or ELK (Elasticsearch + Logstash + Kibana).
 - Include request id, user id (if available), contract id, and correlation id in logs.
 
 ## Alerting
+
 - Use Alertmanager for Prometheus alerts. Example alerts:
   - High API error rate: alert when 5xx rate > 1% for 5min
   - High latency: p95 > X ms for 5min
@@ -61,14 +73,17 @@ and a PromQL root-cause query grouped by view and error type. Celery alerts
 cover queue depth above 100 and task failure rate above 5%.
 
 ## Incident escalation
+
 - Configure Alertmanager to send critical alerts to PagerDuty or Slack.
 - Use runbooks (see Runbooks page) for standard remediation steps.
 
 ## Health checks
+
 - Liveness probe: simple Django endpoint `/health/` returning 200
 - Readiness probe: `/ready/` verifying DB and Redis connectivity
 
 ## SLOs and SLIs
+
 - Example SLOs:
   - 99.9% availability for the API
   - p95 request latency < 500ms for list queries

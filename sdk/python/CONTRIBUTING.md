@@ -5,18 +5,21 @@ Thank you for your interest in contributing to the SoroScan Python SDK!
 ## Development Setup
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/soroscan/soroscan.git
 cd soroscan/sdk/python
 ```
 
-2. Create a virtual environment:
+1. Create a virtual environment:
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install development dependencies:
+1. Install development dependencies:
+
 ```bash
 pip install -e ".[dev]"
 ```
@@ -68,19 +71,19 @@ make all
 ## Code Standards
 
 1. **Type Hints**: All functions must have complete type hints
-2. **Docstrings**: Public APIs require docstrings with parameter descriptions
-3. **Testing**: New features require corresponding tests
-4. **No `Any` Types**: Avoid using `Any` in return types or parameters
-5. **Pydantic Models**: Use Pydantic v2 for all data models
+1. **Docstrings**: Public APIs require docstrings with parameter descriptions
+1. **Testing**: New features require corresponding tests
+1. **No `Any` Types**: Avoid using `Any` in return types or parameters
+1. **Pydantic Models**: Use Pydantic v2 for all data models
 
 ## Pull Request Process
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Make your changes
-4. Run all checks: `make all`
-5. Commit with clear messages
-6. Push and create a pull request
+1. Create a feature branch: `git checkout -b feature/my-feature`
+1. Make your changes
+1. Run all checks: `make all`
+1. Commit with clear messages
+1. Push and create a pull request
 
 ## Testing Guidelines
 
@@ -91,4 +94,4 @@ make all
 
 ## Questions?
 
-Open an issue or reach out to team@soroscan.io
+Open an issue or reach out to <team@soroscan.io>

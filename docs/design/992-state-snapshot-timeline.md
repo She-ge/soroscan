@@ -8,7 +8,8 @@
 
 ## Overview
 
-This document specifies the UI design for a visual timeline that displays historical contract state changes and field diffs, including state snapshots, value changes, and filtering capabilities.
+This document specifies the UI design for a visual timeline that displays historical contract state changes and field
+diffs, including state snapshots, value changes, and filtering capabilities.
 
 ---
 
@@ -82,14 +83,14 @@ This document specifies the UI design for a visual timeline that displays histor
 Ledger 54325   [State Snapshot 3]                 Now ●
 ```
 
-| Component | Spec |
-|-----------|------|
-| Ledger Number | 14px, 600 weight, mono, #f8fafc |
-| Snapshot Label | 12px, 500 weight, sans, #00d4ff |
-| Timestamp | 12px, 400 weight, mono, #718096 |
-| Timeline Dot | 8px circle, background #00ff41, shadow 0 0 12px rgba(0, 255, 65, 0.4) |
-| Vertical Line | 2px solid #2d3748, spans between snapshots |
-| Hover Effect | Vertical line brightens to #00ff41 |
+| Component      | Spec                                                                  |
+| -------------- | --------------------------------------------------------------------- |
+| Ledger Number  | 14px, 600 weight, mono, #f8fafc                                       |
+| Snapshot Label | 12px, 500 weight, sans, #00d4ff                                       |
+| Timestamp      | 12px, 400 weight, mono, #718096                                       |
+| Timeline Dot   | 8px circle, background #00ff41, shadow 0 0 12px rgba(0, 255, 65, 0.4) |
+| Vertical Line  | 2px solid #2d3748, spans between snapshots                            |
+| Hover Effect   | Vertical line brightens to #00ff41                                    |
 
 ### State Diff Row (Field Change)
 
@@ -99,17 +100,17 @@ Ledger 54325   [State Snapshot 3]                 Now ●
 │  Change: -50.00 USDC  (5% decrease)
 ```
 
-| Component | Spec |
-|-----------|------|
-| Field Name | 13px, 500 weight, mono, #00d4ff |
-| Before Label | 12px, 400 weight, mono, #718096 |
-| Before Value | 13px, 400 weight, mono, #f8fafc, background rgba(0, 255, 65, 0.1) |
-| Arrow | > character, 12px, #718096 |
-| After Value | 13px, 400 weight, mono, #f8fafc, background rgba(0, 212, 255, 0.1) |
-| Change Badge | 12px, 500 weight, mono |
-|   Positive (+) | color #00ff41 |
-|   Negative (-) | color #ff3366 |
-|   Neutral (=) | color #00d4ff |
+| Component    | Spec                                                               |
+| ------------ | ------------------------------------------------------------------ |
+| Field Name   | 13px, 500 weight, mono, #00d4ff                                    |
+| Before Label | 12px, 400 weight, mono, #718096                                    |
+| Before Value | 13px, 400 weight, mono, #f8fafc, background rgba(0, 255, 65, 0.1)  |
+| Arrow        | > character, 12px, #718096                                         |
+| After Value  | 13px, 400 weight, mono, #f8fafc, background rgba(0, 212, 255, 0.1) |
+| Change Badge | 12px, 500 weight, mono                                             |
+| Positive (+) | color #00ff41                                                      |
+| Negative (-) | color #ff3366                                                      |
+| Neutral (=)  | color #00d4ff                                                      |
 
 ### Expandable Diff Section
 
@@ -118,6 +119,7 @@ Ledger 54325   [State Snapshot 3]                 Now ●
 ```
 
 **Collapsed State**
+
 ```
 └─ Field: version
    Before: 1  →  After: 2
@@ -125,16 +127,17 @@ Ledger 54325   [State Snapshot 3]                 Now ●
 ```
 
 **Expanded State**
+
 ```
 └─ Field: version
    Before: 1  →  After: 2
-   
+
    Change Details:
    - Reason: Schema upgrade
    - Migration: v1 → v2 compatible
    - Timestamp: 2026-08-28T10:45:00Z
    - Transaction ID: CAXYZ...
-   
+
    [Hide details]
 ```
 
@@ -151,6 +154,7 @@ Ledger 54325   [State Snapshot 3]                 Now ●
 ```
 
 **Expanded Dropdown**
+
 ```
 ┌────────────────────────────────────────────┐
 │ [✓] All Fields                             │
@@ -172,6 +176,7 @@ Search: > [       ]
 ```
 
 **Spec:**
+
 - Placeholder: "Search field names or values..."
 - Height: 36px
 - Padding: 8px 12px
@@ -258,12 +263,12 @@ After: paused
 
 ### Change Indicators
 
-| Type | Indicator | Color |
-|------|-----------|-------|
-| Added (new field) | `+` prefix | #00ff41 (green) |
-| Removed (deleted field) | `-` prefix | #ff3366 (red) |
-| Modified (changed value) | `~` prefix | #fbbf24 (amber) |
-| Unchanged | `=` prefix (hidden) | #718096 (muted) |
+| Type                     | Indicator           | Color           |
+| ------------------------ | ------------------- | --------------- |
+| Added (new field)        | `+` prefix          | #00ff41 (green) |
+| Removed (deleted field)  | `-` prefix          | #ff3366 (red)   |
+| Modified (changed value) | `~` prefix          | #fbbf24 (amber) |
+| Unchanged                | `=` prefix (hidden) | #718096 (muted) |
 
 ---
 
@@ -336,12 +341,14 @@ Ledger 54325   [State Snapshot 3]                 Now ●
 ## 8. Accessibility Features
 
 ### Semantic Structure
+
 - Use `<time>` element for timestamps
 - Use `<dl>` (definition list) for field/value pairs
 - Use `<section>` for each snapshot block
 - Use `role="region"` for timeline container
 
 ### ARIA Labels
+
 ```html
 <div role="region" aria-label="Contract state timeline">
   <article aria-label="State snapshot at ledger 54325">
@@ -355,6 +362,7 @@ Ledger 54325   [State Snapshot 3]                 Now ●
 ```
 
 ### Keyboard Navigation
+
 - Tab: Move between snapshots and interactive elements
 - Enter/Space: Expand/collapse snapshot details
 - Arrow Up/Down: Navigate between snapshots
@@ -365,11 +373,13 @@ Ledger 54325   [State Snapshot 3]                 Now ●
 ## 9. Performance Considerations
 
 ### Virtual Scrolling
+
 - Render only visible snapshots (pagination)
 - Load more button: "[Load earlier snapshots...]"
 - Batch size: 20-50 snapshots per load
 
 ### Optimization
+
 - Lazy load diff details
 - Use CSS containment: `contain: layout style paint`
 - Memoize computed change percentages
@@ -410,8 +420,8 @@ Ledger 54325   [State Snapshot 3]                 Now ●
 
 ## Design Resources
 
-- **Figma Prototype Link:** [SoroScan UI Design - Timeline Visualization](#figma-placeholder)
-- **Node ID:** [State Snapshot Timeline Components](#)
+- **Figma Prototype Link:** SoroScan UI Design - Timeline Visualization (not available)
+- **Node ID:** State Snapshot Timeline Components (not assigned)
 - **Last Sync:** 2026-08-28
 
 ---
@@ -430,5 +440,5 @@ Ledger 54325   [State Snapshot 3]                 Now ●
 ## Approval
 
 - **Design Status:** Pending
-- **Figma Review:** [Link to Figma prototype](#figma-placeholder)
+- **Figma Review:** Link not available
 - **Developer Handoff:** Ready for implementation

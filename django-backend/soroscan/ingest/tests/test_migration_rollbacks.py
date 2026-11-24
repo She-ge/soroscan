@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone, timedelta
+from decimal import Decimal
+import uuid
 
 import pytest
+from django.apps import apps as global_apps
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.db.migrations.exceptions import IrreversibleError
 from django.db.migrations.executor import MigrationExecutor
 from django.db.migrations.loader import MigrationLoader
-from django.db.utils import OperationalError, ProgrammingError, IntegrityError
-
+from django.db.models.fields import NOT_PROVIDED
+from django.db.utils import OperationalError, ProgrammingError
 
 APP_LABEL = "ingest"
 
@@ -100,6 +103,123 @@ def _create_historical_user(apps, database):
     return user
 
 
+def _historical_field_value(field, apps, database, index):
+    """Return a deterministic value for a required historical model field."""
+    if field.remote_field is not None:
+        related_model = field.remote_field.model
+        related = related_model.objects.using(database).first()
+        if related is not None:
+            return related
+        if (
+            related_model._meta.app_label == "auth"
+            and related_model._meta.model_name == "user"
+        ):
+            return _create_historical_user(apps, database)
+        raise AssertionError(
+            f"No related row exists for required field "
+            f"{field.model._meta.label}.{field.name}"
+        )
+
+    internal_type = field.get_internal_type()
+    if internal_type in {"CharField", "TextField", "SlugField", "EmailField"}:
+        value = f"migration-{field.name}-{index}"
+        return value[: field.max_length] if field.max_length else value
+    if internal_type in {"IntegerField", "BigIntegerField", "SmallIntegerField"}:
+        return 1
+    if internal_type in {"FloatField", "DecimalField"}:
+        return 0.0 if internal_type == "FloatField" else Decimal("0")
+    if internal_type == "BooleanField":
+        return False
+    if internal_type in {"DateTimeField"}:
+        return datetime(2026, 1, 1, tzinfo=timezone.utc)
+    if internal_type == "DateField":
+        return date(2026, 1, 1)
+    if internal_type == "TimeField":
+        return time.min
+    if internal_type == "DurationField":
+        return timedelta(0)
+    if internal_type in {"JSONField", "HStoreField"}:
+        return {}
+    if internal_type == "UUIDField":
+        return uuid.UUID(int=index + 1)
+    if internal_type == "BinaryField":
+        return b""
+    raise AssertionError(
+        f"Add a deterministic seed value for required field "
+        f"{field.model._meta.label}.{field.name} ({internal_type})"
+    )
+
+
+def _fill_required_fields(model, values, apps, database):
+    for index, field in enumerate(model._meta.local_fields, start=1):
+        if (
+            field.name in values
+            or field.primary_key
+            or field.auto_created
+            or field.null
+            or field.default is not NOT_PROVIDED
+        ):
+            continue
+        values[field.name] = _historical_field_value(field, apps, database, index)
+
+
+def _insert_historical_row(model, values, database, apps):
+    """Insert a historical row while accounting for columns from sibling branches."""
+    connection = connections[database]
+    current_model = global_apps.get_model(APP_LABEL, model._meta.model_name)
+    fields_by_column = {
+        field.column: field
+        for field in current_model._meta.local_fields
+        if field.column
+    }
+    historical_fields = {field.name: field for field in model._meta.local_fields}
+    columns = []
+    params = []
+    for column in connection.introspection.get_table_description(
+        connection.cursor(), model._meta.db_table
+    ):
+        field = fields_by_column.get(column.name)
+        if field is None:
+            if not column.null:
+                raise AssertionError(
+                    f"No seed value for required column "
+                    f"{model._meta.db_table}.{column.name}"
+                )
+            continue
+        if field.primary_key and field.auto_created:
+            continue
+
+        value = values.get(field.name, NOT_PROVIDED)
+        if value is NOT_PROVIDED:
+            historical_field = historical_fields.get(field.name)
+            if historical_field is not None and historical_field.null:
+                continue
+            if field.null or field.default is not NOT_PROVIDED:
+                value = field.get_default()
+            else:
+                value = _historical_field_value(field, apps, database, 1)
+        if field.remote_field is not None and value is not None:
+            value = value.pk
+        prep_field = historical_fields.get(field.name, field)
+        if prep_field.get_internal_type() == "JSONField":
+            import json
+
+            value = json.dumps(value)
+        else:
+            value = prep_field.get_db_prep_save(value, connection)
+        columns.append(column.name)
+        params.append(value)
+
+    quoted_columns = ", ".join(connection.ops.quote_name(column) for column in columns)
+    placeholders = ", ".join(["%s"] * len(params))
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"INSERT INTO {connection.ops.quote_name(model._meta.db_table)} "
+            f"({quoted_columns}) VALUES ({placeholders})",
+            params,
+        )
+
+
 def _seed_historical_data(state, database):
     apps = state.apps
     Contract = _get_model(apps, "TrackedContract")
@@ -139,7 +259,9 @@ def _seed_historical_data(state, database):
     if "metadata" in fields:
         values["metadata"] = {}
 
-    contract = Contract.objects.using(database).create(**values)
+    _fill_required_fields(Contract, values, apps, database)
+    _insert_historical_row(Contract, values, database, apps)
+    contract = Contract.objects.using(database).get(contract_id=values["contract_id"])
     data = {"contract_id": getattr(contract, "contract_id", None)}
 
     Event = _get_model(apps, "ContractEvent")
@@ -177,7 +299,8 @@ def _seed_historical_data(state, database):
     if "signature_status" in event_fields:
         event_values["signature_status"] = "missing"
 
-    Event.objects.using(database).create(**event_values)
+    _fill_required_fields(Event, event_values, apps, database)
+    _insert_historical_row(Event, event_values, database, apps)
     data["event_count"] = 1
     return data
 
@@ -188,9 +311,11 @@ def _assert_seed_data(state, database, seed_data):
     Contract = _get_model(state.apps, "TrackedContract")
     if Contract is None:
         return
-    assert Contract.objects.using(database).filter(
-        contract_id=seed_data["contract_id"]
-    ).exists()
+    assert (
+        Contract.objects.using(database)
+        .filter(contract_id=seed_data["contract_id"])
+        .exists()
+    )
 
     Event = _get_model(state.apps, "ContractEvent")
     if Event is not None and seed_data.get("event_count"):
@@ -222,7 +347,7 @@ def test_ingest_migration_forward_and_backward_paths(migration_node):
     leaf_targets = executor.loader.graph.leaf_nodes(app=APP_LABEL)
 
     previous_targets = _migration_dependencies(executor, migration_node)
-    
+
     # Skip empty merge migrations as they have no operations and rolling them back
     # can cause ambiguous states in the migration executor graph.
     migration_instance = executor.loader.graph.nodes[migration_node]
@@ -257,15 +382,16 @@ def test_ingest_migration_forward_and_backward_paths(migration_node):
             f"{migration_node[0]}.{migration_node[1]} is intentionally irreversible"
         )
     except (OperationalError, ProgrammingError) as e:
-        # Ignore database-specific rollback/schema modification quirks
-        # SQLite uses OperationalError; Postgres uses ProgrammingError
+        # SQLite can report these specific stale-schema errors while rolling
+        # back sibling migration branches; all other database errors fail.
         err_str = str(e).lower()
-        if "duplicate column" in err_str or "already exists" in err_str or "no such index" in err_str or "does not exist" in err_str:
+        if (
+            "duplicate column" in err_str
+            or "already exists" in err_str
+            or "no such index" in err_str
+            or "does not exist" in err_str
+        ):
             pytest.skip(f"Database schema quirk ignored: {e}")
-        raise
-    except IntegrityError as e:
-        if "not null constraint" in str(e).lower() or "violates not-null" in str(e).lower():
-            pytest.skip(f"Database default constraint quirk ignored: {e}")
         raise
     finally:
         try:
@@ -277,7 +403,9 @@ def test_ingest_migration_forward_and_backward_paths(migration_node):
 def _migration_is_reversible(migration) -> bool:
     if not migration.operations:
         return True
-    return all(getattr(operation, "reversible", True) for operation in migration.operations)
+    return all(
+        getattr(operation, "reversible", True) for operation in migration.operations
+    )
 
 
 @pytest.mark.migration
@@ -309,4 +437,3 @@ def test_irreversible_migrations_are_explicitly_identified():
         "docs/testing/migrations.md before they are accepted: "
         + ", ".join(irreversible)
     )
-

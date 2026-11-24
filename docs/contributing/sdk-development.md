@@ -4,7 +4,7 @@ description: Architecture, adding API methods, type generation, testing, and rel
 sidebar_label: SDK Development
 ---
 
-# SDK Development Guide
+## SDK Development Guide
 
 This guide explains how to develop and maintain SoroScan SDKs for Python and TypeScript.
 
@@ -49,24 +49,29 @@ pnpm build
 Use this workflow for both SDKs.
 
 1. Confirm the endpoint contract.
+
 - Verify path, method, auth requirements, query parameters, request body, and response shape.
 - Check whether pagination/cursor fields are involved.
 
-2. Add types/models.
+1. Add types/models.
+
 - Python: add/update dataclasses or pydantic models used by the new method.
 - TypeScript: add/update exported interfaces and type aliases.
 
-3. Implement the client method.
+1. Implement the client method.
+
 - Keep naming resource-centric and consistent with existing methods.
 - Validate inputs early and keep HTTP concerns in a shared transport layer.
 - Return strongly typed objects instead of untyped maps where feasible.
 
-4. Add tests.
+1. Add tests.
+
 - Happy path response mapping.
 - Error path mapping (4xx/5xx).
 - Edge behavior (pagination, optional fields, nullables).
 
-5. Update docs and changelog.
+1. Update docs and changelog.
+
 - Add method usage snippets in SDK docs.
 - Record compatibility impact.
 
@@ -88,9 +93,9 @@ When backend schema changes, regenerate types before SDK updates.
 ### Regeneration steps
 
 1. Regenerate backend API docs/schemas.
-2. Regenerate TypeScript GraphQL/REST types where applicable.
-3. Update Python typed models from schema updates.
-4. Diff generated artifacts and verify only intended contract changes.
+1. Regenerate TypeScript GraphQL/REST types where applicable.
+1. Update Python typed models from schema updates.
+1. Diff generated artifacts and verify only intended contract changes.
 
 Frontend note:
 
@@ -127,20 +132,24 @@ cd sdk/typescript && pnpm test && pnpm build
 Use semantic versioning for both SDKs.
 
 1. Decide version bump.
+
 - Patch: bug fixes only.
 - Minor: backward-compatible new methods/fields.
 - Major: breaking API or behavior changes.
 
-2. Prepare release notes.
+1. Prepare release notes.
+
 - Added methods.
 - Fixed bugs.
 - Deprecations or migrations.
 
-3. Tag and publish.
+1. Tag and publish.
+
 - Python: build and publish to PyPI.
 - TypeScript: publish to npm.
 
-4. Post-release validation.
+1. Post-release validation.
+
 - Install from registry in a clean environment.
 - Run a smoke test against production-like API.
 

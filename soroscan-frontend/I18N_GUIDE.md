@@ -24,9 +24,9 @@ keys is ongoing follow-up work, not yet complete.
 ## Adding a new translation key
 
 1. Add the key to `messages/en.json` first.
-2. Add the same key, translated, to `messages/es.json`. Keep the nesting identical —
+1. Add the same key, translated, to `messages/es.json`. Keep the nesting identical —
    a script or test that walks both files expects exact key parity between locales.
-3. Use it in a component:
+1. Use it in a component:
 
    ```tsx
    import { useTranslations } from "next-intl"
@@ -37,14 +37,14 @@ keys is ongoing follow-up work, not yet complete.
    }
    ```
 
-4. Never hardcode user-visible English strings in JSX going forward — add a key
+1. Never hardcode user-visible English strings in JSX going forward — add a key
    instead, even if the Spanish translation is a first draft.
 
 ## Adding a new locale
 
 1. Add the locale code to `locales` in `lib/locales.ts`.
-2. Create `messages/<locale>.json` with the same key structure as `messages/en.json`.
-3. That's it — routing, the language selector (`components/ui/LanguageSelector.tsx`),
+1. Create `messages/<locale>.json` with the same key structure as `messages/en.json`.
+1. That's it — routing, the language selector (`components/ui/LanguageSelector.tsx`),
    and the root layout's `<html lang>` all derive from `lib/locales.ts`.
 
 ## Testing

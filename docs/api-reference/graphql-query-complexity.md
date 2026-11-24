@@ -53,7 +53,8 @@ query {
 ```
 
 Roughly: `contracts` selection itself (~1 × 5) + `events` selection (~1 × 100)
-+ two leaf fields under `events` (2 × 100) — nested pagination dominates the
+
+- two leaf fields under `events` (2 × 100) — nested pagination dominates the
 score, which is intentional: it's the shape most likely to be expensive to
 resolve.
 

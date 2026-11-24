@@ -1,14 +1,17 @@
 ---
 slug: /cli-commands
 title: SoroScan CLI Management Commands Reference
-description: Reference guide for all custom Django management commands in the SoroScan backend, including syntax, arguments, examples, and automated cron scheduling.
+description:
+  Reference guide for all custom Django management commands in the SoroScan backend, including syntax, arguments,
+  examples, and automated cron scheduling.
 sidebar_label: CLI Management Commands
 hide_title: false
 ---
 
-# SoroScan CLI Management Commands
+## SoroScan CLI Management Commands
 
-This guide documents every custom `manage.py` command shipped with the SoroScan Django backend. All commands are run from the `django-backend/` directory:
+This guide documents every custom `manage.py` command shipped with the SoroScan Django backend. All commands are run
+from the `django-backend/` directory:
 
 ```bash
 python manage.py <command> [options]
@@ -20,7 +23,8 @@ When running inside Docker Compose:
 docker-compose exec web python manage.py <command> [options]
 ```
 
-The Django default command line options (`--settings`, `--pythonpath`, `--verbosity`, `--no-color`, `--force-color`, `--skip-checks`, `--traceback`) apply to every command unless overridden.
+The Django default command line options (`--settings`, `--pythonpath`, `--verbosity`, `--no-color`, `--force-color`,
+`--skip-checks`, `--traceback`) apply to every command unless overridden.
 
 ## Table of Contents
 
@@ -28,8 +32,10 @@ The Django default command line options (`--settings`, `--pythonpath`, `--verbos
 - [Data Integrity & Maintenance](#data-integrity--maintenance)
 - [Export & Import](#export--import)
 - [Contract Management](#contract-management)
-- [Webhooks](#webhooks)
+- [`list_webhooks`](#list_webhooks)
+- [Organizations & Billing](#organizations--billing)
 - [Migrations](#migrations)
+- [Operations](#operations)
 - [Administration & Development](#administration--development)
 - [Automated Cron Execution](#automated-cron-execution)
 
@@ -49,10 +55,10 @@ python manage.py ingest_events --contract <CONTRACT_ID> [--dry-run]
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--contract` | Yes | — | Target tracked contract ID (must exist in `TrackedContract`) |
-| `--dry-run` | No | `false` | Fetches and validates events but does not persist anything |
+| Option       | Required | Default | Description                                                  |
+| ------------ | -------- | ------- | ------------------------------------------------------------ |
+| `--contract` | Yes      | —       | Target tracked contract ID (must exist in `TrackedContract`) |
+| `--dry-run`  | No       | `false` | Fetches and validates events but does not persist anything   |
 
 **Example**
 
@@ -82,13 +88,15 @@ Sample events:
 [DRY RUN] No data persisted.
 ```
 
-The command errors out if the contract is not tracked (`TrackedContract with ID ... does not exist.`) or the RPC request fails (`Failed to fetch events: ...`).
+The command errors out if the contract is not tracked (`TrackedContract with ID ... does not exist.`) or the RPC request
+fails (`Failed to fetch events: ...`).
 
 ---
 
 ### `reprocess_events`
 
-Reprocesses historical events (decode, validation, signature verification) for a tracked contract, resumable via checkpoints.
+Reprocesses historical events (decode, validation, signature verification) for a tracked contract, resumable via
+checkpoints.
 
 **Syntax**
 
@@ -99,13 +107,13 @@ python manage.py reprocess_events --contract-id <CONTRACT_ID> \
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--contract-id` | Yes | — | Target tracked contract ID |
-| `--dry-run` | No | `false` | Run without committing changes |
-| `--batch-size` | No | `500` | Batch size for processing; must be `> 0` |
-| `--checkpoint-id` | No | `0` | Resume from events with `id > checkpoint-id`; must be `>= 0` |
-| `--rollback-on-error` | No | `false` | Roll back the current batch and abort on the first processing error |
+| Option                | Required | Default | Description                                                         |
+| --------------------- | -------- | ------- | ------------------------------------------------------------------- |
+| `--contract-id`       | Yes      | —       | Target tracked contract ID                                          |
+| `--dry-run`           | No       | `false` | Run without committing changes                                      |
+| `--batch-size`        | No       | `500`   | Batch size for processing; must be `> 0`                            |
+| `--checkpoint-id`     | No       | `0`     | Resume from events with `id > checkpoint-id`; must be `>= 0`        |
+| `--rollback-on-error` | No       | `false` | Roll back the current batch and abort on the first processing error |
 
 **Example**
 
@@ -126,7 +134,8 @@ Validation errors are reported as `CommandError` for invalid `--batch-size` or `
 
 ### `replay_events`
 
-Replays existing `ContractEvent` records through webhook delivery for debugging and retesting. Live mode dispatches webhooks synchronously via Celery.
+Replays existing `ContractEvent` records through webhook delivery for debugging and retesting. Live mode dispatches
+webhooks synchronously via Celery.
 
 **Syntax**
 
@@ -139,18 +148,18 @@ python manage.py replay_events --contract <CONTRACT_ID> \
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--contract` | Yes | — | Contract ID to replay events for (must be tracked) |
-| `--event-type` | No | All types | Filter by event type |
-| `--from-ledger` | No | — | Include events from this ledger (inclusive) |
-| `--to-ledger` | No | — | Include events up to this ledger (inclusive) |
-| `--from-date` | No | — | Include events from this date (ISO format) |
-| `--to-date` | No | — | Include events up to this date (ISO format) |
-| `--limit` | No | `100` | Max events to replay; `0` means all matching events |
-| `--dry-run` | No | `false` | Preview the replay plan without dispatching webhooks |
-| `--webhook-id` | No | All active webhooks | Replay only to a specific webhook subscription ID |
-| `--output-json` | No | — | Write the delivery report to a JSON file instead of stdout |
+| Option          | Required | Default             | Description                                                |
+| --------------- | -------- | ------------------- | ---------------------------------------------------------- |
+| `--contract`    | Yes      | —                   | Contract ID to replay events for (must be tracked)         |
+| `--event-type`  | No       | All types           | Filter by event type                                       |
+| `--from-ledger` | No       | —                   | Include events from this ledger (inclusive)                |
+| `--to-ledger`   | No       | —                   | Include events up to this ledger (inclusive)               |
+| `--from-date`   | No       | —                   | Include events from this date (ISO format)                 |
+| `--to-date`     | No       | —                   | Include events up to this date (ISO format)                |
+| `--limit`       | No       | `100`               | Max events to replay; `0` means all matching events        |
+| `--dry-run`     | No       | `false`             | Preview the replay plan without dispatching webhooks       |
+| `--webhook-id`  | No       | All active webhooks | Replay only to a specific webhook subscription ID          |
+| `--output-json` | No       | —                   | Write the delivery report to a JSON file instead of stdout |
 
 **Example**
 
@@ -174,7 +183,9 @@ Failures:         0
 Skipped:          0
 ```
 
-In live mode the summary reports `Successes`/`Failures` and prints the last 10 delivery entries, or writes the full report to the file given by `--output-json`. The command fails if the contract is not found, `--webhook-id` does not exist or belongs to a different contract, or a `--from-date`/`--to-date` value is not a valid ISO datetime.
+In live mode the summary reports `Successes`/`Failures` and prints the last 10 delivery entries, or writes the full
+report to the file given by `--output-json`. The command fails if the contract is not found, `--webhook-id` does not
+exist or belongs to a different contract, or a `--from-date`/`--to-date` value is not a valid ISO datetime.
 
 ---
 
@@ -192,11 +203,11 @@ python manage.py check_integrity [--contract <CONTRACT_ID>] [--event-type <TYPE>
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--contract` | No | All contracts | Numeric contract ID to check (PK); checks all contracts if omitted |
-| `--event-type` | No | All types | Filter events by event type before checking gaps |
-| `--verbose` | No | `false` | Show detailed information about all found gaps |
+| Option         | Required | Default       | Description                                                        |
+| -------------- | -------- | ------------- | ------------------------------------------------------------------ |
+| `--contract`   | No       | All contracts | Numeric contract ID to check (PK); checks all contracts if omitted |
+| `--event-type` | No       | All types     | Filter events by event type before checking gaps                   |
+| `--verbose`    | No       | `false`       | Show detailed information about all found gaps                     |
 
 **Example**
 
@@ -219,7 +230,8 @@ Unique Ledgers with Events: 801
 
 ```
 
-When gaps exist, `--verbose` prints one error line per gap; otherwise gap ranges are printed together followed by a coverage percentage:
+When gaps exist, `--verbose` prints one error line per gap; otherwise gap ranges are printed together followed by a
+coverage percentage:
 
 ```
 ✗ Found 2 gap(s) in ledger sequence:
@@ -246,10 +258,10 @@ python manage.py prune_events [--retention-days N] [--dry-run]
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--retention-days` | No | `EVENT_RETENTION_DAYS` setting (default `30`) | Number of days of events to retain |
-| `--dry-run` | No | `false` | Show what would be deleted without deleting |
+| Option             | Required | Default                                       | Description                                 |
+| ------------------ | -------- | --------------------------------------------- | ------------------------------------------- |
+| `--retention-days` | No       | `EVENT_RETENTION_DAYS` setting (default `30`) | Number of days of events to retain          |
+| `--dry-run`        | No       | `false`                                       | Show what would be deleted without deleting |
 
 **Example**
 
@@ -283,23 +295,29 @@ python manage.py export_events [--contract <CONTRACT_ID> | --contract-id <CONTRA
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--contract` / `--contract-id` | Yes (one of) | — | Contract ID/address to export |
-| `--format` | No | `json` | Output format: `parquet`, `csv`, `json`, or `avro` |
-| `--output` | Yes | — | Output file path; use `-` for stdout (CSV/JSON only) |
-| `--start-ledger` | No | — | Export events from this ledger (inclusive) |
-| `--end-ledger` | No | — | Export events up to this ledger (inclusive) |
-| `--start-date` | No | — | Export events from this timestamp/date (inclusive; ISO-8601) |
-| `--end-date` | No | — | Export events up to this timestamp/date (inclusive; ISO-8601) |
-| `--batch-size` | No | `500` | Internal streaming batch size |
+| Option                         | Required     | Default | Description                                                   |
+| ------------------------------ | ------------ | ------- | ------------------------------------------------------------- |
+| `--contract` / `--contract-id` | Yes (one of) | —       | Contract ID/address to export                                 |
+| `--format`                     | No           | `json`  | Output format: `parquet`, `csv`, `json`, or `avro`            |
+| `--output`                     | Yes          | —       | Output file path; use `-` for stdout (CSV/JSON only)          |
+| `--start-ledger`               | No           | —       | Export events from this ledger (inclusive)                    |
+| `--end-ledger`                 | No           | —       | Export events up to this ledger (inclusive)                   |
+| `--start-date`                 | No           | —       | Export events from this timestamp/date (inclusive; ISO-8601)  |
+| `--end-date`                   | No           | —       | Export events up to this timestamp/date (inclusive; ISO-8601) |
+| `--batch-size`                 | No           | `500`   | Internal streaming batch size                                 |
 
 **Examples**
 
 ```bash
-python manage.py export_events --contract CAAAAABYDB3U7SUXHNQN7QW4UCNT3MUGIFPVVLPVXJ5FMVXI77GAYEICZ --format csv --output events.csv
-python manage.py export_events --contract-id CAAAAABYDB3U7SUXHNQN7QW4UCNT3MUGIFPVVLPVXJ5FMVXI77GAYEICZ --format json --start-ledger 1000000 --end-ledger 2000000 --output events.json
-python manage.py export_events --contract-id CAAAAABYDB3U7SUXHNQN7QW4UCNT3MUGIFPVVLPVXJ5FMVXI77GAYEICZ --format csv --output - | head
+python manage.py export_events \
+  --contract CAAAAABYDB3U7SUXHNQN7QW4UCNT3MUGIFPVVLPVXJ5FMVXI77GAYEICZ \
+  --format csv --output events.csv
+python manage.py export_events \
+  --contract-id CAAAAABYDB3U7SUXHNQN7QW4UCNT3MUGIFPVVLPVXJ5FMVXI77GAYEICZ \
+  --format json --start-ledger 1000000 --end-ledger 2000000 --output events.json
+python manage.py export_events \
+  --contract-id CAAAAABYDB3U7SUXHNQN7QW4UCNT3MUGIFPVVLPVXJ5FMVXI77GAYEICZ \
+  --format csv --output - | head
 ```
 
 **Expected output**
@@ -320,7 +338,8 @@ Notes and validation errors:
 
 ### `import_events`
 
-Imports `ContractEvent` rows from Parquet, CSV, JSON, or Avro files with per-row schema validation and idempotent upserts (re-importing the same file is safe).
+Imports `ContractEvent` rows from Parquet, CSV, JSON, or Avro files with per-row schema validation and idempotent
+upserts (re-importing the same file is safe).
 
 **Syntax**
 
@@ -330,12 +349,12 @@ python manage.py import_events --file <PATH> [--format <parquet|csv|json|avro>] 
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--file` | Yes | — | Input file path |
-| `--format` | No | Auto-detected from extension | Input format: `parquet`, `csv`, `json`, or `avro` |
-| `--dry-run` | No | `false` | Validate rows without writing to the database |
-| `--fail-fast` | No | `false` | Abort on the first validation error |
+| Option        | Required | Default                      | Description                                       |
+| ------------- | -------- | ---------------------------- | ------------------------------------------------- |
+| `--file`      | Yes      | —                            | Input file path                                   |
+| `--format`    | No       | Auto-detected from extension | Input format: `parquet`, `csv`, `json`, or `avro` |
+| `--dry-run`   | No       | `false`                      | Validate rows without writing to the database     |
+| `--fail-fast` | No       | `false`                      | Abort on the first validation error               |
 
 **Example**
 
@@ -350,7 +369,8 @@ python manage.py import_events --file events.parquet --format parquet --dry-run
 [DRY RUN] imported=804 skipped_duplicates=0 errors=0
 ```
 
-If format cannot be detected from the file extension and `--format` is omitted, the command fails with `Cannot detect format from file extension. Use --format to specify it.`
+If format cannot be detected from the file extension and `--format` is omitted, the command fails with
+`Cannot detect format from file extension. Use --format to specify it.`
 
 ---
 
@@ -366,9 +386,9 @@ python manage.py backup_contracts --output <PATH>
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--output` | Yes | — | Output file path; use `-` for stdout |
+| Option     | Required | Default | Description                          |
+| ---------- | -------- | ------- | ------------------------------------ |
+| `--output` | Yes      | —       | Output file path; use `-` for stdout |
 
 **Example**
 
@@ -383,7 +403,8 @@ Exporting 5 contracts to /backups/contracts-2026-08-27.json
 Exported 5 contracts to /backups/contracts-2026-08-27.json
 ```
 
-The backup file writes a JSON object with `version: 1`, a UTC `timestamp`, and a `contracts` array containing each contract's `contract_id`, `alias`, `settings`, `abi`, and `metadata`.
+The backup file writes a JSON object with `version: 1`, a UTC `timestamp`, and a `contracts` array containing each
+contract's `contract_id`, `alias`, `settings`, `abi`, and `metadata`.
 
 ---
 
@@ -399,11 +420,11 @@ python manage.py restore_contracts --input <PATH> [--dry-run] [--force]
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--input` | Yes | — | Input file path; use `-` for stdin |
-| `--dry-run` | No | `false` | Show what would be imported without making changes |
-| `--force` | No | `false` | Update existing contracts instead of skipping them |
+| Option      | Required | Default | Description                                        |
+| ----------- | -------- | ------- | -------------------------------------------------- |
+| `--input`   | Yes      | —       | Input file path; use `-` for stdin                 |
+| `--dry-run` | No       | `false` | Show what would be imported without making changes |
+| `--force`   | No       | `false` | Update existing contracts instead of skipping them |
 
 **Example**
 
@@ -424,7 +445,8 @@ Would skip:   2
 
 Notes:
 
-- The input file must be a JSON object with `version: 1`; otherwise the command fails with `Unsupported backup version: ...`.
+- The input file must be a JSON object with `version: 1`; otherwise the command fails with
+  `Unsupported backup version: ...`.
 - Each contract requires a `contract_id` and an `alias` field.
 - Without `--force`, existing contracts are skipped; with `--force` they are updated in place.
 
@@ -442,10 +464,10 @@ python manage.py export_contracts --output <PATH> [--pretty]
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--output` | Yes | — | Output file path; use `-` for stdout |
-| `--pretty` | No | `false` | Pretty-print the JSON output |
+| Option     | Required | Default | Description                          |
+| ---------- | -------- | ------- | ------------------------------------ |
+| `--output` | Yes      | —       | Output file path; use `-` for stdout |
+| `--pretty` | No       | `false` | Pretty-print the JSON output         |
 
 **Example**
 
@@ -475,10 +497,10 @@ python manage.py import_contracts --file <PATH> [--owner <USERNAME|EMAIL|ID>]
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--file` / `--input` | Yes | — | Input JSON file path |
-| `--owner` | No | `soroscan-import` service user | Username, email, or id of the owner for newly imported contracts |
+| Option               | Required | Default                        | Description                                                      |
+| -------------------- | -------- | ------------------------------ | ---------------------------------------------------------------- |
+| `--file` / `--input` | Yes      | —                              | Input JSON file path                                             |
+| `--owner`            | No       | `soroscan-import` service user | Username, email, or id of the owner for newly imported contracts |
 
 **Example**
 
@@ -492,7 +514,8 @@ python manage.py import_contracts --file contracts.json --owner admin
 Imported contracts: created=3 skipped_existing=2
 ```
 
-Accepted input formats: a JSON object with a `contracts` list, a flat `{address: name}` mapping object, or a list of `{contract_id, name}` objects (aliased fields `address` and `name` supported).
+Accepted input formats: a JSON object with a `contracts` list, a flat `{address: name}` mapping object, or a list of
+`{contract_id, name}` objects (aliased fields `address` and `name` supported).
 
 ---
 
@@ -510,14 +533,14 @@ python manage.py bulk_import_metadata --input <PATH> \
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--input` | Yes | — | Input file path; use `-` for stdin |
-| `--format` | No | Auto-detected from extension | Input format: `csv` or `json` |
-| `--dry-run` | No | `false` | Validate all rows without modifying the database |
-| `--on-error` | No | `rollback` | Behavior on validation error: `rollback` the entire batch or `skip` the row |
-| `--encoding` | No | `utf-8` | File encoding |
-| `--report` | No | — | Write the import report to this JSON file |
+| Option       | Required | Default                      | Description                                                                 |
+| ------------ | -------- | ---------------------------- | --------------------------------------------------------------------------- |
+| `--input`    | Yes      | —                            | Input file path; use `-` for stdin                                          |
+| `--format`   | No       | Auto-detected from extension | Input format: `csv` or `json`                                               |
+| `--dry-run`  | No       | `false`                      | Validate all rows without modifying the database                            |
+| `--on-error` | No       | `rollback`                   | Behavior on validation error: `rollback` the entire batch or `skip` the row |
+| `--encoding` | No       | `utf-8`                      | File encoding                                                               |
+| `--report`   | No       | —                            | Write the import report to this JSON file                                   |
 
 **Example**
 
@@ -538,7 +561,9 @@ Skipped (on error):           0
 Errors:                       0
 ```
 
-Supported fields: `contract_id` (required), `name`, `description`, `tags` (comma-separated in CSV, JSON array in JSON), `documentation_url`, `github_repo`, `team_email`. CSV input must include a `contract_id` column. When reading from stdin (`-`), `--format` is required.
+Supported fields: `contract_id` (required), `name`, `description`, `tags` (comma-separated in CSV, JSON array in JSON),
+`documentation_url`, `github_repo`, `team_email`. CSV input must include a `contract_id` column. When reading from stdin
+(`-`), `--format` is required.
 
 ---
 
@@ -556,11 +581,11 @@ python manage.py seed_database [--fixture <PATH>] [--scenario <default|minimal|w
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--fixture` | No | `fixtures/development.json` | Path to a JSON fixture file |
-| `--scenario` | No | `default` | Predefined scenario: `default` (full dataset), `minimal` (one user, one org, three contracts, no events), `webhook` (contracts with webhook subscriptions and delivery logs) |
-| `--clear` | No | `false` | Remove all seeded data before seeding |
+| Option       | Required | Default                     | Description                                                                                                                                                                  |
+| ------------ | -------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--fixture`  | No       | `fixtures/development.json` | Path to a JSON fixture file                                                                                                                                                  |
+| `--scenario` | No       | `default`                   | Predefined scenario: `default` (full dataset), `minimal` (one user, one org, three contracts, no events), `webhook` (contracts with webhook subscriptions and delivery logs) |
+| `--clear`    | No       | `false`                     | Remove all seeded data before seeding                                                                                                                                        |
 
 **Example**
 
@@ -593,9 +618,9 @@ python manage.py list_webhooks [--active-only]
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--active-only` | No | `false` | Only show active (non-suspended) webhooks |
+| Option          | Required | Default | Description                               |
+| --------------- | -------- | ------- | ----------------------------------------- |
+| `--active-only` | No       | `false` | Only show active (non-suspended) webhooks |
 
 **Example**
 
@@ -613,11 +638,123 @@ ID  URL                      Status  Event Count
 
 ---
 
+## Organizations & Billing
+
+### `create_organization`
+
+Creates a new organization and grants the resolved user `owner` membership. The slug is generated
+from the display name unless one is supplied.
+
+**Syntax**
+
+```bash
+python manage.py create_organization --name <NAME> --owner <USERNAME|EMAIL> [--slug <SLUG>] [--quota N]
+```
+
+**Arguments**
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `--name` | Yes | — | Display name for the new organization |
+| `--owner` | Yes | — | Username or unique email of the user who becomes the owner |
+| `--slug` | No | Generated from `--name` | Optional unique organization slug |
+| `--quota` | No | `0` | Monthly event quota; `0` means unset/unlimited |
+
+**Example**
+
+```bash
+python manage.py create_organization --name "Acme Corp" --owner alice@example.com --slug acme --quota 100000
+```
+
+**Expected output**
+
+```
+Created organization id=12 name='Acme Corp' slug=acme owner=alice quota=100000
+```
+
+The command raises a `CommandError` if the owner cannot be resolved or the requested name or slug is not unique.
+
+---
+
+### `add_user_to_org`
+
+Adds a user to an organization, or updates the role of an existing membership.
+
+**Syntax**
+
+```bash
+python manage.py add_user_to_org --organization <ID|SLUG|NAME> --user <USERNAME|EMAIL> [--role <owner|admin|member>]
+```
+
+**Arguments**
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `--organization` | Yes | — | Organization id, slug, or unique name |
+| `--user` | Yes | — | Username or unique email of the user to add |
+| `--role` | No | `member` | Membership role to assign: `owner`, `admin`, or `member` |
+
+**Example**
+
+```bash
+python manage.py add_user_to_org --organization acme --user bob@example.com --role admin
+```
+
+**Expected output**
+
+```
+Added bob to acme as admin
+```
+
+If the user is already a member, the command either reports `Updated bob on acme to role=admin`
+when the role changes, or warns `bob is already an admin of acme` when nothing changes. An unknown
+organization, user, or invalid role raises a `CommandError`.
+
+---
+
+### `generate_invoice`
+
+Issues an organization invoice for a billing month. The amount defaults to the
+`OrganizationCostSnapshot` actual cost for that month; pass `--amount` to override it or when no
+snapshot exists.
+
+**Syntax**
+
+```bash
+python manage.py generate_invoice --organization <ID|SLUG|NAME> [--month YYYY-MM] [--amount USD] [--force]
+```
+
+**Arguments**
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `--organization` | Yes | — | Organization id, slug, or unique name |
+| `--month` | No | Current UTC month | Billing period in `YYYY-MM` format |
+| `--amount` | No | Cost snapshot actual cost | Decimal USD amount override; required when no snapshot exists |
+| `--force` | No | `false` | Replace an existing invoice for the same organization and month |
+
+**Example**
+
+```bash
+python manage.py generate_invoice --organization acme --month 2026-08
+```
+
+**Expected output**
+
+```
+Generated invoice INV-2026-08-0001 org=acme period=2026-08 amount_usd=19.99 status=issued
+```
+
+Invalid month or amount values, a missing snapshot without `--amount`, or an existing invoice without `--force` raise a `CommandError`.
+
+---
+
 ## Migrations
 
 ### `migrate`
 
-Thin wrapper around Django's built-in `migrate` that logs the start, completion, and duration of each migration to the `soroscan.migrate` logger. All Django `migrate` options apply.
+Thin wrapper around Django's built-in `migrate` that logs the start, completion, and duration of each migration to the
+`soroscan.migrate` logger. All Django `migrate` options apply.
 
 **Syntax**
 
@@ -652,9 +789,9 @@ python manage.py migration_status [--database <ALIAS>]
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--database` | No | `default` | Database alias to check migration status for |
+| Option       | Required | Default   | Description                                  |
+| ------------ | -------- | --------- | -------------------------------------------- |
+| `--database` | No       | `default` | Database alias to check migration status for |
 
 **Example**
 
@@ -693,10 +830,10 @@ python manage.py validate_migrations [--database <ALIAS>] [--keepdb]
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--database` | No | `default` | Database alias to validate against |
-| `--keepdb` | No | `false` | Keep the temporary database after validation for debugging |
+| Option       | Required | Default   | Description                                                |
+| ------------ | -------- | --------- | ---------------------------------------------------------- |
+| `--database` | No       | `default` | Database alias to validate against                         |
+| `--keepdb`   | No       | `false`   | Keep the temporary database after validation for debugging |
 
 **Example**
 
@@ -715,7 +852,161 @@ Migration validation succeeded: all migrations applied cleanly.
 Destroying temporary database...
 ```
 
-`--verbosity 2` additionally lists each migration in the plan. The command fails with a `CommandError` if migration conflicts, an inconsistent history, or an application error are detected.
+`--verbosity 2` additionally lists each migration in the plan. The command fails with a `CommandError` if migration
+conflicts, an inconsistent history, or an application error are detected.
+
+---
+
+## Operations
+
+### `check_redis`
+
+Verifies Redis connectivity by pinging the configured cache, writing a short-lived probe key
+(10-second TTL), and reading it back. The probe key is deleted afterwards.
+
+**Syntax**
+
+```bash
+python manage.py check_redis
+```
+
+**Arguments**
+
+This command takes no arguments beyond the standard Django options.
+
+**Example**
+
+```bash
+python manage.py check_redis
+```
+
+**Expected output**
+
+```
+Checking Redis connection…
+  ✓ Ping OK  (latency: 1.23 ms)
+  ✓ Cache SET OK
+  ✓ Cache GET OK
+
+Redis is reachable and healthy. Latency: 1.23 ms
+```
+
+**Exit codes**
+
+- `0` — the ping, cache write, and cache read-back all succeeded.
+- `1` — any step failed, including a read-back value that does not match the probe value. The error is written to stderr.
+
+---
+
+### `clear_contract_cache`
+
+Deletes Redis keys matching `soroscan:contract:*`. Use `--dry-run` to preview the keys first.
+
+**Syntax**
+
+```bash
+python manage.py clear_contract_cache [--dry-run]
+```
+
+**Arguments**
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `--dry-run` | No | `false` | Print the matching keys without deleting them |
+
+**Example**
+
+```bash
+python manage.py clear_contract_cache --dry-run
+```
+
+**Expected output**
+
+```
+DRY RUN: Would delete 14 cache keys matching 'soroscan:contract:*'
+  soroscan:contract:123
+  ...
+```
+
+In live mode the command prints
+`Successfully deleted 14 cache keys matching 'soroscan:contract:*'`, or `No contract cache keys
+found` when there is nothing to clear. The command requires a Redis-backed Django cache because it
+calls `cache.client.get_client()` directly.
+
+---
+
+### `validate_payload_compression`
+
+Checks the most recent `ContractEvent` payloads for valid Zstandard-compressed JSON without modifying any rows.
+
+**Syntax**
+
+```bash
+python manage.py validate_payload_compression [--limit N]
+```
+
+**Arguments**
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `--limit` | No | `1000` | Number of most recent events to check; must be greater than zero |
+
+**Example**
+
+```bash
+python manage.py validate_payload_compression --limit 500
+```
+
+**Expected output**
+
+```
+Checked 500 recent event payload(s): 498 valid, 2 corrupt.
+Valid payloads: 498
+Corrupt payloads: 2
+Corrupt payload: ContractEvent id=1234
+Corrupt payload: ContractEvent id=1290
+```
+
+A `--limit` below `1` raises `CommandError("--limit must be greater than zero.")`.
+
+---
+
+### `reset_api_key`
+
+Rotates an API key secret. The new secret is printed once and the old key stops working
+immediately. The key can be selected by id, or by the owner's username/email together with the
+key's display name.
+
+**Syntax**
+
+```bash
+python manage.py reset_api_key (--id N | --username <USERNAME|EMAIL> --name <NAME>) [--no-input]
+```
+
+**Arguments**
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `--id` | No | — | Primary key of the `APIKey` to rotate |
+| `--username` | No | — | Username or email of the key owner; used with `--name` |
+| `--name` | No | — | API key display name; used with `--username` |
+| `--no-input` / `--noinput` | No | `false` | Skip the confirmation prompt; required for non-interactive runs |
+
+**Example**
+
+```bash
+python manage.py reset_api_key --id 42 --no-input
+```
+
+**Expected output**
+
+```
+Store this secret now; it will not be shown again.
+Rotated API key id=42 name='Production' user=alice key=<new-secret>
+```
+
+Without `--no-input`, the command prompts for confirmation and aborts if declined. A
+`CommandError` is raised when the key cannot be resolved uniquely.
 
 ---
 
@@ -733,10 +1024,10 @@ python manage.py reset_admin_password [--username <USERNAME>] [--password <PASSW
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--username` | No | `admin` | Username to reset the password for |
-| `--password` | No | Prompted interactively | New password; required when running non-interactively |
+| Option       | Required | Default                | Description                                           |
+| ------------ | -------- | ---------------------- | ----------------------------------------------------- |
+| `--username` | No       | `admin`                | Username to reset the password for                    |
+| `--password` | No       | Prompted interactively | New password; required when running non-interactively |
 
 **Example**
 
@@ -750,13 +1041,15 @@ python manage.py reset_admin_password --username admin --password 'NewPass123!'
 ✓ Password successfully updated for user 'admin'
 ```
 
-If the user does not exist, the command prints the error and lists the available usernames. When run without a terminal and without `--password`, it fails with `Password must be provided via --password when running non-interactively`.
+If the user does not exist, the command prints the error and lists the available usernames. When run without a terminal
+and without `--password`, it fails with `Password must be provided via --password when running non-interactively`.
 
 ---
 
 ### `generate_api_docs`
 
-Generates API documentation from view docstrings, URL patterns, and DRF metadata. Output is Markdown by default or structured JSON.
+Generates API documentation from view docstrings, URL patterns, and DRF metadata. Output is Markdown by default or
+structured JSON.
 
 **Syntax**
 
@@ -767,13 +1060,13 @@ python manage.py generate_api_docs [--output <PATH>] [--format <markdown|json>] 
 
 **Arguments**
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `--output` | No | `docs/api_reference.md` | Path to write the generated docs |
-| `--format` | No | `markdown` | Output format: `markdown` or `json` |
-| `--include-examples` | No | `true` | Include canned curl/JSON examples in Markdown output |
-| `--no-examples` | No | — | Suppress the examples section |
-| `--stdout` | No | `false` | Print to stdout instead of writing a file |
+| Option               | Required | Default                 | Description                                          |
+| -------------------- | -------- | ----------------------- | ---------------------------------------------------- |
+| `--output`           | No       | `docs/api_reference.md` | Path to write the generated docs                     |
+| `--format`           | No       | `markdown`              | Output format: `markdown` or `json`                  |
+| `--include-examples` | No       | `true`                  | Include canned curl/JSON examples in Markdown output |
+| `--no-examples`      | No       | —                       | Suppress the examples section                        |
+| `--stdout`           | No       | `false`                 | Print to stdout instead of writing a file            |
 
 **Example**
 
@@ -794,7 +1087,8 @@ python manage.py generate_api_docs --output docs/api_reference.md
 
 ## Automated Cron Execution
 
-The ingest and maintenance commands are intended to be scheduled. Keepalive-style cron examples below assume `django-backend/` is the working directory and `WEB` is the container name when running under `docker-compose`.
+The ingest and maintenance commands are intended to be scheduled. Keepalive-style cron examples below assume
+`django-backend/` is the working directory and `WEB` is the container name when running under `docker-compose`.
 
 ### Standard cron (`/etc/cron.d/soroscan`)
 
@@ -806,7 +1100,10 @@ The ingest and maintenance commands are intended to be scheduled. Keepalive-styl
 0 4 * * 0 root cd /opt/soroscan/django-backend && python manage.py check_integrity >> /var/log/soroscan/check_integrity.log 2>&1
 
 # CONTRACT DATA BACKUPS — daily at 02:00 AM UTC
-0 2 * * * root cd /opt/soroscan/django-backend && python manage.py backup_contracts --output /var/backups/soroscan/contracts-$(date +\%F).json >> /var/log/soroscan/backup_contracts.log 2>&1
+0 2 * * * root cd /opt/soroscan/django-backend && \
+  python manage.py backup_contracts \
+  --output /var/backups/soroscan/contracts-$(date +\%F).json \
+  >> /var/log/soroscan/backup_contracts.log 2>&1
 
 # API DOCUMENTATION REGENERATION — weekly on Monday 01:00 AM UTC
 0 1 * * 1 root cd /opt/soroscan/django-backend && python manage.py generate_api_docs >> /var/log/soroscan/generate_api_docs.log 2>&1
@@ -873,8 +1170,12 @@ docker-compose exec web python manage.py prune_events --dry-run
 
 ### Idempotency and safe scheduling
 
-- `export_events`, `backup_contracts`, `export_contracts`, `generate_api_docs`, `check_integrity`, and `migration_status` are read-only and safe to run on any schedule.
-- `ingest_events`, `import_events`, `import_contracts`, `bulk_import_metadata`, and `restore_contracts` are idempotent upserts; overlapping runs will not duplicate rows.
+- `export_events`, `backup_contracts`, `export_contracts`, `generate_api_docs`, `check_integrity`, and
+  `migration_status` are read-only and safe to run on any schedule.
+- `ingest_events`, `import_events`, `import_contracts`, `bulk_import_metadata`, and `restore_contracts` are idempotent
+  upserts; overlapping runs will not duplicate rows.
 - `prune_events` deletes data — always review it with `--dry-run` in production before scheduling.
-- `reprocess_events` uses `--checkpoint-id` for resumability, so an interrupted run can be resumed rather than restarted.
-- For event ingestion at scale, prefer Celery beat scheduled tasks (see `CELERY_BEAT_SCHEDULE` in `soroscan/settings.py`) over cron; cron is recommended for exports, backups, pruning, and integrity audits.
+- `reprocess_events` uses `--checkpoint-id` for resumability, so an interrupted run can be resumed rather than
+  restarted.
+- For event ingestion at scale, prefer Celery beat scheduled tasks (see `CELERY_BEAT_SCHEDULE` in
+  `soroscan/settings.py`) over cron; cron is recommended for exports, backups, pruning, and integrity audits.

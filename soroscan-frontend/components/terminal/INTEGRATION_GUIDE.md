@@ -274,7 +274,7 @@ Then visit `/test/responsive-table` in your browser and resize the window to tes
 ## Next Steps
 
 1. **Add to your page**: Copy the integration example above
-2. **Customize columns**: Modify the column definitions for your data
-3. **Connect to API**: Replace mock data with real API calls
-4. **Style customization**: Add custom CSS classes via `className` and `cardClassName` props
-5. **Add interactions**: Implement row click handlers, selection, or other interactive features
+1. **Customize columns**: Modify the column definitions for your data
+1. **Connect to API**: Replace mock data with real API calls
+1. **Style customization**: Add custom CSS classes via `className` and `cardClassName` props
+1. **Add interactions**: Implement row click handlers, selection, or other interactive features

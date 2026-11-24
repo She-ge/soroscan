@@ -4,21 +4,23 @@ title: Rate Limits
 sidebar_label: Rate Limits
 ---
 
-import RateLimitWidget from '@site/src/components/RateLimitWidget';
+import RateLimitWidget from "@site/src/components/RateLimitWidget";
 
-SoroScan enforces rate limits to ensure fair usage and platform stability. This page explains the limits and how to monitor your usage.
+SoroScan enforces rate limits to ensure fair usage and platform stability. This page explains the limits and how to
+monitor your usage.
 
 ## Default Limits
 
-| Access Type | Limit |
-|---|---|
-| **Public (unauthenticated)** | 60 requests/minute |
-| **Authenticated (API Key)** | 500 requests/minute |
-| **Per-contract ingest** | Configurable via `max_events_per_minute` |
+| Access Type                  | Limit                                    |
+| ---------------------------- | ---------------------------------------- |
+| **Public (unauthenticated)** | 60 requests/minute                       |
+| **Authenticated (API Key)**  | 500 requests/minute                      |
+| **Per-contract ingest**      | Configurable via `max_events_per_minute` |
 
 ## How Rate Limiting Works
 
-Rate limits are enforced using a rolling 60-second window tracked in Redis. Each request increments a counter keyed to your IP or API key. When the counter exceeds the limit, the API returns a `429 Too Many Requests` response.
+Rate limits are enforced using a rolling 60-second window tracked in Redis. Each request increments a counter keyed to
+your IP or API key. When the counter exceeds the limit, the API returns a `429 Too Many Requests` response.
 
 ### Response Headers
 
@@ -30,17 +32,20 @@ RateLimit-Remaining: 432
 RateLimit-Reset: 1714508459
 ```
 
-These headers are present on **all** API endpoints — REST, GraphQL, ingest, and webhook — regardless of which throttle tier applies to your request (anonymous, authenticated user, or API key).
+These headers are present on **all** API endpoints — REST, GraphQL, ingest, and webhook — regardless of which throttle
+tier applies to your request (anonymous, authenticated user, or API key).
 
-| Header | Description |
-|--------|-------------|
-| `RateLimit-Limit` | Maximum requests allowed in the current window |
-| `RateLimit-Remaining` | Requests remaining before you are rate-limited |
-| `RateLimit-Reset` | Unix timestamp (UTC) when the window resets and the counter clears |
+| Header                | Description                                                        |
+| --------------------- | ------------------------------------------------------------------ |
+| `RateLimit-Limit`     | Maximum requests allowed in the current window                     |
+| `RateLimit-Remaining` | Requests remaining before you are rate-limited                     |
+| `RateLimit-Reset`     | Unix timestamp (UTC) when the window resets and the counter clears |
 
-When you have an **API key**, the headers reflect your per-key hourly quota. For unauthenticated or JWT-authenticated requests, the headers reflect the per-minute window for your tier.
+When you have an **API key**, the headers reflect your per-key hourly quota. For unauthenticated or JWT-authenticated
+requests, the headers reflect the per-minute window for your tier.
 
-The `Retry-After` header tells you exactly how many seconds until your limit resets (calculated as seconds remaining in the current minute).
+The `Retry-After` header tells you exactly how many seconds until your limit resets (calculated as seconds remaining in
+the current minute).
 
 ## Checking Your Current Usage
 
@@ -65,7 +70,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 
 ### Via SDKs
 
-#### Python
+### Python
 
 ```python
 from soroscan import SoroScanClient
@@ -112,7 +117,7 @@ Track these over time to alert before saturation and plan scale-up.
 
 ## Handling 429 Responses
 
-#### Python
+### Python
 
 ```python
 from soroscan.exceptions import RateLimitError
@@ -136,7 +141,7 @@ try {
   if (err instanceof SoroScanError && err.statusCode === 429) {
     const retryAfter = parseInt(err.headers?.["retry-after"] ?? "60");
     console.log(`Rate limited. Retrying in ${retryAfter}s...`);
-    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+    await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
   }
 }
 ```

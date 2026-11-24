@@ -37,14 +37,14 @@ redis-cli -u "$REDIS_URL" llen backfill
 1. **Which queue?** Compare depths above. `high_priority` and `default`
    backlogs affect customer-facing freshness first; `backfill` may be
    intentionally deep during catch-up runs.
-2. **Worker or producer problem?**
+1. **Worker or producer problem?**
    - Workers healthy but stalled: check task soft-time-limit expiries,
      database connection pool exhaustion, and RPC availability
      (see [rpc-endpoint-unavailable.md](./rpc-endpoint-unavailable.md)).
    - Workers dead: `kubectl pods -n soroscan` for restart/OOM loops.
    - Producers flooding: check beat schedule and ingest task enqueues for a
      burst (e.g. a contract added and backfilling).
-3. **Poison tasks?** A single task crashing workers repeatedly re-drives the
+1. **Poison tasks?** A single task crashing workers repeatedly re-drives the
    backlog; check Celery logs for repeated failures on the same task ID.
 
 ## Remediation

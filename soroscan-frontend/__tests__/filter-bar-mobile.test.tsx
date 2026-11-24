@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { FilterBar } from "@/app/dashboard/components/FilterBar";
 
 jest.mock("@/components/ingest/graphql", () => ({
@@ -84,7 +84,6 @@ describe("FilterBar mobile drawer", () => {
     fireEvent.click(screen.getByTestId("filter-panel-toggle"));
 
     const drawer = screen.getByRole("dialog", { name: /event filters/i });
-    const applyButton = drawer.querySelector("button");
     const buttons = drawer.querySelectorAll("button");
     const apply = Array.from(buttons).find((btn) =>
       btn.textContent?.includes("Apply Filters"),

@@ -74,11 +74,11 @@ not fabricated product SLOs.
 
 1. Confirm the route exists in `django-backend/soroscan/urls.py` or
    `ingest/urls.py`. Do not invent endpoints.
-2. Add an `exec` function in `load-tests/k6/scenarios.js` and a `scenarios`
+1. Add an `exec` function in `load-tests/k6/scenarios.js` and a `scenarios`
    entry with configurable VUs.
-3. Use `http.expectedStatuses` for authenticated routes that return 401
+1. Use `http.expectedStatuses` for authenticated routes that return 401
    without credentials.
-4. Extend `load-tests/tests/test_k6_config.py`.
+1. Extend `load-tests/tests/test_k6_config.py`.
 
 ## CI
 

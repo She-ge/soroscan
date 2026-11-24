@@ -1,4 +1,3 @@
-import React from "react"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { Popover } from "@/components/ui/popover"
 

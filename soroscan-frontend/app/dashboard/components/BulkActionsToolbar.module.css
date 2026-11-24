@@ -198,6 +198,22 @@
   outline-offset: -1px;
 }
 
+/* ─── Keyboard-operable event rows ───────────────────────────────────────── */
+.eventRow {
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, outline-color 0.2s ease;
+}
+
+.eventRow:not(.selectedRow):hover {
+  box-shadow: 0 0 15px var(--row-glow, #00d4ff);
+}
+
+.eventRow:focus-visible {
+  outline: 2px solid #00d4ff;
+  outline-offset: -2px;
+  box-shadow: 0 0 15px var(--row-glow, #00d4ff);
+}
+
 /* ── Responsive collapse ────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .toolbar {

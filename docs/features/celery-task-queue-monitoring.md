@@ -2,7 +2,8 @@
 
 > **Issue #1292** — `feat: expose Celery task queue metrics and status`
 
-SoroScan exports Prometheus metrics for all Celery workers and queues, ships a Grafana dashboard, and provides a REST endpoint for programmatic status checks.
+SoroScan exports Prometheus metrics for all Celery workers and queues, ships a Grafana dashboard, and provides a REST
+endpoint for programmatic status checks.
 
 ---
 
@@ -28,19 +29,19 @@ All metrics are prefixed with `soroscan_`.
 
 ### Task execution metrics (`soroscan/ingest/metrics.py`)
 
-| Metric | Type | Labels | Description |
-|---|---|---|---|
-| `soroscan_celery_tasks_total` | Counter | `task_name`, `status`, `error_type` | Terminal task outcomes (`success`, `failure`, etc.) |
-| `soroscan_celery_tasks_active` | Gauge | `task_name` | Tasks currently executing |
-| `soroscan_celery_task_duration_seconds` | Histogram | `task_name` | Wall-clock execution time |
+| Metric                                  | Type      | Labels                              | Description                                         |
+| --------------------------------------- | --------- | ----------------------------------- | --------------------------------------------------- |
+| `soroscan_celery_tasks_total`           | Counter   | `task_name`, `status`, `error_type` | Terminal task outcomes (`success`, `failure`, etc.) |
+| `soroscan_celery_tasks_active`          | Gauge     | `task_name`                         | Tasks currently executing                           |
+| `soroscan_celery_task_duration_seconds` | Histogram | `task_name`                         | Wall-clock execution time                           |
 
 ### Operational metrics (`soroscan/operational_metrics.py`)
 
 Collected live on every Prometheus scrape by `OperationalHealthCollector`:
 
-| Metric | Type | Labels | Description |
-|---|---|---|---|
-| `soroscan_celery_queue_depth` | Gauge | `queue` | Pending messages in Redis per queue |
+| Metric                           | Type  | Labels   | Description                          |
+| -------------------------------- | ----- | -------- | ------------------------------------ |
+| `soroscan_celery_queue_depth`    | Gauge | `queue`  | Pending messages in Redis per queue  |
 | `soroscan_celery_workers_online` | Gauge | `worker` | Workers responding to `inspect ping` |
 
 Queues monitored: `high_priority`, `default`, `low_priority`, `backfill`.
@@ -79,7 +80,8 @@ labels:
   severity: warning
 ```
 
-**Runbook**: Check `GET /api/celery/status/` for per-queue depth and `workers_online` count.  Scale workers with `kubectl scale deployment/soroscan-worker --replicas=N`.
+**Runbook**: Check `GET /api/celery/status/` for per-queue depth and `workers_online` count. Scale workers with
+`kubectl scale deployment/soroscan-worker --replicas=N`.
 
 ### `SoroScanCeleryFailureRateHigh`
 
@@ -95,7 +97,8 @@ labels:
   severity: critical
 ```
 
-**Runbook**: Check the `root_cause_query` annotation to identify the task names and error types with the highest failure rates.
+**Runbook**: Check the `root_cause_query` annotation to identify the task names and error types with the highest failure
+rates.
 
 ---
 
@@ -103,7 +106,7 @@ labels:
 
 ### `GET /api/celery/status/`
 
-Returns a JSON snapshot of queue depths, worker health, and task metrics.  Requires authentication.
+Returns a JSON snapshot of queue depths, worker health, and task metrics. Requires authentication.
 
 **Example response**
 
@@ -159,13 +162,13 @@ The endpoint is registered at two paths:
 
 Import the template into Grafana to get:
 
-| Panel | Description |
-|---|---|
-| Queue Depth | Time-series of pending messages per queue |
-| Active Tasks | Currently executing tasks per task name |
+| Panel                      | Description                                 |
+| -------------------------- | ------------------------------------------- |
+| Queue Depth                | Time-series of pending messages per queue   |
+| Active Tasks               | Currently executing tasks per task name     |
 | Completed and Failed Tasks | Rate of terminal outcomes (success/failure) |
-| Average Task Duration | p50 execution time per task |
-| Workers Online | Stat panel showing total live workers |
+| Average Task Duration      | p50 execution time per task                 |
+| Workers Online             | Stat panel showing total live workers       |
 
 Import path: **Dashboards → Import → Upload JSON file** → select `k8s/grafana-templates/celery-task-queue.json`.
 
@@ -199,7 +202,8 @@ No code changes are needed to instrument new tasks — the signals fire automati
 
 ## Environment Variables
 
-No additional environment variables are required.  The broker URL (`CELERY_BROKER_URL`) used by `operational_metrics.py` is derived from `REDIS_URL`.
+No additional environment variables are required. The broker URL (`CELERY_BROKER_URL`) used by `operational_metrics.py`
+is derived from `REDIS_URL`.
 
 ---
 
@@ -212,27 +216,27 @@ cd django-backend
 pytest soroscan/ingest/tests/test_celery_monitoring.py -v
 ```
 
-| Test class | What it covers |
-|---|---|
-| `CeleryMetricsRegisteredTests` | All three metrics export without duplicate registration errors |
-| `CelerySignalHandlerTests` | Prerun/postrun/failure signals update metrics correctly |
-| `CeleryDurationTests` | Duration histogram is observed on completion |
-| `CeleryStatusViewTests` | API endpoint structure, auth, Redis/worker error handling |
-| `CeleryAlertRulesTests` | prometheus-rules.yaml has required alerts with correct thresholds |
-| `OperationalHealthCollectorCeleryTests` | Collector yields queue/worker metrics gracefully under failures |
+| Test class                              | What it covers                                                    |
+| --------------------------------------- | ----------------------------------------------------------------- |
+| `CeleryMetricsRegisteredTests`          | All three metrics export without duplicate registration errors    |
+| `CelerySignalHandlerTests`              | Prerun/postrun/failure signals update metrics correctly           |
+| `CeleryDurationTests`                   | Duration histogram is observed on completion                      |
+| `CeleryStatusViewTests`                 | API endpoint structure, auth, Redis/worker error handling         |
+| `CeleryAlertRulesTests`                 | prometheus-rules.yaml has required alerts with correct thresholds |
+| `OperationalHealthCollectorCeleryTests` | Collector yields queue/worker metrics gracefully under failures   |
 
 ---
 
 ## Source Files
 
-| File | Purpose |
-|---|---|
-| `soroscan/ingest/metrics.py` | `celery_tasks_total`, `celery_tasks_active`, `celery_task_duration_seconds` |
-| `soroscan/operational_metrics.py` | `OperationalHealthCollector` — queue depth and worker status |
-| `soroscan/celery.py` | Signal handlers wiring Celery events to metrics |
-| `soroscan/ingest/views.py` | `celery_status_view` (GET `/api/celery/status/`) |
-| `soroscan/urls.py` | URL registration |
-| `soroscan/ingest/urls.py` | URL registration (ingest sub-router) |
-| `k8s/prometheus-rules.yaml` | `SoroScanCeleryQueueDepthHigh`, `SoroScanCeleryFailureRateHigh` |
-| `k8s/grafana-templates/celery-task-queue.json` | Grafana dashboard template |
-| `soroscan/ingest/tests/test_celery_monitoring.py` | Test suite |
+| File                                              | Purpose                                                                     |
+| ------------------------------------------------- | --------------------------------------------------------------------------- |
+| `soroscan/ingest/metrics.py`                      | `celery_tasks_total`, `celery_tasks_active`, `celery_task_duration_seconds` |
+| `soroscan/operational_metrics.py`                 | `OperationalHealthCollector` — queue depth and worker status                |
+| `soroscan/celery.py`                              | Signal handlers wiring Celery events to metrics                             |
+| `soroscan/ingest/views.py`                        | `celery_status_view` (GET `/api/celery/status/`)                            |
+| `soroscan/urls.py`                                | URL registration                                                            |
+| `soroscan/ingest/urls.py`                         | URL registration (ingest sub-router)                                        |
+| `k8s/prometheus-rules.yaml`                       | `SoroScanCeleryQueueDepthHigh`, `SoroScanCeleryFailureRateHigh`             |
+| `k8s/grafana-templates/celery-task-queue.json`    | Grafana dashboard template                                                  |
+| `soroscan/ingest/tests/test_celery_monitoring.py` | Test suite                                                                  |

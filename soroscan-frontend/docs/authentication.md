@@ -13,6 +13,7 @@ curl -X POST https://soroscan.io/api/auth/token/ \
 ```
 
 Response:
+
 ```json
 {
   "access": "eyJhbGci...",
@@ -91,6 +92,7 @@ Authenticated requests are rate-limited per API key:
 - **Enterprise**: Custom limits
 
 Rate limit headers are included in every response:
+
 ```
 X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 987

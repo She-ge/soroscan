@@ -1,6 +1,9 @@
 # Historical Ledger Event Backfilling
 
-SoroScan continuously monitors contracts for new events, but gaps can appear in the indexed history — for example when the ingestion worker is restarted, a node is temporarily unreachable, or a contract is registered after some events have already been emitted. The backfill system exists to detect and close those gaps without duplicating already-indexed data.
+SoroScan continuously monitors contracts for new events, but gaps can appear in the indexed history — for example when
+the ingestion worker is restarted, a node is temporarily unreachable, or a contract is registered after some events have
+already been emitted. The backfill system exists to detect and close those gaps without duplicating already-indexed
+data.
 
 ---
 
@@ -8,13 +11,18 @@ SoroScan continuously monitors contracts for new events, but gaps can appear in 
 
 ### Normal ingestion vs. backfilling
 
-The regular ingestion path (`ingest_latest_events`) advances a cursor stored in `IndexerState` forward in real time. It only fetches events at or after `last_indexed_ledger` for each contract. When the cursor skips ledgers (e.g. the worker was offline), a gap forms in the `ContractEvent` table.
+The regular ingestion path (`ingest_latest_events`) advances a cursor stored in `IndexerState` forward in real time. It
+only fetches events at or after `last_indexed_ledger` for each contract. When the cursor skips ledgers (e.g. the worker
+was offline), a gap forms in the `ContractEvent` table.
 
 The backfill system is a separate concern that:
 
-1. **Detects gaps** — `reconcile_event_completeness` scans every active contract and compares observed ledger numbers against the expected contiguous range. Any missing ledger numbers are recorded as gaps.
-2. **Schedules repairs** — For each gap (up to 10 per contract per reconciliation cycle), it enqueues a `backfill_contract_events` Celery task for the missing ledger range.
-3. **Fills in the data** — `backfill_contract_events` fetches historical events from the Soroban RPC node in batches and upserts them into the database.
+1. **Detects gaps** — `reconcile_event_completeness` scans every active contract and compares observed ledger numbers
+   against the expected contiguous range. Any missing ledger numbers are recorded as gaps.
+1. **Schedules repairs** — For each gap (up to 10 per contract per reconciliation cycle), it enqueues a
+   `backfill_contract_events` Celery task for the missing ledger range.
+1. **Fills in the data** — `backfill_contract_events` fetches historical events from the Soroban RPC node in batches and
+   upserts them into the database.
 
 ### Gap detection logic
 
@@ -37,12 +45,14 @@ A warning is logged when completeness drops below **99.9%**.
 
 ### Batch processing
 
-`backfill_contract_events` processes the requested ledger range in chunks of **200 ledgers** (`BATCH_LEDGER_SIZE = 200`). After each batch:
+`backfill_contract_events` processes the requested ledger range in chunks of **200 ledgers**
+(`BATCH_LEDGER_SIZE = 200`). After each batch:
 
 - `contract.last_indexed_ledger` is advanced to `batch_end` and saved.
 - Prometheus counters (`backfill_ledgers_processed_total`, `backfill_batch_duration_seconds`) are updated.
 
-Each event in the batch goes through `_upsert_contract_event`, which creates or updates the `ContractEvent` row, respects the per-contract `max_events_per_minute` rate limit, and triggers ABI decoding and signature verification.
+Each event in the batch goes through `_upsert_contract_event`, which creates or updates the `ContractEvent` row,
+respects the per-contract `max_events_per_minute` rate limit, and triggers ABI decoding and signature verification.
 
 ---
 
@@ -50,7 +60,8 @@ Each event in the batch goes through `_upsert_contract_event`, which creates or 
 
 ### Automatic (recommended)
 
-The `reconcile_event_completeness` task runs on a Celery Beat schedule and triggers backfill tasks automatically. No manual intervention is needed under normal operating conditions.
+The `reconcile_event_completeness` task runs on a Celery Beat schedule and triggers backfill tasks automatically. No
+manual intervention is needed under normal operating conditions.
 
 To manually trigger reconciliation across all active contracts:
 
@@ -73,9 +84,11 @@ backfill_contract_events.delay(
 )
 ```
 
-The task validates that `from_ledger` and `to_ledger` are both positive and that `from_ledger <= to_ledger`. An invalid range raises `ValueError` immediately.
+The task validates that `from_ledger` and `to_ledger` are both positive and that `from_ledger <= to_ledger`. An invalid
+range raises `ValueError` immediately.
 
-If `contract.last_indexed_ledger` is set and is greater than `from_ledger`, the task automatically advances `next_ledger` to avoid re-fetching already-indexed ledgers:
+If `contract.last_indexed_ledger` is set and is greater than `from_ledger`, the task automatically advances
+`next_ledger` to avoid re-fetching already-indexed ledgers:
 
 ```python
 next_ledger = max(from_ledger, contract.last_indexed_ledger + 1)
@@ -83,7 +96,8 @@ next_ledger = max(from_ledger, contract.last_indexed_ledger + 1)
 
 ### Via management command (manual ingestion)
 
-For a quick manual ingest from the current cursor position (not a ranged backfill), use the `ingest_events` management command:
+For a quick manual ingest from the current cursor position (not a ranged backfill), use the `ingest_events` management
+command:
 
 ```bash
 # Dry run — fetch and validate, do not persist
@@ -95,7 +109,8 @@ python manage.py ingest_events --contract CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4W
 
 ### Reprocessing already-indexed events
 
-If you need to re-run decoding, validation, or signature verification on events that are already in the database (e.g. after uploading a new ABI), use `reprocess_events`:
+If you need to re-run decoding, validation, or signature verification on events that are already in the database (e.g.
+after uploading a new ABI), use `reprocess_events`:
 
 ```bash
 # Dry run — show what would change
@@ -129,17 +144,19 @@ reprocess_events completed: contract=C... processed=12500/12500 updated=843 fail
 
 ## Ledger Range Parameters
 
-| Parameter | Description | Constraints |
-|---|---|---|
-| `from_ledger` | First ledger to fetch (inclusive) | Must be > 0 |
-| `to_ledger` | Last ledger to fetch (inclusive) | Must be ≥ `from_ledger` |
+| Parameter     | Description                       | Constraints             |
+| ------------- | --------------------------------- | ----------------------- |
+| `from_ledger` | First ledger to fetch (inclusive) | Must be > 0             |
+| `to_ledger`   | Last ledger to fetch (inclusive)  | Must be ≥ `from_ledger` |
 
 The effective start ledger is `max(from_ledger, contract.last_indexed_ledger + 1)` to avoid redundant work.
 
 **Choosing ranges:**
 
-- A range of 5,000 ledgers (~7 hours of Stellar mainnet history at ~5s/ledger) processes in approximately 25 batches of 200.
-- Prefer smaller ranges for targeted repairs. Large ranges (>50,000 ledgers) should be split across multiple task invocations to stay within the `soft_time_limit` of 300 seconds.
+- A range of 5,000 ledgers (~7 hours of Stellar mainnet history at ~5s/ledger) processes in approximately 25 batches
+  of 200.
+- Prefer smaller ranges for targeted repairs. Large ranges (>50,000 ledgers) should be split across multiple task
+  invocations to stay within the `soft_time_limit` of 300 seconds.
 
 ---
 
@@ -183,13 +200,13 @@ summary = json.loads(state.value)
 
 ### Prometheus metrics
 
-| Metric | Type | Description |
-|---|---|---|
-| `backfill_ledgers_processed_total` | Counter | Ledgers processed, labelled by `contract_id` |
-| `backfill_batch_duration_seconds` | Histogram | Time per 200-ledger batch |
-| `ledger_gaps_total` | Counter | Gaps detected per reconciliation run |
-| `missing_events_total` | Counter | Missing ledger count at detection time |
-| `task_duration_seconds{task_name="backfill_contract_events"}` | Histogram | End-to-end task duration |
+| Metric                                                        | Type      | Description                                  |
+| ------------------------------------------------------------- | --------- | -------------------------------------------- |
+| `backfill_ledgers_processed_total`                            | Counter   | Ledgers processed, labelled by `contract_id` |
+| `backfill_batch_duration_seconds`                             | Histogram | Time per 200-ledger batch                    |
+| `ledger_gaps_total`                                           | Counter   | Gaps detected per reconciliation run         |
+| `missing_events_total`                                        | Counter   | Missing ledger count at detection time       |
+| `task_duration_seconds{task_name="backfill_contract_events"}` | Histogram | End-to-end task duration                     |
 
 ---
 
@@ -197,15 +214,19 @@ summary = json.loads(state.value)
 
 ### Per-contract ingest rate
 
-Each `TrackedContract` can have a `max_events_per_minute` cap. During backfill, events pass through `check_ingest_rate` which uses a 60-second Redis counter keyed by `ingest_rate:<contract_id>:<minute_bucket>`. If the limit is exceeded, the event is skipped for that minute and a `Throttled` exception is raised.
+Each `TrackedContract` can have a `max_events_per_minute` cap. During backfill, events pass through `check_ingest_rate`
+which uses a 60-second Redis counter keyed by `ingest_rate:<contract_id>:<minute_bucket>`. If the limit is exceeded, the
+event is skipped for that minute and a `Throttled` exception is raised.
 
 To avoid triggering this limit during a large backfill, either:
+
 - Temporarily increase (or remove) the `max_events_per_minute` on the contract, or
 - Use a slower backfill pace by processing smaller ledger ranges with delays between tasks.
 
 ### Celery queue
 
-Backfill tasks run in the dedicated `backfill` queue. Keep this queue separate from the live ingestion queue so that historical repairs do not starve real-time event processing:
+Backfill tasks run in the dedicated `backfill` queue. Keep this queue separate from the live ingestion queue so that
+historical repairs do not starve real-time event processing:
 
 ```bash
 # Start a worker dedicated to backfill
@@ -217,8 +238,11 @@ celery -A soroscan worker -Q default,celery --loglevel=info
 
 ### Retry behavior
 
-`backfill_contract_events` retries up to **3 times** with a **60-second delay** between attempts (`max_retries=3`, `default_retry_delay=60`). The `soft_time_limit` is **300 seconds** per task. If a single range cannot complete within that window, split it into smaller sub-ranges.
+`backfill_contract_events` retries up to **3 times** with a **60-second delay** between attempts (`max_retries=3`,
+`default_retry_delay=60`). The `soft_time_limit` is **300 seconds** per task. If a single range cannot complete within
+that window, split it into smaller sub-ranges.
 
 ### Duplicate prevention
 
-`_upsert_contract_event` uses an upsert (get-or-create keyed on `contract + ledger + event_index + tx_hash`) so re-running a backfill over an already-covered range is safe and idempotent.
+`_upsert_contract_event` uses an upsert (get-or-create keyed on `contract + ledger + event_index + tx_hash`) so
+re-running a backfill over an already-covered range is safe and idempotent.

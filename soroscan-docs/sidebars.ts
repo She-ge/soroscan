@@ -71,6 +71,16 @@ const sidebars: SidebarsConfig = {
         'deployment/docker-compose',
         'deployment/kubernetes',
         'deployment/cloud-platforms',
+        'deployment/monitoring',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Observability',
+      items: [
+        'observability/index',
+        'observability/grafana-dashboards',
+        'observability/structured-logging',
       ],
     },
     {

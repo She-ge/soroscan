@@ -9,7 +9,6 @@ import {
   Server,
   RefreshCw,
   Clock,
-  ArrowUpRight,
   ArrowDownRight,
   CheckCircle2,
   AlertTriangle,

@@ -4,13 +4,15 @@
 **Estimated Completion**: 1 day  
 **Owner**: [Assign team member]
 
-**Philosophy**: Document patterns once, reuse everywhere. No separate component library needed—use Tailwind + existing UI components.
+**Philosophy**: Document patterns once, reuse everywhere. No separate component library needed—use Tailwind + existing
+UI components.
 
 ---
 
 ## MVP Deliverables
 
 ### 1. Error Patterns Documentation
+
 - [ ] Create `docs/ERROR_PATTERNS.md` (developer guide, 3-4 pages max)
 - [ ] Document when to use each pattern:
   - [ ] **Inline validation**: form field errors (email invalid, required, etc.)
@@ -21,16 +23,19 @@
 - [ ] Include color references: red-500 (danger), orange-500 (warning), blue-500 (info), green-500 (success)
 
 **Content Outline**:
+
 ```markdown
 # Error State Patterns
 
 ## 1. Inline Form Validation
+
 - When: user submits invalid form or focuses away from field
 - Visual: red border + red error text below input
 - Accessibility: error text associated with input via aria-describedby
 - Example: "Email must be valid"
 
 ## 2. Toast Notifications
+
 - When: action completes (success/error) or async operation updates
 - Visual: small box, bottom-right, auto-dismiss after 3-5s
 - Duration: success 3s, error 5s, info 4s
@@ -38,6 +43,7 @@
 - Accessibility: aria-live="polite"
 
 ## 3. Error Banners
+
 - When: persistent issue (network offline, API unavailable)
 - Visual: banner at top of page, full width, dismissible
 - Color: background red-50 / red-100 (dark), text red-900
@@ -45,12 +51,14 @@
 - Action: retry button (optional)
 
 ## 4. Error Pages (404, 500, 403)
+
 - When: user navigates to non-existent page or server error
 - Visual: large error code, friendly message, helpful links
 - Content: error explanation, link to homepage, search option (if applicable)
 - No: don't show technical stack traces to users
 
 ## 5. Loading States
+
 - When: data fetching or processing
 - Option A: skeleton screen (gray placeholder matching content shape)
 - Option B: spinner (spinning animation)
@@ -58,12 +66,14 @@
 - Text: optional "Loading..." message
 
 ## 6. Success States
+
 - When: action completes successfully
 - Visual: green checkmark icon, brief success message
 - Animation: fade-in, optional scale animation (subtle)
 - Dismissal: auto-hide after 3s or on next action
 
 ## 7. Validation States (form)
+
 - Empty: gray border, placeholder text
 - Valid: green checkmark icon to right of input
 - Invalid: red border, red error text below, clear message
@@ -71,18 +81,22 @@
 ```
 
 ### 2. Error Pages (404, 500, 403)
+
 Create in both apps:
 
 #### Admin App
+
 - [ ] Create `admin/app/not-found.tsx` (404)
 - [ ] Create `admin/app/error.tsx` (500 / server error)
 - [ ] Create `admin/app/forbidden.tsx` (403) optional
 
 #### Frontend App
+
 - [ ] Create `soroscan-frontend/app/not-found.tsx` (404)
 - [ ] Create `soroscan-frontend/app/error.tsx` (500)
 
 **404 Page Template**:
+
 ```typescript
 // app/not-found.tsx
 export default function NotFoundPage() {
@@ -107,6 +121,7 @@ export default function NotFoundPage() {
 ```
 
 **500 Page Template**:
+
 ```typescript
 // app/error.tsx
 'use client';
@@ -133,28 +148,34 @@ export default function ErrorPage({ error, reset }) {
 ```
 
 ### 3. Toast Notification Component
+
 - [ ] Check if toast component exists: `components/ui/Toast.tsx` or `components/notifications/Toast.tsx`
 - [ ] If not, create simple toast provider using React Context
 - [ ] Toast interface:
+
   ```typescript
   type Toast = {
     id: string;
-    type: 'success' | 'error' | 'info' | 'warning';
+    type: "success" | "error" | "info" | "warning";
     message: string;
     duration?: number; // ms, default 3000
   };
   ```
+
 - [ ] Usage:
+
   ```typescript
   const { addToast } = useToast();
-  addToast({ type: 'success', message: 'Webhook created!' });
+  addToast({ type: "success", message: "Webhook created!" });
   ```
 
 ### 4. Form Validation Pattern
+
 - [ ] Document form validation flow
 - [ ] Using React Hook Form (if available, check package.json):
+
   ```typescript
-  <input 
+  <input
     {...register('email', { required: 'Email required' })}
     aria-describedby={errors.email ? 'email-error' : undefined}
   />
@@ -166,30 +187,32 @@ export default function ErrorPage({ error, reset }) {
   ```
 
 ### 5. Network Error Handling
+
 - [ ] Create `utils/networkDetection.ts`:
   - [ ] Listen to `navigator.onLine` or fetch retry logic
   - [ ] Show banner when offline
   - [ ] Hide banner when back online
 - [ ] Banner component:
+
   ```typescript
   function OfflineBanner() {
     const [isOnline, setIsOnline] = useState(true);
-    
+
     useEffect(() => {
       const handleOnline = () => setIsOnline(true);
       const handleOffline = () => setIsOnline(false);
-      
+
       window.addEventListener('online', handleOnline);
       window.addEventListener('offline', handleOffline);
-      
+
       return () => {
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
       };
     }, []);
-    
+
     if (isOnline) return null;
-    
+
     return (
       <div className="bg-red-900 text-white p-3 text-center">
         You're offline. Some features may not work.
@@ -199,23 +222,25 @@ export default function ErrorPage({ error, reset }) {
   ```
 
 ### 6. Rate Limit (429) Handling
+
 - [ ] Detect 429 responses in GraphQL client
 - [ ] Show banner with countdown timer:
+
   ```typescript
   function RateLimitBanner({ resetAt }) {
     const [countdown, setCountdown] = useState(0);
-    
+
     useEffect(() => {
       const interval = setInterval(() => {
         const remaining = Math.ceil((resetAt - Date.now()) / 1000);
         setCountdown(Math.max(0, remaining));
       }, 1000);
-      
+
       return () => clearInterval(interval);
     }, [resetAt]);
-    
+
     if (countdown === 0) return null;
-    
+
     return (
       <div className="bg-amber-900 text-white p-3 text-center">
         Rate limited. Try again in {countdown}s
@@ -225,6 +250,7 @@ export default function ErrorPage({ error, reset }) {
   ```
 
 ### 7. Accessibility Annotations
+
 - [ ] All error messages: use `aria-describedby` to connect to input
 - [ ] Toast notifications: use `aria-live="polite"` + `role="status"`
 - [ ] Error icons: use `aria-label="error"` or wrap in `<span aria-hidden="true">`
@@ -263,11 +289,13 @@ soroscan-frontend/context/
 ## Acceptance Tests
 
 ### Documentation
+
 - [ ] ERROR_PATTERNS.md is clear and concise (devs understand patterns)
 - [ ] Code examples are copy-paste ready
 - [ ] Color palette documented (red-500 for danger, etc.)
 
 ### Error Pages
+
 - [ ] 404 page loads without errors
 - [ ] 500 page handles missing error message gracefully
 - [ ] Both pages styled consistently with app theme
@@ -275,6 +303,7 @@ soroscan-frontend/context/
 - [ ] Dark mode: readable
 
 ### Toast Component
+
 - [ ] Toast appears/disappears correctly
 - [ ] Multiple toasts stack (show 2-3 at once)
 - [ ] Auto-dismiss after 3-5s
@@ -282,12 +311,14 @@ soroscan-frontend/context/
 - [ ] Keyboard accessible (focus visible)
 
 ### Form Validation
+
 - [ ] Invalid input shows error message
 - [ ] Valid input hides error message
 - [ ] Accessible: screen reader reads error
 - [ ] Red border clearly visible
 
 ### Network/Rate Limit
+
 - [ ] Offline banner appears when disconnected
 - [ ] Rate limit countdown shows and counts down
 - [ ] Banners dismissible (optional)
@@ -297,9 +328,9 @@ soroscan-frontend/context/
 ## Fastest Approach for MVP
 
 1. **2 hours**: Write ERROR_PATTERNS.md + code snippets
-2. **1 hour**: Create 404/500 pages (copy template)
-3. **30 min**: Add Toast component (use existing if available, else simple context)
-4. **30 min**: Test + dark mode checks
+1. **1 hour**: Create 404/500 pages (copy template)
+1. **30 min**: Add Toast component (use existing if available, else simple context)
+1. **30 min**: Test + dark mode checks
 
 **Total**: 1 day
 
@@ -316,7 +347,7 @@ soroscan-frontend/context/
 
 ## References
 
-- Tailwind colors: https://tailwindcss.com/docs/customizing-colors
-- ARIA accessibility: https://www.w3.org/WAI/tutorials/
-- React error boundaries: https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary
-- Network API: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/onLine
+- Tailwind colors: [tailwindcss.com](https://tailwindcss.com/docs/customizing-colors)
+- ARIA accessibility: [WAI tutorials](https://www.w3.org/WAI/tutorials/)
+- React error boundaries: [React documentation](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)
+- Network API: [MDN documentation](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/onLine)

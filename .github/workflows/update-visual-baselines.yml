@@ -1,0 +1,67 @@
+name: Update Playwright Visual Baselines
+
+# Manual helper for regenerating the Linux Chromium baselines in the same
+# environment the E2E workflow uses. Download the "linux-visual-baselines"
+# artifact and commit the five *-chromium-linux.png files.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-baselines:
+    name: Generate Linux Chromium baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: soroscan-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('soroscan-frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox
+
+      - name: Build frontend
+        run: pnpm run build
+
+      - name: Regenerate visual baselines
+        run: pnpm exec playwright test --project=chromium --grep "visual regression" --update-snapshots
+        env:
+          CI: true
+
+      - name: Upload Linux baselines
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-visual-baselines
+          path: soroscan-frontend/tests/**/*-chromium-linux.png
+          if-no-files-found: error
+          retention-days: 14

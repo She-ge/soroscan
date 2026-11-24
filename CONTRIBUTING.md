@@ -2,7 +2,8 @@
 
 Thank you for investing your time in contributing to SoroScan!
 
-SoroScan is an open-source indexing layer designed to make Soroban smart contract data accessible and queryable. Whether you're fixing a bug, improving documentation, or building a new feature, we welcome your involvement.
+SoroScan is an open-source indexing layer designed to make Soroban smart contract data accessible and queryable. Whether
+you're fixing a bug, improving documentation, or building a new feature, we welcome your involvement.
 
 ---
 
@@ -11,12 +12,12 @@ SoroScan is an open-source indexing layer designed to make Soroban smart contrac
 For more detailed contributor guidance:
 
 1. 🔰 **Getting Started**: Read the [Developer Onboarding Guide](docs/contributing/developer-onboarding.md).
-2. 🎨 **Code Style & Linting**: Follow the [Code Style Guidelines](docs/contributing/style-guide.md).
-3. 🌿 **Git & PR Workflows**: See the [Git & PR Workflow Guide](docs/contributing/git-and-pr-workflow.md).
-4. 📄 **Writing Documentation**: See the [Documentation Contribution Guide](docs/contributing/documentation-guide.md).
-5. 🤝 **Community & Code of Conduct**: Read the [Community Standards](docs/contributing/community-standards.md).
-6. 📝 **Logging Standards**: Follow the [Logging Standards](docs/contributing/LOGGING_STANDARDS.md).
-7. 🏛️ **Architecture Decisions**: Review the [Architecture Decision Records](docs/adrs/README.md).
+1. 🎨 **Code Style & Linting**: Follow the [Code Style Guidelines](docs/contributing/style-guide.md).
+1. 🌿 **Git & PR Workflows**: See the [Git & PR Workflow Guide](docs/contributing/git-and-pr-workflow.md).
+1. 📄 **Writing Documentation**: See the [Documentation Contribution Guide](docs/contributing/documentation-guide.md).
+1. 🤝 **Community & Code of Conduct**: Read the [Community Standards](docs/contributing/community-standards.md).
+1. 📝 **Logging Standards**: Follow the [Logging Standards](docs/contributing/LOGGING_STANDARDS.md).
+1. 🏛️ **Architecture Decisions**: Review the [Architecture Decision Records](docs/adrs/README.md).
 
 ---
 
@@ -25,34 +26,37 @@ For more detailed contributor guidance:
 By participating in this project you agree to abide by our
 [Community Standards & Code of Conduct](docs/contributing/community-standards.md).
 
-We are committed to making participation in SoroScan a harassment-free experience for everyone, regardless of level of experience, gender, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, ethnicity, age, religion, or nationality.
+We are committed to making participation in SoroScan a harassment-free experience for everyone, regardless of level of
+experience, gender, gender identity and expression, sexual orientation, disability, personal appearance, body size,
+race, ethnicity, age, religion, or nationality.
 
-Security vulnerabilities should not be reported through public issues. See the [Security Issues](#-security-issues) section below.
+Security vulnerabilities should not be reported through public issues. See the
+[security reporting guidance](docs/security/index.md).
 
 ---
 
-# ✅ First-Time Contributor Setup Checklist
+## ✅ First-Time Contributor Setup Checklist
 
 Before starting your first contribution, complete the following checklist:
 
-* [ ] Fork `SoroScan/soroscan` on GitHub.
-* [ ] Clone your fork locally.
-* [ ] Add the official SoroScan repository as `upstream`.
-* [ ] Fetch the latest upstream changes.
-* [ ] Check out an up-to-date `dev` branch.
-* [ ] Install the dependencies required for the area you are changing.
-* [ ] Configure the local backend environment if required.
-* [ ] Install frontend dependencies if required.
-* [ ] Install the repository pre-commit hooks.
-* [ ] Run the relevant tests and lint checks.
-* [ ] Create a contribution branch from `dev`.
-* [ ] Keep changes limited to the assigned issue.
-* [ ] Push your branch to your fork.
-* [ ] Open a pull request against `dev`.
+- [ ] Fork `SoroScan/soroscan` on GitHub.
+- [ ] Clone your fork locally.
+- [ ] Add the official SoroScan repository as `upstream`.
+- [ ] Fetch the latest upstream changes.
+- [ ] Check out an up-to-date `dev` branch.
+- [ ] Install the dependencies required for the area you are changing.
+- [ ] Configure the local backend environment if required.
+- [ ] Install frontend dependencies if required.
+- [ ] Install the repository pre-commit hooks.
+- [ ] Run the relevant tests and lint checks.
+- [ ] Create a contribution branch from `dev`.
+- [ ] Keep changes limited to the assigned issue.
+- [ ] Push your branch to your fork.
+- [ ] Open a pull request against `dev`.
 
 ---
 
-# 🛠️ Environment Setup
+## 🛠️ Environment Setup
 
 ## 1. Prerequisites
 
@@ -60,12 +64,12 @@ Install the tools required for the area of SoroScan you plan to work on.
 
 Core tools include:
 
-* Git
-* Python
-* Node.js
-* pnpm
-* Docker
-* Docker Compose
+- Git
+- Python
+- Node.js
+- pnpm
+- Docker
+- Docker Compose
 
 Rust and Cargo are also required when contributing to the Soroban contracts.
 
@@ -204,7 +208,7 @@ Do not make contribution commits directly on `dev` or `main`.
 
 ---
 
-# 🐳 Running the Project with Docker
+## 🐳 Running the Project with Docker
 
 From the repository root, the quickest way to start the local stack is:
 
@@ -234,7 +238,7 @@ docker compose down
 
 ---
 
-# 🐍 Backend Setup
+## 🐍 Backend Setup
 
 From the repository root:
 
@@ -294,7 +298,7 @@ http://localhost:8000/graphql/
 
 ---
 
-# ⚛️ Frontend Setup
+## ⚛️ Frontend Setup
 
 From the repository root:
 
@@ -335,19 +339,19 @@ pnpm run codegen:watch
 
 ---
 
-# 🪝 Pre-Commit Hooks
+## 🪝 Pre-Commit Hooks
 
 SoroScan provides a repository-level `.pre-commit-config.yaml`.
 
 The configured hooks check:
 
-* trailing whitespace;
-* end-of-file newlines;
-* YAML syntax;
-* accidentally added large files;
-* Python formatting with Black;
-* Python linting with Flake8;
-* Python import ordering with isort.
+- trailing whitespace;
+- end-of-file newlines;
+- YAML syntax;
+- accidentally added large files;
+- Python formatting with Black;
+- Python linting with Flake8;
+- Python import ordering with isort.
 
 ## Install pre-commit
 
@@ -377,7 +381,7 @@ Do not routinely bypass pre-commit using `--no-verify`. Fix the reported issue i
 
 ---
 
-# 🧪 Testing Commands Reference
+## 🧪 Testing Commands Reference
 
 Run tests and checks relevant to the part of the repository you changed.
 
@@ -524,11 +528,11 @@ pytest
 For documentation-only pull requests:
 
 1. review the rendered Markdown;
-2. verify links and file paths;
-3. verify commands against the current repository;
-4. check examples for obvious syntax errors;
-5. run applicable pre-commit checks;
-6. confirm that no unrelated files were changed.
+1. verify links and file paths;
+1. verify commands against the current repository;
+1. check examples for obvious syntax errors;
+1. run applicable pre-commit checks;
+1. confirm that no unrelated files were changed.
 
 Check for whitespace errors with:
 
@@ -538,15 +542,15 @@ git diff --check
 
 ---
 
-# 🌿 Development Workflow
+## 🌿 Development Workflow
 
 ## 1. Claim an Issue
 
-* Browse the repository's GitHub Issues.
-* Filter by `good-first-issue` if you are new.
-* Comment that you would like to work on the issue when required.
-* Wait for maintainer assignment when the task requires it.
-* Read the complete issue description and acceptance criteria before starting.
+- Browse the repository's GitHub Issues.
+- Filter by `good-first-issue` if you are new.
+- Comment that you would like to work on the issue when required.
+- Wait for maintainer assignment when the task requires it.
+- Read the complete issue description and acceptance criteria before starting.
 
 Keep your contribution focused on the assigned issue.
 
@@ -668,7 +672,7 @@ Documentation-only changes should validate documentation, links, examples, and a
 
 ---
 
-# 📤 Pull Request Submission Guidelines
+## 📤 Pull Request Submission Guidelines
 
 ## 1. Update Your Branch Before Submission
 
@@ -693,13 +697,13 @@ git rebase upstream/dev
 If conflicts occur:
 
 1. resolve the conflicting files;
-2. stage the resolved files:
+1. stage the resolved files:
 
 ```bash
 git add <resolved-file>
 ```
 
-3. continue the rebase:
+1. continue the rebase:
 
 ```bash
 git rebase --continue
@@ -719,10 +723,10 @@ git diff --check
 
 Confirm:
 
-* only files required by the issue were changed;
-* no credentials or environment files were added;
-* required tests or documentation checks pass;
-* the acceptance criteria are satisfied.
+- only files required by the issue were changed;
+- no credentials or environment files were added;
+- required tests or documentation checks pass;
+- the acceptance criteria are satisfied.
 
 ---
 
@@ -814,6 +818,7 @@ Commands run:
 
 ```bash
 <command>
+```
 ````
 
 ## Related Issues
@@ -826,12 +831,12 @@ Add screenshots when required by the issue or when they help reviewers verify a 
 
 ## Checklist
 
-* [ ] Changes are limited to the assigned issue
-* [ ] Relevant tests/checks pass
-* [ ] Documentation is updated where required
-* [ ] No secrets or environment files are committed
-* [ ] Conventional Commit format is used
-* [ ] PR targets `dev`
+- [ ] Changes are limited to the assigned issue
+- [ ] Relevant tests/checks pass
+- [ ] Documentation is updated where required
+- [ ] No secrets or environment files are committed
+- [ ] Conventional Commit format is used
+- [ ] PR targets `dev`
 
 ```
 
@@ -869,7 +874,7 @@ Accepted contributions are normally merged according to the maintainers' reposit
 
 ---
 
-## 🔒 Security Issues
+## Security Issues
 
 **Do not open a public issue for security vulnerabilities.**
 

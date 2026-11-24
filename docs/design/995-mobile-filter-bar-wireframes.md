@@ -8,7 +8,8 @@
 
 ## Overview
 
-This document specifies the UI design for mobile filter drawer and multi-select filter chips for the SoroScan event explorer on mobile devices (375px viewport).
+This document specifies the UI design for mobile filter drawer and multi-select filter chips for the SoroScan event
+explorer on mobile devices (375px viewport).
 
 ---
 
@@ -63,19 +64,19 @@ This document specifies the UI design for mobile filter drawer and multi-select 
 
 ### Specifications
 
-| Property | Value |
-|----------|-------|
-| Viewport Width | 375px |
-| Safe Area Padding | 16px |
-| Header Height | 48px |
-| Section Spacing | 16px |
-| Input Height | 44px |
-| Button Height | 44px |
-| Font (Label) | 12px, 600 weight, sans |
-| Font (Input) | 14px, 400 weight, mono |
-| Background | #0a0e27 |
-| Border Color | #2d3748 |
-| Accent Color | #00ff41 |
+| Property          | Value                  |
+| ----------------- | ---------------------- |
+| Viewport Width    | 375px                  |
+| Safe Area Padding | 16px                   |
+| Header Height     | 48px                   |
+| Section Spacing   | 16px                   |
+| Input Height      | 44px                   |
+| Button Height     | 44px                   |
+| Font (Label)      | 12px, 600 weight, sans |
+| Font (Input)      | 14px, 400 weight, mono |
+| Background        | #0a0e27                |
+| Border Color      | #2d3748                |
+| Accent Color      | #00ff41                |
 
 ### Behaviors
 
@@ -97,6 +98,7 @@ This document specifies the UI design for mobile filter drawer and multi-select 
 ```
 
 **Specifications:**
+
 - Background: rgba(0, 255, 65, 0.2)
 - Border: 1px solid #00ff41
 - Text Color: #00ff41
@@ -114,6 +116,7 @@ This document specifies the UI design for mobile filter drawer and multi-select 
 ```
 
 **Specifications:**
+
 - Background: transparent
 - Border: 1px solid #2d3748
 - Text Color: #718096
@@ -131,6 +134,7 @@ This document specifies the UI design for mobile filter drawer and multi-select 
 ```
 
 **Specifications:**
+
 - Same as Active Chip
 - Right-aligned × icon (12px, clickable)
 - Click action: Remove filter and chip
@@ -162,6 +166,7 @@ This document specifies the UI design for mobile filter drawer and multi-select 
 ```
 
 **Specifications:**
+
 - Opens as bottom sheet (not dropdown) on mobile
 - Search input at top (always visible)
 - Virtual scrolling for 500+ contracts
@@ -172,8 +177,8 @@ This document specifies the UI design for mobile filter drawer and multi-select 
 
 ## Design Resources
 
-- **Figma Prototype Link:** [SoroScan UI Design - Mobile Filter Bar](#figma-placeholder)
-- **Node ID:** [Filter Bar Mobile Components](#)
+- **Figma Prototype Link:** SoroScan UI Design - Mobile Filter Bar (not available)
+- **Node ID:** Filter Bar Mobile Components (not assigned)
 - **Last Sync:** 2026-08-28
 
 ---
@@ -191,5 +196,5 @@ This document specifies the UI design for mobile filter drawer and multi-select 
 ## Approval
 
 - **Design Status:** Pending
-- **Figma Review:** [Link to Figma prototype](#figma-placeholder)
+- **Figma Review:** Link not available
 - **Developer Handoff:** Ready for implementation

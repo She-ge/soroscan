@@ -15,9 +15,10 @@
 
 ## 🧩 Figma Source
 
-Figma file: https://www.figma.com/file/qkTJWD2iKj4W2BVztdCrHt/SoroScan-UI-Design?node-id=0-1
+Figma file: [SoroScan UI Design](https://www.figma.com/file/qkTJWD2iKj4W2BVztdCrHt/SoroScan-UI-Design?node-id=0-1)
 
-This repository follows the Figma master file as the single source of truth for colors, typography, spacing, and component behavior.
+This repository follows the Figma master file as the single source of truth for colors, typography, spacing, and
+component behavior.
 
 ---
 
@@ -732,29 +733,36 @@ REGISTER MODAL:
 
 ```css
 /* Terminal Green Glow (Primary) */
-box-shadow: 0 0 10px rgba(0, 255, 65, 0.3),
-            0 0 20px rgba(0, 255, 65, 0.2);
+box-shadow:
+  0 0 10px rgba(0, 255, 65, 0.3),
+  0 0 20px rgba(0, 255, 65, 0.2);
 
 /* Terminal Cyan Glow (Secondary) */
-box-shadow: 0 0 10px rgba(0, 212, 255, 0.3),
-            0 0 20px rgba(0, 212, 255, 0.2);
+box-shadow:
+  0 0 10px rgba(0, 212, 255, 0.3),
+  0 0 20px rgba(0, 212, 255, 0.2);
 
 /* Pulse Animation (for live events) */
 @keyframes pulse {
-  0%   { opacity: 1; }
-  50%  { opacity: 0.7; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* Scanlines Effect (overlay) */
-background-image: 
-  repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.15),
-    rgba(0, 0, 0, 0.15) 1px,
-    transparent 1px,
-    transparent 2px
-  );
+background-image: repeating-linear-gradient(
+  0deg,
+  rgba(0, 0, 0, 0.15),
+  rgba(0, 0, 0, 0.15) 1px,
+  transparent 1px,
+  transparent 2px
+);
 ```
 
 ### Transitions
@@ -817,11 +825,13 @@ DESKTOP (≥ 1024px)
 ## 🎯 Key Design Principles
 
 ### 1. **Functionality First**
+
 - Clear information hierarchy
 - Actions obvious and accessible
 - Error states and feedback immediate
 
 ### 2. **Terminal Aesthetic Consistency**
+
 - Green (#00ff41) for success/primary
 - Cyan (#00d4ff) for secondary/info
 - Monospace fonts for authenticity
@@ -829,18 +839,21 @@ DESKTOP (≥ 1024px)
 - Glow effects for visual depth
 
 ### 3. **Developer-Friendly**
+
 - Technical language and jargon
 - Code snippets displayed prominently
 - API references easily accessible
 - Status indicators clear and color-coded
 
 ### 4. **Performance-Conscious**
+
 - Lightweight animations (200-300ms)
 - Efficient gradient usage
 - SVG icons (not raster images)
 - Minimal JavaScript for effects
 
 ### 5. **Accessibility**
+
 - WCAG 2.1 AA compliant
 - Sufficient color contrast (4.5:1 text)
 - Focus states visible and obvious
@@ -859,7 +872,7 @@ This design system provides:
 ✅ **Responsive design** supporting all devices  
 ✅ **Accessibility compliance** with modern standards  
 ✅ **Performance optimized** with GPU-accelerated effects  
-✅ **Developer experience** with clear documentation  
+✅ **Developer experience** with clear documentation
 
 ---
 

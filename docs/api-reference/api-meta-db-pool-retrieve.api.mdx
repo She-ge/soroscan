@@ -1,7 +1,9 @@
 ---
 id: api-meta-db-pool-retrieve
 title: "api_meta_db_pool_retrieve"
-description: "Return real-time database connection pool statistics for the default database alias.  Useful for detecting connection leaks or pool exhaustion.  **Admin access required.**"
+description:
+  "Return real-time database connection pool statistics for the default database alias.  Useful for detecting connection
+  leaks or pool exhaustion.  **Admin access required.**"
 sidebar_label: "api_meta_db_pool_retrieve"
 hide_title: true
 hide_table_of_contents: true
@@ -20,40 +22,15 @@ import TabItem from "@theme/TabItem";
 import Heading from "@theme/Heading";
 import Translate from "@docusaurus/Translate";
 
-<Heading
-  as={"h1"}
-  className={"openapi__heading"}
-  children={"api_meta_db_pool_retrieve"}
->
-</Heading>
+<Heading as={"h1"} className={"openapi__heading"} children={"api_meta_db_pool_retrieve"}></Heading>
 
-<MethodEndpoint
-  method={"get"}
-  path={"/api/meta/db-pool/"}
-  context={"endpoint"}
->
-  
-</MethodEndpoint>
+<MethodEndpoint method={"get"} path={"/api/meta/db-pool/"} context={"endpoint"}></MethodEndpoint>
 
+Return real-time database connection pool statistics for the default database alias. Useful for detecting connection
+leaks or pool exhaustion. **Admin access required.**
 
+<ParamsDetails></ParamsDetails>
 
-Return real-time database connection pool statistics for the default database alias.  Useful for detecting connection leaks or pool exhaustion.  **Admin access required.**
+<RequestSchema {...require("./api-meta-db-pool-retrieve.RequestSchema.json")}></RequestSchema>
 
-<ParamsDetails>
-  
-</ParamsDetails>
-
-<RequestSchema
-  {...require("./api-meta-db-pool-retrieve.RequestSchema.json")}
->
-  
-</RequestSchema>
-
-<StatusCodes
-  {...require("./api-meta-db-pool-retrieve.StatusCodes.json")}
->
-  
-</StatusCodes>
-
-
-      
+<StatusCodes {...require("./api-meta-db-pool-retrieve.StatusCodes.json")}></StatusCodes>

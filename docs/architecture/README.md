@@ -1,6 +1,8 @@
 # SoroScan Architecture Overview
 
-This document is the definitive architecture reference for SoroScan. It explains how the system works end-to-end, including event ingestion, storage, query APIs, real-time delivery, webhook dispatch, caching, schema design, and deployment. It is intended for developers onboarding on the project, maintainers, and architects.
+This document is the definitive architecture reference for SoroScan. It explains how the system works end-to-end,
+including event ingestion, storage, query APIs, real-time delivery, webhook dispatch, caching, schema design, and
+deployment. It is intended for developers onboarding on the project, maintainers, and architects.
 
 ## Table of Contents
 
@@ -44,18 +46,22 @@ SoroScan is an event indexing and delivery platform for Soroban smart contracts 
 - support real-time subscriptions and webhook push delivery;
 - provide auditability, resiliency, and deployment-ready infrastructure.
 
-This document is intentionally implementation-aware: it uses real code references from the repository so developers can navigate from architecture to source quickly.
+This document is intentionally implementation-aware: it uses real code references from the repository so developers can
+navigate from architecture to source quickly.
 
 ## Architecture Summary
 
-SoroScan is a hybrid on-chain/off-chain system. The Soroban smart contract emits structured events on the Stellar ledger. The backend listens to Horizon / Soroban RPC, ingests those events, enriches them, stores them in PostgreSQL, and exposes them through a modern API surface.
+SoroScan is a hybrid on-chain/off-chain system. The Soroban smart contract emits structured events on the Stellar
+ledger. The backend listens to Horizon / Soroban RPC, ingests those events, enriches them, stores them in PostgreSQL,
+and exposes them through a modern API surface.
 
 Key architectural principles:
 
 - **Separation of concerns**: ingestion, storage, query, and delivery are distinct layers.
 - **Event-first**: the contract is the source of truth, and all downstream systems are derived from event data.
 - **Resilient delivery**: webhooks are delivered asynchronously with retry and dead-letter support.
-- **Cache-backed performance**: Redis is used for rate limiting, query caching, decoded payload caching, and Channels pub/sub.
+- **Cache-backed performance**: Redis is used for rate limiting, query caching, decoded payload caching, and Channels
+  pub/sub.
 - **Incremental sync**: the ingestion pipeline processes new ledgers incrementally and tracks cursor state.
 
 ## High-Level System Diagram
@@ -103,13 +109,15 @@ flowchart TD
 
 ### Soroban Smart Contract
 
-The smart contract lives in `soroban-contracts/soroscan_core/` and is the canonical source of event data. Its responsibilities are:
+The smart contract lives in `soroban-contracts/soroscan_core/` and is the canonical source of event data. Its
+responsibilities are:
 
 - emit strongly typed `EventRecord` events from contract function invocations;
 - store minimal metadata required for verification and traceability;
 - allow only authorized indexers to write event records.
 
-Because SoroScan is event-driven, the contract is intentionally kept lightweight. The backend does the heavy lifting of indexing, validation, filtering, and delivery.
+Because SoroScan is event-driven, the contract is intentionally kept lightweight. The backend does the heavy lifting of
+indexing, validation, filtering, and delivery.
 
 ### Ingestion Layer
 
@@ -133,7 +141,8 @@ Responsibilities:
 
 ### Storage Layer
 
-PostgreSQL is the persistent store for all indexed data. The Django models define the contract, event, webhook, and delivery schema.
+PostgreSQL is the persistent store for all indexed data. The Django models define the contract, event, webhook, and
+delivery schema.
 
 Core storage models:
 
@@ -155,7 +164,8 @@ Key implementation points:
 - `django-backend/soroscan/graphql_views.py` — GraphQL view wrapper with introspection and rate-limit controls
 - `django-backend/soroscan/throttles.py` — shared API throttling logic
 
-REST is used for resource-centric endpoints and admin-style operations. GraphQL is used for flexible event search, timeline querying, and contract metadata exploration.
+REST is used for resource-centric endpoints and admin-style operations. GraphQL is used for flexible event search,
+timeline querying, and contract metadata exploration.
 
 ### Webhook Dispatcher
 
@@ -170,14 +180,15 @@ Key implementation points:
 When a new event is saved, `process_new_event` is queued. It does three things:
 
 1. publish the event to Django Channels groups for live WebSocket subscribers;
-2. optionally publish a CDC event to Kafka / Pub/Sub / SQS if configured;
-3. enqueue webhook dispatch tasks for active webhook subscriptions.
+1. optionally publish a CDC event to Kafka / Pub/Sub / SQS if configured;
+1. enqueue webhook dispatch tasks for active webhook subscriptions.
 
 The webhook worker retries failed deliveries and eventually suspends subscriptions after exhausting retries.
 
 ### Admin & Dashboard Layer
 
-The front-end dashboard and admin UI are built on Next.js and provide developer-facing insights into contracts, events, and integration status.
+The front-end dashboard and admin UI are built on Next.js and provide developer-facing insights into contracts, events,
+and integration status.
 
 Key areas:
 
@@ -185,7 +196,8 @@ Key areas:
 - `admin/` — administrative UI shell
 - `django-backend/soroscan/ingest/admin.py` — Django admin configuration (if used)
 
-The web UI consumes the backend APIs. It is the primary developer experience for contract registration, event exploration, webhook management, and system monitoring.
+The web UI consumes the backend APIs. It is the primary developer experience for contract registration, event
+exploration, webhook management, and system monitoring.
 
 ## Technology Stack Justification
 
@@ -193,12 +205,14 @@ The web UI consumes the backend APIs. It is the primary developer experience for
 
 Django was chosen because it provides:
 
-- a mature ORM and migration system (`django-backend/soroscan/ingest/models.py`, `django-backend/soroscan/ingest/migrations/`);
+- a mature ORM and migration system (`django-backend/soroscan/ingest/models.py`,
+  `django-backend/soroscan/ingest/migrations/`);
 - configurable REST and GraphQL routing with built-in authentication and permissions;
 - smooth integration with Celery, Redis, and PostgreSQL;
 - a familiar convention-based backend for Python developers.
 
-Django also reduces the amount of boilerplate needed for multi-tenant model relationships, admin tooling, and schema validation.
+Django also reduces the amount of boilerplate needed for multi-tenant model relationships, admin tooling, and schema
+validation.
 
 ### Why Next.js?
 
@@ -229,7 +243,8 @@ PostgreSQL is the preferred persistence layer because it provides:
 - advanced indexing for high-cardinality event queries;
 - reliable migration support through Django.
 
-The current schema is event-oriented, and PostgreSQL balances structured query performance with the flexibility required for decoded payloads and metadata.
+The current schema is event-oriented, and PostgreSQL balances structured query performance with the flexibility required
+for decoded payloads and metadata.
 
 ### Why Redis?
 
@@ -263,11 +278,11 @@ flowchart TD
 #### Sequence
 
 1. `ingest_latest_events` polls `SorobanServer.get_events()` for active tracked contracts.
-2. Each event is validated using contract-level JSON schemas and optional whitelist/blacklist filters.
-3. Successful events are persisted in `ContractEvent`.
-4. `ContractInvocation` metadata is optionally recorded by fetching transaction details.
-5. The contract index cursor is updated to avoid reprocessing old ledger history.
-6. A `process_new_event` background task is queued for downstream delivery.
+1. Each event is validated using contract-level JSON schemas and optional whitelist/blacklist filters.
+1. Successful events are persisted in `ContractEvent`.
+1. `ContractInvocation` metadata is optionally recorded by fetching transaction details.
+1. The contract index cursor is updated to avoid reprocessing old ledger history.
+1. A `process_new_event` background task is queued for downstream delivery.
 
 ### Real-Time Subscription Flow
 
@@ -346,7 +361,8 @@ flowchart TD
 
 - `query_cache_ttl` values are configurable, defaulting to 60 seconds.
 - Event counts are cached for five minutes (`event_count:{contract_id}`).
-- Contract event count cache is proactively warmed for the top 100 active contracts every 5 minutes via Celery Beat (`warm_event_count_cache`). See [Contract Event Count Cache Warming](../features/event-count-cache-warming.md).
+- Contract event count cache is proactively warmed for the top 100 active contracts every 5 minutes via Celery Beat
+  (`warm_event_count_cache`). See [Contract Event Count Cache Warming](../features/event-count-cache-warming.md).
 - Decoded ABI payloads are cached for 24 hours (`soroscan:decoded:{event_id}`).
 - API rate limiting counters live in Redis using hourly buckets.
 - Django Channels uses Redis for websocket group membership and broadcasts.
@@ -529,7 +545,8 @@ The database schema is optimized for event query patterns:
 - transaction-level queries rely on `tx_hash` and `ledger`.
 - webhook delivery and audit logs use `subscription + timestamp` for recent-failure lookups.
 
-PostgreSQL JSONB is used sparingly. The `payload` field is stored in JSON, but the system relies on indexed event metadata for common filters.
+PostgreSQL JSONB is used sparingly. The `payload` field is stored in JSON, but the system relies on indexed event
+metadata for common filters.
 
 ### Migration Workflow
 
@@ -551,7 +568,8 @@ SoroScan offers REST and GraphQL APIs to support different developer needs.
 - use resource-oriented endpoints for contract, event, and webhook management;
 - keep payloads predictable and versionable;
 - validate requests with DRF serializers and return structured error details;
-- use standard HTTP status codes: `200` for success, `202` for accepted async operations, `400` for validation errors, `401` for auth failures, `429` for throttling.
+- use standard HTTP status codes: `200` for success, `202` for accepted async operations, `400` for validation errors,
+  `401` for auth failures, `429` for throttling.
 
 Key REST entrypoints include:
 
@@ -560,7 +578,8 @@ Key REST entrypoints include:
 - webhook subscription CRUD operations
 - ingestion and health endpoints
 
-The REST API is defined in `django-backend/soroscan/ingest/views.py` and wired by `django-backend/soroscan/ingest/urls.py`.
+The REST API is defined in `django-backend/soroscan/ingest/views.py` and wired by
+`django-backend/soroscan/ingest/urls.py`.
 
 ### GraphQL Schema Organization
 
@@ -589,7 +608,8 @@ The backend supports two authentication modes:
 - JWT for standard user sessions;
 - API keys for service-to-service access.
 
-API keys are implemented in `django-backend/soroscan/authentication.py` and integrate with DRF authentication and throttles.
+API keys are implemented in `django-backend/soroscan/authentication.py` and integrate with DRF authentication and
+throttles.
 
 Authorization is layered:
 
@@ -604,7 +624,8 @@ Rate limiting is enforced at several layers:
 - DRF throttle classes handle anonymous, authenticated, ingest, and GraphQL request limits at the HTTP layer.
 - `APIKeyThrottle` uses Redis hourly buckets and supports contract-specific quota overrides.
 - ingest-time rate limiting for event ingestion uses Redis counters per contract per minute.
-- WebSocket and subscription rate limiting is enforced by middleware in `django-backend/soroscan/subscription_middleware.py`.
+- WebSocket and subscription rate limiting is enforced by middleware in
+  `django-backend/soroscan/subscription_middleware.py`.
 
 This approach protects the service from abusive clients, runaway ingest traffic, and expensive GraphQL queries.
 
@@ -635,7 +656,8 @@ Core components:
 
 - PostgreSQL persistence is managed externally (managed service or StatefulSet) and configured via `DATABASE_URL`.
 - Redis is used for ephemeral state and should be backed by persistence if long-lived Celery state is required.
-- backups are not part of this repo, but the architecture assumes regular database backups for PostgreSQL and Redis snapshots.
+- backups are not part of this repo, but the architecture assumes regular database backups for PostgreSQL and Redis
+  snapshots.
 
 ### Monitoring and Logging
 
@@ -648,15 +670,22 @@ Key observability points:
 
 ## Design Decision Records (ADRs)
 
-The canonical set of architecture decisions lives in [`docs/adrs/`](../adrs/README.md) (ADR index). The former inline `docs/architecture/adr.md` set was consolidated into that directory in issue #1685; `adr.md` is now a redirect with an old-to-new number mapping.
+The canonical set of architecture decisions lives in [`docs/adrs/`](../adrs/README.md) (ADR index). The former inline
+`docs/architecture/adr.md` set was consolidated into that directory in issue #1685; `adr.md` is now a redirect with an
+old-to-new number mapping.
 
 Summary of key decisions (see the linked ADRs for full context):
 
-- Soroban RPC is used because Horizon alone does not expose all contract event metadata and fine-grained ledger query capabilities ([ADR 0001](../adrs/0001-event-ingestion-architecture.md)).
-- PostgreSQL was chosen for its transactional consistency, JSONB support, and mature Django tooling ([ADR 0003](../adrs/0003-database-schema-rationale.md)).
-- Strawberry GraphQL enables typed schema generation with Django model integration ([ADR 0007](../adrs/0007-strawberry-graphql.md)).
-- exponential backoff was selected for webhook retries to protect downstream subscribers and avoid thundering herd effects ([ADR 0004](../adrs/0004-webhook-delivery-system.md)).
-- Redis was chosen as a shared low-latency store for caching, rate limiting, and WebSocket pub/sub ([ADR 0008](../adrs/0008-redis-cache-and-channels.md)).
+- Soroban RPC is used because Horizon alone does not expose all contract event metadata and fine-grained ledger query
+  capabilities ([ADR 0001](../adrs/0001-event-ingestion-architecture.md)).
+- PostgreSQL was chosen for its transactional consistency, JSONB support, and mature Django tooling
+  ([ADR 0003](../adrs/0003-database-schema-rationale.md)).
+- Strawberry GraphQL enables typed schema generation with Django model integration
+  ([ADR 0007](../adrs/0007-strawberry-graphql.md)).
+- exponential backoff was selected for webhook retries to protect downstream subscribers and avoid thundering herd
+  effects ([ADR 0004](../adrs/0004-webhook-delivery-system.md)).
+- Redis was chosen as a shared low-latency store for caching, rate limiting, and WebSocket pub/sub
+  ([ADR 0008](../adrs/0008-redis-cache-and-channels.md)).
 - Django is the backend application framework ([ADR 0006](../adrs/0006-django-backend.md)).
 
 ## Code References
@@ -675,4 +704,5 @@ The architecture described here is grounded in implementation.
 
 ---
 
-This architecture document is intended to be the single source of truth for how SoroScan processes contract events from the Stellar network through to API consumers, webhooks, dashboards, and delivery systems.
+This architecture document is intended to be the single source of truth for how SoroScan processes contract events from
+the Stellar network through to API consumers, webhooks, dashboards, and delivery systems.

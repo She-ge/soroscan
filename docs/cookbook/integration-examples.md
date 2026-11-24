@@ -7,6 +7,7 @@ This section provides complete, real-world integration examples for SoroScan.
 Using React and SoroScan's GraphQL subscriptions, you can build a real-time event dashboard for your smart contract.
 
 ### Setup (React + Apollo Client)
+
 ```tsx
 import { ApolloClient, InMemoryCache, ApolloProvider, useSubscription, gql } from '@apollo/client';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
@@ -129,14 +130,15 @@ export_events("CC...123")
 SoroScan stores its data in PostgreSQL. You can connect Metabase directly to the SoroScan read-replica to build dashboards.
 
 1. Install Metabase via Docker: `docker run -d -p 3000:3000 --name metabase metabase/metabase`
-2. Go to `localhost:3000` and setup your admin account.
-3. Add a Database connection:
+1. Go to `localhost:3000` and setup your admin account.
+1. Add a Database connection:
    * **Database type**: PostgreSQL
    * **Host**: `localhost` (or your SoroScan Postgres host)
    * **Port**: `5432`
    * **Database name**: `soroscan`
    * **Username**: `soroscan_user`
-4. Write SQL queries directly in Metabase:
+1. Write SQL queries directly in Metabase:
+
 ```sql
 SELECT
   date_trunc('day', created_at) AS day,

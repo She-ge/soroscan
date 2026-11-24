@@ -480,6 +480,23 @@ describe("DeliveryLog", () => {
     expect(statusCells).toHaveLength(0)
   })
 
+  it("flips the row order when the sort header is clicked twice", () => {
+    const { container } = render(<DeliveryLog logs={logs} />)
+    const timestampHeader = screen.getByText("TIMESTAMP")
+    const firstRow = () =>
+      container.querySelector("tbody tr")?.textContent ?? ""
+
+    const descendingFirst = firstRow()
+    expect(descendingFirst).not.toBe("")
+
+    fireEvent.click(timestampHeader)
+    const ascendingFirst = firstRow()
+    expect(ascendingFirst).not.toBe(descendingFirst)
+
+    fireEvent.click(timestampHeader)
+    expect(firstRow()).toBe(descendingFirst)
+  })
+
   it("shows empty state message when no logs match filter", () => {
     const emptyWebhook: Webhook = { ...MOCK_WEBHOOKS[0], id: "wh_empty" }
     void emptyWebhook

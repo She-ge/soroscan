@@ -98,5 +98,5 @@ except SoroScanError as e:
 
 ## Support
 
-- GitHub: https://github.com/soroscan/soroscan/issues
-- Email: team@soroscan.io
+- GitHub: <https://github.com/soroscan/soroscan/issues>
+- Email: <team@soroscan.io>

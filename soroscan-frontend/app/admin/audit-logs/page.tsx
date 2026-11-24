@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { ResponsiveTable } from "@/components/terminal/ResponsiveTable";
 import { Button } from "@/components/terminal/Button";
 import { Input } from "@/components/terminal/Input";
 

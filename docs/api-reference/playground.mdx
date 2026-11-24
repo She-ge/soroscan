@@ -29,10 +29,10 @@ If GraphQL introspection is enabled, this route provides an interactive query ed
 ## Recommended workflow
 
 1. Authenticate with `POST {{baseUrl}}/api/token/`.
-2. Copy the access token from the response.
-3. Use Swagger or ReDoc to inspect available REST endpoints.
-4. Open `{{baseUrl}}/graphql/` to build GraphQL queries and subscriptions.
-5. Import the Postman collection if you want saved requests and environment variables.
+1. Copy the access token from the response.
+1. Use Swagger or ReDoc to inspect available REST endpoints.
+1. Open `{{baseUrl}}/graphql/` to build GraphQL queries and subscriptions.
+1. Import the Postman collection if you want saved requests and environment variables.
 
 ## Working with authorization
 
@@ -72,5 +72,6 @@ curl -X POST "{{baseUrl}}/graphql/" \
 
 - Use `{{baseUrl}}` to avoid hard-coding the environment.
 - If a request returns `401`, refresh your access token using `POST /api/token/refresh/`.
-- If introspection is disabled for GraphQL, rely on documented schema fields or use the backend GraphQL schema export if available.
+- If introspection is disabled for GraphQL, rely on documented schema fields or use the backend GraphQL schema export if
+  available.
 - Watch for `429` rate limit responses and retry after a short delay.

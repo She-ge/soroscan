@@ -9,6 +9,7 @@
 ## MVP Deliverables
 
 ### 1. Contract Header
+
 - [ ] Create `soroscan-frontend/app/contracts/[id]/components/ContractHeader.tsx`
 - [ ] Display: contract name, address (with copy button), network badge, verified status badge
 - [ ] Copy address to clipboard on click/button press
@@ -17,6 +18,7 @@
 - [ ] Responsive: stack on mobile (name on line 1, address + badges on line 2)
 
 **GraphQL Query Needed**:
+
 ```graphql
 query getContractHeader($id: ID!) {
   contract(id: $id) {
@@ -30,6 +32,7 @@ query getContractHeader($id: ID!) {
 ```
 
 ### 2. Contract Stats Cards
+
 - [ ] Create `soroscan-frontend/app/contracts/[id]/components/ContractStats.tsx`
 - [ ] Cards: "Total Events", "Event Types", "Last Event", "Avg Event Size"
 - [ ] Layout: 4 cards in row (responsive: 2x2 on tablet, 1 column on mobile)
@@ -38,6 +41,7 @@ query getContractHeader($id: ID!) {
 - [ ] Last Event card: timestamp relative to now (e.g., "2 hours ago")
 
 **GraphQL Query Needed**:
+
 ```graphql
 query getContractStats($id: ID!) {
   contract(id: $id) {
@@ -52,6 +56,7 @@ query getContractStats($id: ID!) {
 ```
 
 ### 3. Event Type Breakdown Chart
+
 - [ ] Create `soroscan-frontend/app/contracts/[id]/components/EventTypeChart.tsx`
 - [ ] Use existing `PieChart.tsx` or `BarChart.tsx` (reuse from `admin/app/components/`)
 - [ ] Show: pie chart (top 5 event types) or bar chart (all types sorted by count)
@@ -61,6 +66,7 @@ query getContractStats($id: ID!) {
 - [ ] Hover: tooltip shows percentage
 
 **GraphQL Query Needed**:
+
 ```graphql
 query getEventTypeStats($contractId: ID!) {
   contract(id: $contractId) {
@@ -73,6 +79,7 @@ query getEventTypeStats($contractId: ID!) {
 ```
 
 ### 4. Event Timeline
+
 - [ ] Create `soroscan-frontend/app/contracts/[id]/components/EventTimeline.tsx`
 - [ ] Display: list of recent events (last 20) with vertical timeline
 - [ ] Per event: timestamp (absolute), event type (colored badge), status, brief description
@@ -81,6 +88,7 @@ query getEventTypeStats($contractId: ID!) {
 - [ ] Pagination: "Load More" button or infinite scroll (your choice)
 
 **GraphQL Query Needed**:
+
 ```graphql
 query getContractEvents($contractId: ID!, $limit: Int, $offset: Int) {
   contractEvents(contractId: $contractId, limit: $limit, offset: $offset) {
@@ -95,6 +103,7 @@ query getContractEvents($contractId: ID!, $limit: Int, $offset: Int) {
 ```
 
 ### 5. Event Types List
+
 - [ ] Create `soroscan-frontend/app/contracts/[id]/components/EventTypesList.tsx`
 - [ ] Table/List: type name, event count, avg size, first seen, last seen
 - [ ] Sortable columns: click header to sort
@@ -102,6 +111,7 @@ query getContractEvents($contractId: ID!, $limit: Int, $offset: Int) {
 - [ ] Paging: 25 types per page
 
 **GraphQL Query Needed** (reuse from #3 or extend):
+
 ```graphql
 query getEventTypesDetail($contractId: ID!) {
   contract(id: $contractId) {
@@ -117,6 +127,7 @@ query getEventTypesDetail($contractId: ID!) {
 ```
 
 ### 6. Contract Code/ABI Viewer
+
 - [ ] Create `soroscan-frontend/app/contracts/[id]/components/AbiViewer.tsx`
 - [ ] Display: contract ABI (JSON), syntax highlighted
 - [ ] Copy button: copy full ABI to clipboard
@@ -125,6 +136,7 @@ query getEventTypesDetail($contractId: ID!) {
 - [ ] Dark mode: use atom-one-dark syntax theme
 
 **GraphQL Query Needed**:
+
 ```graphql
 query getContractAbi($id: ID!) {
   contract(id: $id) {
@@ -136,6 +148,7 @@ query getContractAbi($id: ID!) {
 **Syntax Highlight Library**: Check `pnpm list react-syntax-highlighter` or use `<Highlight>` if available.
 
 ### 7. Related Contracts Section
+
 - [ ] Create `soroscan-frontend/app/contracts/[id]/components/RelatedContracts.tsx`
 - [ ] Show: 5-10 similar contracts (same creator, or same event types)
 - [ ] Layout: horizontal scrollable cards or 2-column grid
@@ -143,6 +156,7 @@ query getContractAbi($id: ID!) {
 - [ ] Mobile: full-width stack
 
 **GraphQL Query Needed**:
+
 ```graphql
 query getRelatedContracts($contractId: ID!, $limit: Int) {
   relatedContracts(contractId: $contractId, limit: $limit) {
@@ -207,6 +221,7 @@ export default function ContractDetailPage({ params }) {
 ## Acceptance Tests
 
 ### Functional
+
 - [ ] Load contract detail page → all data loads within 3s
 - [ ] Chart displays correct event type breakdown
 - [ ] Timeline shows events in reverse chronological order
@@ -216,6 +231,7 @@ export default function ContractDetailPage({ params }) {
 - [ ] Related contracts show clickable links
 
 ### Visual
+
 - [ ] All 7 components visible in viewport (no important content cut off)
 - [ ] Stats cards have good visual hierarchy (large numbers, small labels)
 - [ ] Chart legend readable and accurate
@@ -224,11 +240,13 @@ export default function ContractDetailPage({ params }) {
 - [ ] Dark mode: all text readable, colors distinct
 
 ### Performance
+
 - [ ] Lighthouse Performance > 70
 - [ ] Initial data loads < 3s
 - [ ] Images/icons load without layout shift
 
 ### Accessibility
+
 - [ ] Tab navigation through all components
 - [ ] Chart has alt text or ARIA description
 - [ ] Verified badge has tooltip explaining meaning
@@ -252,7 +270,7 @@ export default function ContractDetailPage({ params }) {
 - **Spacing**: 4px base unit (Tailwind: p-4, gap-6, space-y-6)
 - **Fonts**: Assume sans-serif default, monospace for code blocks
 - **Dark mode**: Ensure all cards have `bg-zinc-900` or `bg-zinc-950` backgrounds
-- **Responsive breakpoints**: 
+- **Responsive breakpoints**:
   - Mobile: < 768px (single column)
   - Tablet: 768px-1024px (2 columns)
   - Desktop: > 1024px (3+ columns)

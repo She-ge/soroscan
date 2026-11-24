@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // ── Mock @xyflow/react so tests run without a DOM canvas ──────────────────────
@@ -108,7 +108,6 @@ function makeTimelineEvent(i: number): AtomicGroupTimeline {
 }
 
 /** 110 events for the "100+ nodes" acceptance criterion */
-const EVENTS_110 = Array.from({ length: 110 }, (_, i) => makeEvent(i));
 const TIMELINE_110 = Array.from({ length: 110 }, (_, i) => makeTimelineEvent(i));
 const EVENTS_5 = Array.from({ length: 5 }, (_, i) => makeEvent(i));
 const TIMELINE_5 = Array.from({ length: 5 }, (_, i) => makeTimelineEvent(i));

@@ -3,8 +3,8 @@
 This runbook covers the supported deployment paths for the SoroScan stack:
 
 1. local development with Docker Compose;
-2. production-style deployment with the repository's Kubernetes manifests;
-3. Helm-based deployment when a compatible chart is available.
+1. production-style deployment with the repository's Kubernetes manifests;
+1. Helm-based deployment when a compatible chart is available.
 
 Use this document as the operational checklist for deployment, verification, and rollback.
 
@@ -18,7 +18,7 @@ Use this document as the operational checklist for deployment, verification, and
 
 ---
 
-# 1. Docker Compose
+## 1. Docker Compose
 
 ## 1.1 Prerequisites
 
@@ -40,7 +40,8 @@ cp django-backend/.env.example django-backend/.env
 
 Review `django-backend/.env` and set any environment-specific values required for your workflow.
 
-The Compose file overrides the local database and Redis URLs so the application can reach the `db` and `redis` services on the internal Compose network.
+The Compose file overrides the local database and Redis URLs so the application can reach the `db` and `redis` services
+on the internal Compose network.
 
 Do not commit `django-backend/.env`.
 
@@ -174,13 +175,17 @@ After verification, return to your normal branch when appropriate:
 git switch <branch-name>
 ```
 
-`docker compose down` preserves named volumes by default, so the PostgreSQL data volume remains in place. Database schema changes require extra care: do not assume application-code rollback also reverses migrations. Back up important data before applying migrations and use migration-specific rollback procedures only when the migration is designed to be reversible.
+`docker compose down` preserves named volumes by default, so the PostgreSQL data volume remains in place. Database
+schema changes require extra care: do not assume application-code rollback also reverses migrations. Back up important
+data before applying migrations and use migration-specific rollback procedures only when the migration is designed to be
+reversible.
 
 ---
 
-# 2. Kubernetes with `kubectl apply`
+## 2. Kubernetes with `kubectl apply`
 
-The repository includes Kubernetes manifests in `k8s/`. The manifests use the `soroscan` namespace and expect a Secret named `soroscan-secrets`.
+The repository includes Kubernetes manifests in `k8s/`. The manifests use the `soroscan` namespace and expect a Secret
+named `soroscan-secrets`.
 
 ## 2.1 Prerequisites
 
@@ -214,7 +219,8 @@ with the registry/repository/tag you intend to deploy in:
 - `k8s/worker-deployment.yaml`;
 - `k8s/beat-cronjob.yaml`.
 
-The backend manifest uses the image in both init containers and the main backend container, so all occurrences must point to the same intended release unless your deployment strategy explicitly requires otherwise.
+The backend manifest uses the image in both init containers and the main backend container, so all occurrences must
+point to the same intended release unless your deployment strategy explicitly requires otherwise.
 
 ## 2.3 Create the namespace
 
@@ -235,7 +241,13 @@ kubectl get namespace soroscan
 Use this path when External Secrets Operator is not configured:
 
 ```bash
-kubectl create secret generic soroscan-secrets   --from-literal=SECRET_KEY='<django-secret-key>'   --from-literal=DATABASE_URL='<postgresql-connection-url>'   --from-literal=REDIS_URL='<redis-connection-url>'   --from-literal=SOROSCAN_CONTRACT_ID='<contract-id>'   --from-literal=INDEXER_SECRET_KEY='<indexer-secret-key>'   -n soroscan
+kubectl create secret generic soroscan-secrets \
+  --from-literal=SECRET_KEY='<django-secret-key>' \
+  --from-literal=DATABASE_URL='<postgresql-connection-url>' \
+  --from-literal=REDIS_URL='<redis-connection-url>' \
+  --from-literal=SOROSCAN_CONTRACT_ID='<contract-id>' \
+  --from-literal=INDEXER_SECRET_KEY='<indexer-secret-key>' \
+  -n soroscan
 ```
 
 Confirm that the Secret exists without printing secret values:
@@ -249,8 +261,8 @@ kubectl get secret soroscan-secrets -n soroscan
 `k8s/secret-reference.yaml` is an `ExternalSecret` example. Apply it only after:
 
 1. External Secrets Operator is installed;
-2. the referenced `SecretStore` exists;
-3. the referenced remote secrets exist.
+1. the referenced `SecretStore` exists;
+1. the referenced remote secrets exist.
 
 Then apply:
 
@@ -306,7 +318,8 @@ Wait for rollout:
 kubectl rollout status deployment/soroscan-backend -n soroscan
 ```
 
-The backend deployment runs migrations and static-file collection in init containers before starting the Gunicorn container.
+The backend deployment runs migrations and static-file collection in init containers before starting the Gunicorn
+container.
 
 ## 2.8 Deploy Celery workers
 
@@ -368,7 +381,7 @@ For monitoring guidance, see `docs/deployment/monitoring.md`. For backup guidanc
 
 ---
 
-# 3. Kubernetes health verification
+## 3. Kubernetes health verification
 
 ## 3.1 Check workload state
 
@@ -430,7 +443,7 @@ kubectl logs deployment/soroscan-beat -n soroscan --tail=100
 
 ---
 
-# 4. Kubernetes rollback
+## 4. Kubernetes rollback
 
 ## 4.1 Inspect rollout history
 
@@ -488,11 +501,12 @@ kubectl rollout restart deployment/soroscan-worker-backfill -n soroscan
 kubectl rollout restart deployment/soroscan-beat -n soroscan
 ```
 
-Always treat database migrations separately from Kubernetes object rollback. Confirm migration compatibility before rolling application images backward.
+Always treat database migrations separately from Kubernetes object rollback. Confirm migration compatibility before
+rolling application images backward.
 
 ---
 
-# 5. Helm deployment
+## 5. Helm deployment
 
 The repository currently provides production-oriented values at:
 
@@ -558,7 +572,7 @@ kubectl get pods -n soroscan
 
 ---
 
-# 6. Post-deployment checklist
+## 6. Post-deployment checklist
 
 After any Docker Compose, Kubernetes, or Helm deployment:
 

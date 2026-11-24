@@ -5,9 +5,7 @@
  *         and code sample syntax validation.
  */
 
-import React from "react";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 // ---------- SchemaBrowser ----------
 
@@ -127,7 +125,7 @@ describe("SchemaBrowser", () => {
 
 // ---------- CodeSampleGenerator ----------
 
-import { CodeSampleGenerator, SAMPLE_SETS, type CodeSampleSet } from "@/components/developer/CodeSampleGenerator";
+import { CodeSampleGenerator, SAMPLE_SETS } from "@/components/developer/CodeSampleGenerator";
 
 // Mock clipboard
 const writeTextMock = jest.fn(() => Promise.resolve());

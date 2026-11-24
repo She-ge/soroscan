@@ -15,6 +15,7 @@ Production-ready Python SDK for the SoroScan API, providing type-safe access to 
 ## Features Implemented
 
 ### ✅ Core Functionality
+
 - Synchronous client (`SoroScanClient`)
 - Asynchronous client (`AsyncSoroScanClient`)
 - Full REST API coverage (15 endpoints)
@@ -22,6 +23,7 @@ Production-ready Python SDK for the SoroScan API, providing type-safe access to 
 - Comprehensive error handling
 
 ### ✅ Type Safety
+
 - 100% type hint coverage
 - Pydantic v2 models
 - Verified with `mypy --strict`
@@ -29,6 +31,7 @@ Production-ready Python SDK for the SoroScan API, providing type-safe access to 
 - `py.typed` marker included
 
 ### ✅ Testing
+
 - 42+ unit tests
 - Integration tests
 - HTTP mocking (no live calls)
@@ -36,6 +39,7 @@ Production-ready Python SDK for the SoroScan API, providing type-safe access to 
 - Async test support
 
 ### ✅ Documentation
+
 - Comprehensive README (200+ lines)
 - Quickstart guide
 - API reference
@@ -79,6 +83,7 @@ sdk/python/
 ## API Coverage
 
 ### Contracts (6 methods)
+
 - `get_contracts()` - List contracts with filtering
 - `get_contract()` - Get single contract
 - `create_contract()` - Register new contract
@@ -87,11 +92,13 @@ sdk/python/
 - `get_contract_stats()` - Get statistics
 
 ### Events (3 methods)
+
 - `get_events()` - Query events with filtering
 - `get_event()` - Get single event
 - `record_event()` - Submit new event
 
 ### Webhooks (6 methods)
+
 - `get_webhooks()` - List webhooks
 - `get_webhook()` - Get single webhook
 - `create_webhook()` - Create subscription
@@ -102,6 +109,7 @@ sdk/python/
 ## Data Models
 
 ### Response Models
+
 - `TrackedContract` - Contract metadata
 - `ContractEvent` - Event data
 - `WebhookSubscription` - Webhook config
@@ -109,6 +117,7 @@ sdk/python/
 - `PaginatedResponse[T]` - Generic pagination
 
 ### Request Models
+
 - `RecordEventRequest` - Event submission
 - `RecordEventResponse` - Submission result
 
@@ -126,10 +135,12 @@ SoroScanError (base)
 ## Dependencies
 
 ### Production
+
 - `httpx>=0.27.0` - HTTP client (sync/async)
 - `pydantic>=2.0.0` - Data validation
 
 ### Development
+
 - `pytest>=8.0.0` - Testing
 - `pytest-asyncio>=0.23.0` - Async tests
 - `pytest-httpx>=0.30.0` - HTTP mocking
@@ -174,21 +185,25 @@ client.close()
 ## Quality Checks
 
 ### Type Checking
+
 ```bash
 mypy soroscan/ --strict
 ```
 
 ### Testing
+
 ```bash
 pytest tests/ -v --cov=soroscan
 ```
 
 ### Linting
+
 ```bash
 ruff check soroscan/ tests/
 ```
 
 ### All Checks
+
 ```bash
 make all
 ```
@@ -225,16 +240,16 @@ All criteria from the specification are met:
 ## Next Steps
 
 1. Install dependencies: `pip install -e ".[dev]"`
-2. Run tests: `pytest tests/ -v`
-3. Run type check: `mypy soroscan/ --strict`
-4. Build package: `make build`
-5. Publish to PyPI: `make publish`
+1. Run tests: `pytest tests/ -v`
+1. Run type check: `mypy soroscan/ --strict`
+1. Build package: `make build`
+1. Publish to PyPI: `make publish`
 
 ## Support
 
-- GitHub: https://github.com/soroscan/soroscan
-- Issues: https://github.com/soroscan/soroscan/issues
-- Email: team@soroscan.io
+- GitHub: <https://github.com/soroscan/soroscan>
+- Issues: <https://github.com/soroscan/soroscan/issues>
+- Email: <team@soroscan.io>
 
 ## License
 

@@ -41,13 +41,13 @@ python manage.py validate_migrations
 
 1. Name files `NNNN_short_name.py` with a single leaf (`test_migration_graph.py`
    enforces this).
-2. Prefer additive schema changes. Provide a reverse for `RunPython` /
+1. Prefer additive schema changes. Provide a reverse for `RunPython` /
    `RunSQL`.
-3. If a change cannot be reversed, say so in the migration docstring and
+1. If a change cannot be reversed, say so in the migration docstring and
    update `test_irreversible_migrations_are_explicitly_identified` plus this
    page after review.
-4. Do not edit historical migrations to make rollback tests pass.
-5. Seed data in tests must use historical model state (`state.apps.get_model`).
+1. Do not edit historical migrations to make rollback tests pass.
+1. Seed data in tests must use historical model state (`state.apps.get_model`).
 
 ## Add a rollback case
 

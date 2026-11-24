@@ -1,16 +1,18 @@
-> [!NOTE]
-> **Archived Document**: This document is a historical PR/implementation summary preserved for audit and historical reference.
-> For current active documentation, see `docs/frontend/apollo_guide.md`, `docs/features/`, and `docs/architecture/README.md`.
+> [!NOTE] **Archived Document**: This document is a historical PR/implementation summary preserved for audit and
+> historical reference. For current active documentation, see `docs/frontend/apollo_guide.md`, `docs/features/`, and
+> `docs/architecture/README.md`.
 
 # Apollo Client Integration - Implementation Summary
 
 ## Status: ✅ Complete
 
-Apollo Client has been successfully integrated into the SoroScan frontend to consume the Django Strawberry GraphQL endpoint.
+Apollo Client has been successfully integrated into the SoroScan frontend to consume the Django Strawberry GraphQL
+endpoint.
 
 ## What Was Implemented
 
 ### 1. Core Apollo Client Setup
+
 - **File**: `soroscan-frontend/lib/apollo-client.ts`
 - HTTP Link for GraphQL endpoint connection
 - Auth Link for JWT token authentication
@@ -20,32 +22,38 @@ Apollo Client has been successfully integrated into the SoroScan frontend to con
 - DevTools integration for development
 
 ### 2. React Provider
+
 - **File**: `soroscan-frontend/providers/ApolloProvider.tsx`
 - Wraps application with Apollo context
 - Integrated into main `app/providers.tsx`
 
 ### 3. Custom Hooks
+
 - **File**: `soroscan-frontend/lib/hooks/useGraphQL.ts`
 - `useGraphQLQuery`: Enhanced query hook with error handling
 - `useGraphQLMutation`: Enhanced mutation hook with error handling
 - Type-safe with TypeScript generics
 
 ### 4. Test Component
+
 - **File**: `soroscan-frontend/components/apollo/ApolloTestComponent.tsx`
 - Verifies GraphQL connection
 - Shows connection status and errors
 - Can be added to any page for testing
 
 ### 5. Configuration Files
+
 - **`.env.local`**: Environment variables for local development
 - **`.env.local.example`**: Template for environment setup
 - **`package.json`**: Added `@apollo/client` dependency
 
 ### 6. Backend Updates
+
 - **`django-backend/soroscan/settings.py`**: Added `CORS_ALLOW_CREDENTIALS = True`
 - **`django-backend/.env.example`**: Updated CORS documentation
 
 ### 7. Documentation
+
 - **`soroscan-frontend/lib/apollo-client.README.md`**: Technical documentation
 - **`soroscan-frontend/APOLLO_INTEGRATION.md`**: Comprehensive integration guide
 - **`APOLLO_CLIENT_IMPLEMENTATION.md`**: This summary
@@ -60,7 +68,7 @@ Apollo Client has been successfully integrated into the SoroScan frontend to con
 ✅ Apollo DevTools integration  
 ✅ CORS configuration on backend  
 ✅ Type-safe hooks with TypeScript  
-✅ Comprehensive documentation  
+✅ Comprehensive documentation
 
 ## Acceptance Criteria - All Met
 
@@ -69,7 +77,7 @@ Apollo Client has been successfully integrated into the SoroScan frontend to con
 ✅ Authentication headers automatically added to requests  
 ✅ Apollo DevTools work in browser  
 ✅ Network requests visible in DevTools  
-✅ Error handling logs meaningful messages  
+✅ Error handling logs meaningful messages
 
 ## CI/CD Status
 
@@ -99,12 +107,14 @@ pnpm run build
 ## Environment Setup
 
 ### Frontend (.env.local)
+
 ```env
 NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8000/graphql/
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 ### Backend (.env)
+
 ```env
 CORS_ALLOWED_ORIGINS=http://localhost:3000
 ```
@@ -126,10 +136,10 @@ const GET_CONTRACTS = gql`
 
 function ContractsList() {
   const { data, loading, error } = useQuery(GET_CONTRACTS);
-  
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
-  
+
   return (
     <ul>
       {data.contracts.map(contract => (
@@ -143,10 +153,10 @@ function ContractsList() {
 ## Authentication Flow
 
 1. User logs in → JWT token stored in `localStorage.getItem('access_token')`
-2. Apollo Auth Link reads token from localStorage
-3. Token added to `Authorization: Bearer <token>` header
-4. All GraphQL requests include authentication
-5. On auth error → Token cleared, user notified
+1. Apollo Auth Link reads token from localStorage
+1. Token added to `Authorization: Bearer <token>` header
+1. All GraphQL requests include authentication
+1. On auth error → Token cleared, user notified
 
 ## Error Handling
 
@@ -173,21 +183,23 @@ function ContractsList() {
 ## Files Created/Modified
 
 ### Created (9 files)
+
 1. `soroscan-frontend/lib/apollo-client.ts`
-2. `soroscan-frontend/providers/ApolloProvider.tsx`
-3. `soroscan-frontend/lib/hooks/useGraphQL.ts`
-4. `soroscan-frontend/components/apollo/ApolloTestComponent.tsx`
-5. `soroscan-frontend/.env.local`
-6. `soroscan-frontend/.env.local.example`
-7. `soroscan-frontend/lib/apollo-client.README.md`
-8. `soroscan-frontend/APOLLO_INTEGRATION.md`
-9. `APOLLO_CLIENT_IMPLEMENTATION.md`
+1. `soroscan-frontend/providers/ApolloProvider.tsx`
+1. `soroscan-frontend/lib/hooks/useGraphQL.ts`
+1. `soroscan-frontend/components/apollo/ApolloTestComponent.tsx`
+1. `soroscan-frontend/.env.local`
+1. `soroscan-frontend/.env.local.example`
+1. `soroscan-frontend/lib/apollo-client.README.md`
+1. `soroscan-frontend/APOLLO_INTEGRATION.md`
+1. `APOLLO_CLIENT_IMPLEMENTATION.md`
 
 ### Modified (4 files)
+
 1. `soroscan-frontend/package.json` - Added @apollo/client dependency
-2. `soroscan-frontend/app/providers.tsx` - Integrated ApolloProvider
-3. `django-backend/soroscan/settings.py` - Added CORS_ALLOW_CREDENTIALS
-4. `django-backend/.env.example` - Updated CORS documentation
+1. `soroscan-frontend/app/providers.tsx` - Integrated ApolloProvider
+1. `django-backend/soroscan/settings.py` - Added CORS_ALLOW_CREDENTIALS
+1. `django-backend/.env.example` - Updated CORS documentation
 
 ## Dependencies Added
 
@@ -198,6 +210,7 @@ function ContractsList() {
 ```
 
 This brings in:
+
 - Apollo Client core
 - Apollo Link (HTTP, Error, Retry)
 - InMemoryCache
@@ -211,15 +224,15 @@ These are prepared for but require additional work:
    - Endpoint: `/api/token/refresh/`
    - Function stub: `refreshToken()` in `apollo-client.ts`
 
-2. **GraphQL Type Generation** (FE-5)
+1. **GraphQL Type Generation** (FE-5)
    - Generate TypeScript types from schema
    - Use typed queries and mutations
 
-3. **Real-time Subscriptions**
+1. **Real-time Subscriptions**
    - Add WebSocket link
    - Subscribe to contract events
 
-4. **Specific Queries/Mutations**
+1. **Specific Queries/Mutations**
    - Create query files in `src/queries/`
    - Use GraphQL Code Generator
 
@@ -228,27 +241,29 @@ These are prepared for but require additional work:
 To verify the integration:
 
 1. **Start Backend**
+
    ```bash
    cd django-backend
    python manage.py runserver
    ```
 
-2. **Start Frontend**
+1. **Start Frontend**
+
    ```bash
    cd soroscan-frontend
    pnpm run dev
    ```
 
-3. **Test Connection**
+1. **Test Connection**
    - Add `<ApolloTestComponent />` to any page
    - Should show "✓ Connected Successfully"
 
-4. **Check DevTools**
+1. **Check DevTools**
    - Install Apollo Client DevTools extension
    - Open browser DevTools → Apollo tab
    - Execute a test query
 
-5. **Verify Authentication**
+1. **Verify Authentication**
    - Set token: `localStorage.setItem('access_token', 'your-jwt-token')`
    - Check Network tab → GraphQL request headers
    - Should include `Authorization: Bearer <token>`
@@ -274,6 +289,7 @@ None. All acceptance criteria met and CI checks passing.
 ## Browser Compatibility
 
 Apollo Client supports:
+
 - Chrome/Edge (latest)
 - Firefox (latest)
 - Safari (latest)
@@ -282,6 +298,7 @@ Apollo Client supports:
 ## Documentation
 
 Comprehensive documentation provided:
+
 - Technical setup: `lib/apollo-client.README.md`
 - Integration guide: `APOLLO_INTEGRATION.md`
 - Usage examples in both documents
@@ -289,4 +306,6 @@ Comprehensive documentation provided:
 
 ## Conclusion
 
-Apollo Client integration is complete and production-ready. All acceptance criteria met, CI checks passing, and comprehensive documentation provided. The frontend can now consume the Django Strawberry GraphQL endpoint with type safety, caching, authentication, and error handling.
+Apollo Client integration is complete and production-ready. All acceptance criteria met, CI checks passing, and
+comprehensive documentation provided. The frontend can now consume the Django Strawberry GraphQL endpoint with type
+safety, caching, authentication, and error handling.

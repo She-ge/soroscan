@@ -2,14 +2,12 @@
  * Tests for CDC Monitoring Dashboard (#917).
  */
 import React from 'react';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // ── Mock recharts so tests run without canvas ─────────────────────────────────
 jest.mock('recharts', () => {
   const React = jest.requireActual('react');
-  const Mock = ({ children, 'data-testid': tid }: { children?: React.ReactNode; 'data-testid'?: string }) =>
-    <div data-testid={tid}>{children}</div>;
   return {
     LineChart: ({ children }: { children: React.ReactNode }) => <div data-testid="line-chart">{children}</div>,
     Line: () => null,

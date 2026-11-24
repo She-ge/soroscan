@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { InputHTMLAttributes, KeyboardEvent } from "react";
+import type { CSSProperties, InputHTMLAttributes, KeyboardEvent } from "react";
 import { Search, Inbox } from "lucide-react";
 import { EmptyState, EmptyStateIcon } from "@/components/ui/empty-state";
 import { EventTableSkeleton } from "@/components/ui/skeletons";
@@ -79,6 +79,22 @@ export function EventTable({
   ) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
+      onEventClick(record);
+    }
+  };
+
+  /**
+   * Table rows are focusable and activatable with Enter/Space (a11y).
+   * Keypresses from controls nested in the row (checkbox, tag inputs,
+   * buttons) must not open the event detail.
+   */
+  const handleRowKeyDown = (
+    keyEvent: KeyboardEvent<HTMLTableRowElement>,
+    record: EventRecord,
+  ) => {
+    if (keyEvent.target !== keyEvent.currentTarget) return;
+    if (keyEvent.key === "Enter" || keyEvent.key === " " || keyEvent.key === "Spacebar") {
+      keyEvent.preventDefault();
       onEventClick(record);
     }
   };
@@ -366,22 +382,19 @@ export function EventTable({
             return (
               <tr
                 key={event.id}
-                className={isSelected ? toolbarStyles.selectedRow : undefined}
-                style={{
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                }}
+                className={[
+                  toolbarStyles.eventRow,
+                  isSelected ? toolbarStyles.selectedRow : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={
+                  { "--row-glow": getEventTypeColor(event.eventType) } as CSSProperties
+                }
+                tabIndex={0}
+                aria-label={`View event ${event.id}`}
                 onClick={() => onEventClick(event)}
-                onMouseEnter={(mouseEvent) => {
-                  if (!isSelected) {
-                    mouseEvent.currentTarget.style.boxShadow = `0 0 15px ${getEventTypeColor(
-                      event.eventType,
-                    )}`;
-                  }
-                }}
-                onMouseLeave={(mouseEvent) => {
-                  mouseEvent.currentTarget.style.boxShadow = "none";
-                }}
+                onKeyDown={(keyEvent) => handleRowKeyDown(keyEvent, event)}
               >
                 <td
                   className={toolbarStyles.checkboxCell}

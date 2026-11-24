@@ -37,6 +37,7 @@ kubectl exec -it deployment/soroscan-backend -- python manage.py reset_admin_pas
 ## Examples
 
 ### Local Development
+
 ```bash
 cd django-backend
 python manage.py reset_admin_password
@@ -44,11 +45,13 @@ python manage.py reset_admin_password
 ```
 
 ### CI/CD Setup
+
 ```bash
 python manage.py reset_admin_password --username testadmin --password testpass
 ```
 
 ### Docker Compose
+
 ```bash
 docker-compose exec backend python manage.py reset_admin_password --password admin123
 ```
@@ -74,11 +77,13 @@ python verify_reset_password.py
 ## Tips
 
 ✅ **DO:**
+
 - Use interactive mode for production
 - Use strong passwords
 - Test the new password immediately
 
 ❌ **DON'T:**
+
 - Put passwords in shell scripts (use interactive mode)
 - Use weak passwords
 - Share passwords in documentation
@@ -86,18 +91,21 @@ python verify_reset_password.py
 ## Troubleshooting
 
 **Command not found?**
+
 ```bash
 cd django-backend
 python manage.py reset_admin_password
 ```
 
 **User doesn't exist?**
+
 ```bash
 # Create the user first
 python manage.py createsuperuser --username admin
 ```
 
 **Still can't login?**
+
 ```bash
 # Verify the password was set
 python manage.py shell

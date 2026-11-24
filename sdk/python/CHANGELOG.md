@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-02-22
 
 ### Added
+
 - Initial release of SoroScan Python SDK
 - `SoroScanClient` - Synchronous HTTP client
 - `AsyncSoroScanClient` - Asynchronous HTTP client with asyncio/trio support
@@ -38,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full documentation and API reference
 
 ### Dependencies
+
 - httpx >= 0.27.0 (sync and async HTTP)
 - pydantic >= 2.0.0 (data validation)
 

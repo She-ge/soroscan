@@ -7,16 +7,18 @@ sidebar_label: AWS / EKS
 hide_title: false
 ---
 
-This guide provides a pragmatic EKS deployment path using Terraform to provision infrastructure and Helm to deploy the SoroScan application.
+This guide provides a pragmatic EKS deployment path using Terraform to provision infrastructure and Helm to deploy the
+SoroScan application.
 
 Warning: These are example snippets—adapt to your security, networking, and compliance needs.
 
 ## High-level steps
+
 1. Provision EKS cluster and networking with Terraform.
-2. Provision managed RDS Postgres and ElastiCache Redis.
-3. Build and push container images to ECR.
-4. Deploy SoroScan via Helm using `values.yaml` tuned for production.
-5. Configure Ingress with ALB / ACM for TLS.
+1. Provision managed RDS Postgres and ElastiCache Redis.
+1. Build and push container images to ECR.
+1. Deploy SoroScan via Helm using `values.yaml` tuned for production.
+1. Configure Ingress with ALB / ACM for TLS.
 
 ## Example Terraform snippet (very condensed)
 
@@ -50,14 +52,20 @@ resource "aws_db_instance" "postgres" {
 ```
 
 ## Helm deploy (recommended)
-- Create a `values-production.yaml` that sets `replicaCount` for backend and worker, resource requests/limits, and PostgreSQL connection via `DATABASE_URL` secret.
-- Use `helm upgrade --install soroscan ./helm-chart --namespace soroscan --create-namespace -f docs/deployment/helm/values-production.yaml`
+
+- Create a `values-production.yaml` that sets `replicaCount` for backend and worker, resource requests/limits, and
+  PostgreSQL connection via `DATABASE_URL` secret.
+- Use
+  `helm upgrade --install soroscan ./helm-chart --namespace soroscan --create-namespace -f docs/deployment/helm/values-production.yaml`
 
 ## Networking and TLS
-- Use AWS ACM to issue TLS certs and ALB Ingress Controller (AWS Load Balancer Controller) to provision ALBs automatically.
+
+- Use AWS ACM to issue TLS certs and ALB Ingress Controller (AWS Load Balancer Controller) to provision ALBs
+  automatically.
 - Configure DNS to point to ALB.
 
 ## Cost estimate (small production)
+
 - EKS control + 3 `t3.medium` nodes: ~ $100–150/month
 - RDS `db.t3.medium` (100GB): ~ $100–200/month
 - ElastiCache (single node): ~$40/month
@@ -66,6 +74,7 @@ resource "aws_db_instance" "postgres" {
 Adjust instance sizes and storage for production loads.
 
 ## Notes
+
 - Use parameter groups and backups for RDS.
 - Use IAM roles for service accounts (IRSA) for fine-grained access.
 - Rotate credentials and secrets using AWS Secrets Manager or SSM Parameter Store.

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { SoroScanClient, SoroScanError } from "../src/client.js";
+import {
+  SoroScanClient,
+  SoroScanError,
+  SoroScanValidationError,
+} from "../src/client.js";
 import type { RecordEventsBatchResponse } from "../src/types.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,13 +29,6 @@ const MOCK_BATCH_RESPONSE: RecordEventsBatchResponse = {
   status: "submitted",
   totalEvents: 3,
   txHash: "txbatch001",
-  transactionStatus: "pending",
-  error: null,
-};
-
-const MOCK_RECORD_RESPONSE = {
-  status: "submitted",
-  txHash: "tx001",
   transactionStatus: "pending",
   error: null,
 };
@@ -108,31 +105,37 @@ describe("recordEventsBatch() — SC-29", () => {
     expect(result.totalEvents).toBe(1);
   });
 
-  it("posts a single event to /v1/record-event and returns response", async () => {
-    mockFetch(MOCK_RECORD_RESPONSE, 202);
-    const result = await makeClient().recordEvent({
-      contractId: SAMPLE_EVENTS[0]!.contractId,
-      eventType: SAMPLE_EVENTS[0]!.eventType,
-      payloadHash: SAMPLE_EVENTS[0]!.payloadHash,
+  it("posts a single event through recordEventsBatch to /v1/record-events-batch", async () => {
+    mockFetch({ ...MOCK_BATCH_RESPONSE, totalEvents: 1, txHash: "tx001" }, 202);
+    const result = await makeClient().recordEventsBatch({
+      events: [SAMPLE_EVENTS[0]!],
     });
 
     expect(result.status).toBe("submitted");
     expect(result.txHash).toBe("tx001");
+    expect(result.totalEvents).toBe(1);
 
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [
       string,
       RequestInit,
     ];
-    expect(url).toContain("/v1/record-event");
+    expect(url).toContain("/v1/record-events-batch");
     expect(init.method).toBe("POST");
+
+    const body = JSON.parse(init.body as string) as { events: typeof SAMPLE_EVENTS };
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0]).toEqual(SAMPLE_EVENTS[0]);
   });
 
-  it("throws SoroScanError on 400 validation error", async () => {
+  it("throws SoroScanValidationError on 400 validation error", async () => {
     mockFetch({ code: "INVALID_BATCH", message: "Batch too large" }, 400);
-    await expect(
-      makeClient().recordEventsBatch({ events: SAMPLE_EVENTS })
-    ).rejects.toMatchObject({
-      name: "SoroScanError",
+    const error = await makeClient()
+      .recordEventsBatch({ events: SAMPLE_EVENTS })
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(SoroScanError);
+    expect(error).toBeInstanceOf(SoroScanValidationError);
+    expect(error).toMatchObject({
       statusCode: 400,
       code: "INVALID_BATCH",
     });

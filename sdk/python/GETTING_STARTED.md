@@ -38,6 +38,7 @@ pip install -e ".[dev]"
 ```
 
 This installs:
+
 - The SDK package (editable)
 - httpx (HTTP client)
 - pydantic (data validation)
@@ -53,6 +54,7 @@ python verify_package.py
 ```
 
 Expected output:
+
 ```
 ✓ All required files present
 ✓ All imports successful
@@ -143,6 +145,7 @@ client.close()
 ```
 
 Run it:
+
 ```bash
 python test_sdk.py
 ```
@@ -164,6 +167,7 @@ asyncio.run(main())
 ```
 
 Run it:
+
 ```bash
 python test_async.py
 ```
@@ -177,6 +181,7 @@ make build
 ```
 
 This creates:
+
 - `dist/soroscan_sdk-0.1.0-py3-none-any.whl`
 - `dist/soroscan-sdk-0.1.0.tar.gz`
 
@@ -195,16 +200,17 @@ python -c "from soroscan import SoroScanClient; print('OK')"
 ## Development Workflow
 
 1. Make changes to code
-2. Run tests: `pytest tests/ -v`
-3. Check types: `mypy soroscan/ --strict`
-4. Format code: `ruff format soroscan/`
-5. Commit changes
+1. Run tests: `pytest tests/ -v`
+1. Check types: `mypy soroscan/ --strict`
+1. Format code: `ruff format soroscan/`
+1. Commit changes
 
 ## Common Issues
 
 ### Import Errors
 
 If you see `ModuleNotFoundError`:
+
 ```bash
 # Reinstall in development mode
 pip install -e ".[dev]"
@@ -213,6 +219,7 @@ pip install -e ".[dev]"
 ### Type Check Failures
 
 If mypy fails:
+
 ```bash
 # Check specific file
 mypy soroscan/client.py --strict
@@ -224,6 +231,7 @@ mypy soroscan/ --strict --show-error-codes
 ### Test Failures
 
 If tests fail:
+
 ```bash
 # Run with verbose output
 pytest tests/ -vv
@@ -240,11 +248,13 @@ pytest tests/ -v -s
 ### VS Code
 
 Install extensions:
+
 - Python
 - Pylance
 - Ruff
 
 Settings (`.vscode/settings.json`):
+
 ```json
 {
   "python.linting.enabled": true,
@@ -260,8 +270,8 @@ Settings (`.vscode/settings.json`):
 ### PyCharm
 
 1. Mark `soroscan/` as Sources Root
-2. Enable mypy plugin
-3. Configure Ruff as external tool
+1. Enable mypy plugin
+1. Configure Ruff as external tool
 
 ## Next Steps
 
@@ -272,6 +282,6 @@ Settings (`.vscode/settings.json`):
 
 ## Getting Help
 
-- Check existing issues: https://github.com/soroscan/soroscan/issues
+- Check existing issues: <https://github.com/soroscan/soroscan/issues>
 - Create new issue with reproduction steps
-- Email: team@soroscan.io
+- Email: <team@soroscan.io>

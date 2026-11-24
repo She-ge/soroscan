@@ -1,6 +1,7 @@
 # Security Best Practices & Hardening Guide
 
-This guide consolidates SoroScan's security approach across authentication, data protection, API hardening, infrastructure, and incident response.
+This guide consolidates SoroScan's security approach across authentication, data protection, API hardening,
+infrastructure, and incident response.
 
 ## Authentication & Authorization
 

@@ -1,7 +1,8 @@
 # SoroScan — Project Status & Implementation Report
 
 **Last Updated:** October 17, 2026
-**Project Type:** Blockchain Event Indexer & Monitoring Platform  
+
+**Project Type:** Blockchain Event Indexer & Monitoring Platform
 **Status:** Active Development
 
 ---
@@ -9,14 +10,14 @@
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
-2. [Architecture](#architecture)
-3. [Technology Stack](#technology-stack)
-4. [Current Implementation Status](#current-implementation-status)
-5. [Testing & Quality](#testing--quality)
-6. [Issues & Roadmap](#issues--roadmap)
-7. [Development Setup](#development-setup)
-8. [Deployment & DevOps](#deployment--devops)
-9. [Contributing](#contributing)
+1. [Architecture](#architecture)
+1. [Technology Stack](#technology-stack)
+1. [Current Implementation Status](#current-implementation-status)
+1. [Testing & Quality](#testing--quality)
+1. [Issues & Roadmap](#issues--roadmap)
+1. [Development Setup](#development-setup)
+1. [Deployment & DevOps](#deployment--devops)
+1. [Contributing](#contributing)
 
 ---
 
@@ -42,11 +43,11 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 
 ### Key Differentiators
 
-✅ **Tested** — Backend and frontend test suites are configured in CI; see the test inventory below.
-✅ **Enterprise-ready** — Multi-tenancy, GDPR compliance, HA/DR  
-✅ **Developer-friendly** — Interactive API docs, SDKs (Python, TypeScript), Webhooks  
-✅ **Retro aesthetic** — Terminal-inspired UI with phosphor green on deep black  
-✅ **Documented** — Current priorities are maintained in the project roadmap.
+- ✅ **Tested** — Backend and frontend test suites are configured in CI; see the test inventory below.
+- ✅ **Enterprise-ready** — Multi-tenancy, GDPR compliance, HA/DR
+- ✅ **Developer-friendly** — Interactive API docs, SDKs (Python, TypeScript), Webhooks
+- ✅ **Retro aesthetic** — Terminal-inspired UI with phosphor green on deep black
+- ✅ **Documented** — Current priorities are maintained in the project roadmap.
 
 ---
 
@@ -85,7 +86,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
         │   Developer Portal              │
         │   (Next.js Frontend)            │
         └─────────────────────────────────┘
-        
+
         ▼ (Webhooks)
    Third-Party Systems
    (Data Warehouses, Monitoring, APIs)
@@ -94,6 +95,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 ### Core Modules
 
 **Backend (Django + Strawberry GraphQL)**
+
 - `soroscan/ingest/` — Event ingestion from Horizon
 - `soroscan/graphql/` — GraphQL schema and resolvers
 - `soroscan/api/` — REST API endpoints
@@ -102,6 +104,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - `soroscan/tasks/` — Celery async tasks
 
 **Frontend (Next.js + Apollo Client)**
+
 - `app/` — Page routes (event explorer, dashboard, admin)
 - `components/` — Reusable UI components (buttons, cards, tables, etc.)
 - `lib/` — Utilities and GraphQL query builders
@@ -109,9 +112,11 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - `providers/` — Apollo Client setup
 
 **Smart Contracts (Rust/Soroban)**
+
 - `soroban-contracts/soroscan_core/` — Contract verification logic
 
 **SDKs**
+
 - `sdk/python/` — Python client library
 - `sdk/typescript/` — JavaScript/TypeScript client library
 
@@ -121,51 +126,51 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 
 ### Backend
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| Framework | Django | 5.2.10 |
-| Language | Python | 3.11 in CI |
-| GraphQL | Strawberry GraphQL | 0.289.0 |
-| Database | PostgreSQL | 15 in CI |
-| Cache | Redis | 7 in CI |
-| Task Queue | Celery | 5.6.2 |
-| Server | Gunicorn/Uvicorn | Latest |
-| ORM | Django ORM | 5.2 |
+| Component  | Technology         | Version    |
+| ---------- | ------------------ | ---------- |
+| Framework  | Django             | 5.2.10     |
+| Language   | Python             | 3.12 in CI |
+| GraphQL    | Strawberry GraphQL | 0.289.0    |
+| Database   | PostgreSQL         | 15 in CI   |
+| Cache      | Redis              | 7 in CI    |
+| Task Queue | Celery             | 5.6.2      |
+| Server     | Gunicorn/Uvicorn   | Latest     |
+| ORM        | Django ORM         | 5.2        |
 
 ### Frontend
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| Framework | Next.js | 16.1.6 |
-| Runtime | Node.js | 20 in CI |
-| Language | TypeScript | 5.x |
-| Styling | Tailwind CSS | 4.x |
-| Components | shadcn CLI | 3.8.5 |
-| Icons | Lucide React | 0.575.0 |
-| GraphQL Client | Apollo Client | 3.14.0 |
-| State | Zustand | 4.4.7 |
-| i18n | next-intl | 4.8.3 |
-| Testing | Jest + React Testing Library | 30.2.0 / 16.3.2 |
-| Package Manager | pnpm | 10.5.2 |
+| Component       | Technology                   | Version         |
+| --------------- | ---------------------------- | --------------- |
+| Framework       | Next.js                      | 16.1.6          |
+| Runtime         | Node.js                      | 20 in CI        |
+| Language        | TypeScript                   | 5.x             |
+| Styling         | Tailwind CSS                 | 4.x             |
+| Components      | shadcn CLI                   | 3.8.5           |
+| Icons           | Lucide React                 | 0.575.0         |
+| GraphQL Client  | Apollo Client                | 3.14.0          |
+| State           | Zustand                      | 4.4.7           |
+| i18n            | next-intl                    | 4.8.3           |
+| Testing         | Jest + React Testing Library | 30.2.0 / 16.3.2 |
+| Package Manager | pnpm                         | 10.5.2          |
 
 ### Infrastructure
 
-| Component | Technology |
-|-----------|-----------|
-| Containerization | Docker + Docker Compose |
-| Orchestration | Kubernetes (k8s manifests provided) |
-| CI/CD | GitHub Actions |
-| Monitoring | Prometheus + Grafana |
-| Logging | Structured logging + Sentry |
-| Package Managers | npm/pnpm (frontend), pip (backend) |
+| Component        | Technology                          |
+| ---------------- | ----------------------------------- |
+| Containerization | Docker + Docker Compose             |
+| Orchestration    | Kubernetes (k8s manifests provided) |
+| CI/CD            | GitHub Actions                      |
+| Monitoring       | Prometheus + Grafana                |
+| Logging          | Structured logging + Sentry         |
+| Package Managers | npm/pnpm (frontend), pip (backend)  |
 
 ### Blockchain
 
-| Component | Technology |
-|-----------|-----------|
-| Smart Contracts | Rust + Soroban SDK |
-| Event Source | Stellar Horizon API |
-| RPC | Soroban RPC endpoints |
+| Component       | Technology            |
+| --------------- | --------------------- |
+| Smart Contracts | Rust + Soroban SDK    |
+| Event Source    | Stellar Horizon API   |
+| RPC             | Soroban RPC endpoints |
 
 ---
 
@@ -174,6 +179,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 ### ✅ Completed Features
 
 #### Core Indexing & Ingestion
+
 - [x] Real-time event ingestion from Horizon
 - [x] Ledger streaming with backfill support
 - [x] Contract registration and tracking
@@ -181,6 +187,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - [x] Event persistence to PostgreSQL
 
 #### APIs
+
 - [x] GraphQL schema with Strawberry
 - [x] REST API endpoints for events and contracts
 - [x] Cursor-based pagination
@@ -188,6 +195,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - [x] Schema introspection and documentation
 
 #### Webhooks
+
 - [x] Webhook subscription management
 - [x] Event delivery to subscriber endpoints
 - [x] Exponential backoff retry logic
@@ -195,12 +203,14 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - [x] HMAC-SHA256 signature verification
 
 #### Authentication & Security
+
 - [x] JWT token authentication for API
 - [x] Rate limiting on REST and GraphQL
 - [x] CORS configuration
 - [x] Environment variable validation on startup
 
 #### Observability
+
 - [x] Structured logging throughout codebase
 - [x] Error tracking with Sentry
 - [x] Prometheus metrics endpoint
@@ -208,6 +218,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - [x] Request ID tracking across logs
 
 #### Frontend
+
 - [x] Event Explorer dashboard
 - [x] Contract management UI
 - [x] Webhook subscription manager
@@ -218,6 +229,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - [x] Dark mode (terminal-inspired)
 
 #### Testing
+
 - [x] Backend and frontend test suites are run by GitHub Actions (see Testing & Quality)
 - [x] GraphQL resolver tests
 - [x] Model and task tests
@@ -226,6 +238,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - [x] End-to-end testing with Playwright (framework ready)
 
 #### DevOps & Infrastructure
+
 - [x] Docker Compose setup for local development
 - [x] Kubernetes manifests for production
 - [x] GitHub Actions CI/CD pipeline
@@ -233,6 +246,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - [x] Environment configuration via `.env`
 
 #### Documentation
+
 - [x] README files for each module
 - [x] API documentation (OpenAPI/Swagger ready)
 - [x] SDK documentation (Python, TypeScript)
@@ -240,6 +254,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 - [x] Getting started guides
 
 #### SDKs
+
 - [x] Python client SDK (published)
 - [x] TypeScript/JavaScript client SDK (published)
 - [x] SDK examples and tests
@@ -247,6 +262,7 @@ SoroScan is a **Stellar Soroban event indexer and monitoring platform** that:
 ---
 
 ### 🚧 In Progress / Planned Features
+
 Feature priorities and issue status change over time; see the [project roadmap](ROADMAP.md) for the maintained list.
 
 ---
@@ -254,22 +270,29 @@ Feature priorities and issue status change over time; see the [project roadmap](
 ## Testing & Quality
 
 ### Test Coverage
+
 ### Test Inventory
 
 - Python: 501 `test_` function/method declarations across 58 files named `test*.py` in the repository.
 - Frontend: 2 Jest test modules.
-- These are checked-in inventory counts, not a collected or passing test total. Parametrization and runner configuration affect the number of executed cases.
+- These are checked-in inventory counts, not a collected or passing test total. Parametrization and runner configuration
+  affect the number of executed cases.
 
 **GitHub Actions Workflows:**
+
 1. `django.yml` — Runs pytest, coverage analysis, linting (consolidates the former `django-tests.yml`; see issue #1678)
-2. `frontend-ci.yml` — Runs Jest, ESLint, Next.js build
-3. `migration-check.yml` — Validates migration integrity
+1. `frontend-ci.yml` — Runs Jest, ESLint, Next.js build
+1. `migration-check.yml` — Validates migration integrity
+
 ### Coverage and CI
 
-- Backend CI runs pytest with coverage and enforces an 80% minimum; see [Django Tests](../.github/workflows/django-tests.yml).
-- Frontend CI runs Jest with coverage; see [Frontend CI](../.github/workflows/frontend-ci.yml).
+- Backend CI runs pytest with coverage and enforces an 80% minimum; see
+  [Django Tests](https://github.com/Emmzyemms/soroscan/blob/main/.github/workflows/django.yml).
+- Frontend CI runs Jest with coverage; see
+  [Frontend CI](https://github.com/Emmzyemms/soroscan/blob/main/.github/workflows/frontend-ci.yml).
 - Current pass counts and coverage percentages are produced by CI runs and are not asserted in this report.
-- The Django workflow also checks for missing migrations with `makemigrations --check --dry-run`; there is no separate `migration-check.yml` workflow.
+- The Django workflow also checks for missing migrations with `makemigrations --check --dry-run`; there is no separate
+  `migration-check.yml` workflow.
 
 ### Code Quality
 
@@ -281,6 +304,7 @@ Feature priorities and issue status change over time; see the [project roadmap](
 ---
 
 ## Issues & Roadmap
+
 See the [project roadmap](ROADMAP.md) for current priorities and issue status.
 
 ---
@@ -291,7 +315,7 @@ See the [project roadmap](ROADMAP.md) for current priorities and issue status.
 
 ```bash
 # Backend
-- Python 3.11 (version used by backend CI)
+- Python 3.12 (version used by backend CI and the Docker image)
 - PostgreSQL 15+
 - Redis 7+
 - Docker & Docker Compose
@@ -418,24 +442,29 @@ kubectl logs -f deployment/soroscan-backend -n soroscan
 ### Monitoring
 
 **Prometheus Metrics:**
+
 - Endpoint: `http://localhost:8000/metrics`
 - Scraped by Prometheus every 30 seconds
 
 **Grafana Dashboards:**
+
 - Example dashboard in `k8s/grafana-dashboard.json`
 
 **Alerting:**
+
 - Sentry integration for error tracking
 - Custom alerts via Prometheus rules
 
 ### Backup & Recovery
 
 **Automated Backups:**
+
 - Daily PostgreSQL dumps (Kubernetes CronJob)
 - Backup stored in cloud storage (configurable)
 - Recovery tested quarterly
 
 **Health Checks:**
+
 ```bash
 GET /health  → Returns {"status": "ok"}
 GET /ready   → Checks DB and Redis connectivity
@@ -448,19 +477,19 @@ GET /ready   → Checks DB and Redis connectivity
 ### For New Contributors
 
 1. **Pick a task** from the [project roadmap](ROADMAP.md)
-2. **Read the issue** — all have clear acceptance criteria
-3. **Set up dev environment** — see Development Setup above
-4. **Create a branch:** `git checkout -b fix/issue-name`
-5. **Implement & test:** All tests must pass
-6. **Submit PR** — link to issue, describe changes
+1. **Read the issue** — all have clear acceptance criteria
+1. **Set up dev environment** — see Development Setup above
+1. **Create a branch:** `git checkout -b fix/issue-name`
+1. **Implement & test:** All tests must pass
+1. **Submit PR** — link to issue, describe changes
 
 ### For Experienced Contributors
 
 1. **Choose a task** from the [project roadmap](ROADMAP.md)
-2. **Understand dependencies** — each issue lists what it depends on
-3. **Communicate progress** — update issue with status
-4. **Follow patterns** — check existing code for style/architecture
-5. **Document thoroughly** — add docstrings, update README if needed
+1. **Understand dependencies** — each issue lists what it depends on
+1. **Communicate progress** — update issue with status
+1. **Follow patterns** — check existing code for style/architecture
+1. **Document thoroughly** — add docstrings, update README if needed
 
 ### Code Review Process
 
@@ -483,11 +512,14 @@ GET /ready   → Checks DB and Redis connectivity
 ---
 
 ## Key Metrics
-This report does not publish live performance, uptime, or coverage measurements. See current CI artifacts for test and coverage results, and the [performance playbook](PERFORMANCE_PLAYBOOK.md) for benchmark procedures.
+
+This report does not publish live performance, uptime, or coverage measurements. See current CI artifacts for test and
+coverage results, and the [performance playbook](PERFORMANCE_PLAYBOOK.md) for benchmark procedures.
 
 ---
 
 ## Next Steps
+
 See the [project roadmap](ROADMAP.md) for current priorities.
 
 ---
@@ -495,18 +527,21 @@ See the [project roadmap](ROADMAP.md) for current priorities.
 ## Resources
 
 ### Documentation
-- 📖 [README.md](../README.md) — Project overview
+
+- 📖 [README.md](https://github.com/Emmzyemms/soroscan/blob/main/README.md) — Project overview
 - 🔧 [Getting Started](getting-started.md)
 - 📋 [Project Roadmap](ROADMAP.md)
-- 🎯 [Contributing](../CONTRIBUTING.md)
+- 🎯 [Contributing](https://github.com/Emmzyemms/soroscan/blob/main/CONTRIBUTING.md)
 - 🧭 [Contributor Style Guide](contributing/style-guide.md)
 
 ### APIs
-- GraphQL: http://localhost:8000/graphql
-- REST: http://localhost:8000/api/
-- Health: http://localhost:8000/health
+
+- GraphQL: [http://localhost:8000/graphql](http://localhost:8000/graphql)
+- REST: [http://localhost:8000/api/](http://localhost:8000/api/)
+- Health: [http://localhost:8000/health](http://localhost:8000/health)
 
 ### Team
+
 ---
 
 **Last Updated:** October 17, 2026

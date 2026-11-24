@@ -89,4 +89,4 @@ try {
 
 ## Support
 
-- GitHub: https://github.com/soroscan/soroscan/issues
+- GitHub: <https://github.com/soroscan/soroscan/issues>

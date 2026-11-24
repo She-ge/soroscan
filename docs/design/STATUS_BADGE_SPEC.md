@@ -10,16 +10,16 @@ guidance.
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Design Tokens](#design-tokens)
-3. [Badge Variants (6)](#badge-variants-6)
-4. [Sizing System](#sizing-system)
-5. [Shape Options](#shape-options)
-6. [Anatomy](#anatomy)
-7. [CSS Utility Classes & Tailwind Mappings](#css-utility-classes--tailwind-mappings)
-8. [Accessibility Contrast Verification](#accessibility-contrast-verification)
-9. [State Transitions & Animation](#state-transitions--animation)
-10. [Usage Guidelines](#usage-guidelines)
-11. [Figma Component Specification](#figma-component-specification)
+1. [Design Tokens](#design-tokens)
+1. [Badge Variants (6)](#badge-variants-6)
+1. [Sizing System](#sizing-system)
+1. [Shape Options](#shape-options)
+1. [Anatomy](#anatomy)
+1. [CSS Utility Classes & Tailwind Mappings](#css-utility-classes--tailwind-mappings)
+1. [Accessibility Contrast Verification](#accessibility-contrast-verification)
+1. [State Transitions & Animation](#state-transitions--animation)
+1. [Usage Guidelines](#usage-guidelines)
+1. [Figma Component Specification](#figma-component-specification)
 
 ---
 
@@ -232,9 +232,9 @@ contexts (e.g. webhook status badges in the admin panel).
 Component layers (inside-out):
 
 1. **Outer `<span>`** — flex container, border, background, radius, padding
-2. **Icon `<span>`** — `inline-flex shrink-0 aria-hidden`, sized per table above
-3. **Label `<span>`** — text content, `leading-none`
-4. *(optional)* **Dismiss `<button>`** — only on dismissible tag variants
+1. **Icon `<span>`** — `inline-flex shrink-0 aria-hidden`, sized per table above
+1. **Label `<span>`** — text content, `leading-none`
+1. *(optional)* **Dismiss `<button>`** — only on dismissible tag variants
 
 ---
 

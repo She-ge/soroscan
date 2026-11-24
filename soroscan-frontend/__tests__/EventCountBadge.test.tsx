@@ -1,4 +1,3 @@
-import React from "react";
 import { render, screen } from "@testing-library/react";
 import { EventStreamProvider } from "@/context/EventStreamContext";
 import { EventCountBadge } from "@/components/ui/EventCountBadge";

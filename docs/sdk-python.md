@@ -1,6 +1,7 @@
 # Python SDK
 
-The **SoroScan Python SDK** is the official library for integrating SoroScan into your Python applications. It supports both synchronous and asynchronous operations and is fully type-hinted.
+The **SoroScan Python SDK** is the official library for integrating SoroScan into your Python applications. It supports
+both synchronous and asynchronous operations and is fully type-hinted.
 
 ## Installation
 
@@ -22,7 +23,8 @@ soroscan webhooks test 1
 soroscan contracts list --output json
 ```
 
-Use `--output table` (default) or `--output json`. Point `--base-url` at a local SoroScan instance when developing against a self-hosted stack.
+Use `--output table` (default) or `--output json`. Point `--base-url` at a local SoroScan instance when developing
+against a self-hosted stack.
 
 ## Basic Usage
 
@@ -61,33 +63,10 @@ async def main():
 asyncio.run(main())
 ```
 
-### Retries
-
-Both clients retry transient connection failures and HTTP `502`, `503`, and `504`
-responses using exponential backoff with full jitter. `max_retries` is the number
-of additional attempts after the initial request and defaults to `3`. Backoff
-starts with a 250 ms ceiling, doubles on each attempt, and is capped at 10 seconds.
-Client errors (`4xx`), including rate limiting (`429`), are not retried.
-
-```python
-client = SoroScanClient(
-    base_url="https://api.soroscan.io",
-    api_key="your-api-key",
-    max_retries=5,
-)
-
-# The async client accepts the same option.
-async_client = AsyncSoroScanClient(
-    base_url="https://api.soroscan.io",
-    max_retries=5,
-)
-```
-
-Set `max_retries=0` to disable retries.
-
 ### Fluent Builder Pattern (issue #1281)
 
-Construct complex queries with a chainable, type-hinted builder. Every method returns `Self` for fluency; call `build()` to inspect params or `execute()` to run.
+Construct complex queries with a chainable, type-hinted builder. Every method returns `Self` for fluency; call `build()`
+to inspect params or `execute()` to run.
 
 ```python
 from soroscan import SoroScanClient
@@ -148,7 +127,8 @@ asyncio.run(main())
 
 ### Tagged Events (SC-24)
 
-SoroScan supports recording and indexing events with up to 4 producer-defined tags. This allows off-chain indexers to categorize and filter events efficiently:
+SoroScan supports recording and indexing events with up to 4 producer-defined tags. This allows off-chain indexers to
+categorize and filter events efficiently:
 
 ```python
 # Submit a tagged event
@@ -162,7 +142,6 @@ print(f"Status: {response.status} | Echoed Tags: {response.tags}")
 ```
 
 ## Features
-
 
 - **Type Safety**: Built with Pydantic v2 for robust data validation.
 - **Full Coverage**: 100% endpoint coverage for Contracts, Events, and Webhooks.
@@ -184,6 +163,8 @@ except ValidationError as e:
     print(f"Input error: {e}")
 ```
 
-For more detailed information, see the [official GitHub repository](https://github.com/Harbduls/soroscan/tree/main/sdk/python).
+For more detailed information, see the
+[official GitHub repository](https://github.com/Harbduls/soroscan/tree/main/sdk/python).
 
-If you want to contribute new methods or releases, see the [SDK Development Guide](./contributing/sdk-development.md) and the comprehensive [SDK & Library Development Guide](./sdk/sdk-development-guide.md).
+If you want to contribute new methods or releases, see the [SDK Development Guide](./contributing/sdk-development.md)
+and the comprehensive [SDK & Library Development Guide](./sdk/sdk-development-guide.md).

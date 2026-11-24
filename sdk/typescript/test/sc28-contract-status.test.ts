@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { SoroScanClient, SoroScanError } from "../src/client.js";
+import {
+  SoroScanClient,
+  SoroScanError,
+  SoroScanAuthenticationError,
+} from "../src/client.js";
 import type { ContractStatus } from "../src/types.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -82,10 +86,15 @@ describe("getContractStatus() — SC-28", () => {
     );
   });
 
-  it("throws SoroScanError on 401 unauthorized", async () => {
+  it("throws SoroScanAuthenticationError on 401 unauthorized", async () => {
     mockFetch({ code: "UNAUTHORIZED", message: "Invalid API key" }, 401);
-    await expect(makeClient().getContractStatus()).rejects.toMatchObject({
-      name: "SoroScanError",
+    const error = await makeClient()
+      .getContractStatus()
+      .catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(SoroScanError);
+    expect(error).toBeInstanceOf(SoroScanAuthenticationError);
+    expect(error).toMatchObject({
       statusCode: 401,
       code: "UNAUTHORIZED",
     });
